@@ -3,7 +3,7 @@
 ## ▶️ CÁCH CHẠY (làm theo đúng thứ tự)
 
 ### BƯỚC 1 — Import database
-Mở **MySQL Workbench** → File → Open SQL Script → chọn `cho_nong_san_tiengviet.sql` → chạy (Ctrl+Shift+Enter)
+Mở **MySQL Workbench** → File → Open SQL Script → chọn `cho_nong_san_sach.sql` → chạy (Ctrl+Shift+Enter)
 
 ### BƯỚC 2 — Tạo file .env
 ```
