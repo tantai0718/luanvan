@@ -3,8 +3,7 @@ const jwt = require('jsonwebtoken');
 const db = require('../config/db');
 const { JWT_SECRET, isBcryptHash } = require('../config/auth');
 
-const mapRole = value =>
-  value === 'quan_tri' ? 'admin' : value === 'nong_dan' ? 'farmer' : 'buyer';
+const mapRole = value => (value === 'quan_tri' ? 'admin' : 'buyer');
 
 const fmtUser = tk => ({
   id: tk.ma_tai_khoan,
@@ -19,17 +18,17 @@ const fmtUser = tk => ({
 
 exports.register = async (req, res) => {
   try {
-    const { ho_ten, email, so_dien_thoai, mat_khau, vai_tro = 'nguoi_mua' } = req.body;
+    const { ho_ten, email, so_dien_thoai, mat_khau } = req.body;
     const cleanName = (ho_ten || '').trim();
     const cleanEmail = (email || '').trim().toLowerCase();
     const cleanPhone = (so_dien_thoai || '').trim();
 
     if (!cleanName || !cleanEmail || !mat_khau) {
-      return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin' });
+      return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin.' });
     }
 
     if (mat_khau.length < 6) {
-      return res.status(400).json({ message: 'Mật khẩu ít nhất 6 ký tự' });
+      return res.status(400).json({ message: 'Mật khẩu phải có ít nhất 6 ký tự.' });
     }
 
     const [existedUsers] = await db.query(
@@ -38,26 +37,19 @@ exports.register = async (req, res) => {
     );
 
     if (existedUsers.length > 0) {
-      return res.status(400).json({ message: 'Email đã được sử dụng' });
+      return res.status(400).json({ message: 'Email đã được sử dụng.' });
     }
 
     const hash = await bcrypt.hash(mat_khau, 10);
-    const [result] = await db.query(
+    await db.query(
       'INSERT INTO tai_khoan (ho_ten, email, so_dien_thoai, mat_khau, vai_tro) VALUES (?, ?, ?, ?, ?)',
-      [cleanName, cleanEmail, cleanPhone || null, hash, vai_tro]
+      [cleanName, cleanEmail, cleanPhone || null, hash, 'nguoi_mua']
     );
 
-    if (vai_tro === 'nong_dan') {
-      await db.query(
-        'INSERT INTO nong_dan (ma_tai_khoan, ten_nong_trai) VALUES (?, ?)',
-        [result.insertId, `Trang trại của ${cleanName}`]
-      );
-    }
-
-    return res.status(201).json({ message: 'Đăng ký thành công!' });
+    return res.status(201).json({ message: 'Đăng ký thành công.' });
   } catch (error) {
     console.error('[register]', error);
-    return res.status(500).json({ message: 'Lỗi server: ' + error.message });
+    return res.status(500).json({ message: `Lỗi server: ${error.message}` });
   }
 };
 
@@ -67,7 +59,7 @@ exports.login = async (req, res) => {
     const cleanEmail = (email || '').trim().toLowerCase();
 
     if (!cleanEmail || !mat_khau) {
-      return res.status(400).json({ message: 'Vui lòng nhập email và mật khẩu' });
+      return res.status(400).json({ message: 'Vui lòng nhập email và mật khẩu.' });
     }
 
     const [rows] = await db.query(
@@ -76,13 +68,19 @@ exports.login = async (req, res) => {
     );
 
     if (rows.length === 0) {
-      return res.status(400).json({ message: 'Email hoặc mật khẩu không đúng' });
+      return res.status(400).json({ message: 'Email hoặc mật khẩu không đúng.' });
     }
 
     const tk = rows[0];
 
+    if (tk.vai_tro === 'nong_dan') {
+      return res.status(403).json({
+        message: 'Hệ thống hiện không còn hỗ trợ vai trò nông dân. Vui lòng liên hệ quản trị viên.',
+      });
+    }
+
     if (!tk.con_hoat_dong) {
-      return res.status(403).json({ message: 'Tài khoản đã bị khóa' });
+      return res.status(403).json({ message: 'Tài khoản đã bị khóa.' });
     }
 
     let match = false;
@@ -103,11 +101,11 @@ exports.login = async (req, res) => {
       }
     } catch (hashError) {
       console.error('[login] password error:', hashError.message);
-      return res.status(500).json({ message: 'Không thể xử lý mật khẩu tài khoản này' });
+      return res.status(500).json({ message: 'Không thể xử lý mật khẩu của tài khoản này.' });
     }
 
     if (!match) {
-      return res.status(400).json({ message: 'Email hoặc mật khẩu không đúng' });
+      return res.status(400).json({ message: 'Email hoặc mật khẩu không đúng.' });
     }
 
     const token = jwt.sign(
@@ -119,7 +117,7 @@ exports.login = async (req, res) => {
     return res.json({ token, user: fmtUser(tk) });
   } catch (error) {
     console.error('[login]', error);
-    return res.status(500).json({ message: 'Lỗi server: ' + error.message });
+    return res.status(500).json({ message: `Lỗi server: ${error.message}` });
   }
 };
 
@@ -131,12 +129,18 @@ exports.me = async (req, res) => {
     );
 
     if (!rows.length) {
-      return res.status(404).json({ message: 'Không tìm thấy tài khoản' });
+      return res.status(404).json({ message: 'Không tìm thấy tài khoản.' });
+    }
+
+    if (rows[0].vai_tro === 'nong_dan') {
+      return res.status(403).json({
+        message: 'Tài khoản này không còn được hỗ trợ trong phiên bản hiện tại.',
+      });
     }
 
     return res.json({ user: fmtUser(rows[0]) });
   } catch (error) {
-    return res.status(500).json({ message: 'Lỗi server' });
+    return res.status(500).json({ message: 'Lỗi server.' });
   }
 };
 
@@ -149,9 +153,9 @@ exports.updateProfile = async (req, res) => {
       [ho_ten, so_dien_thoai, dia_chi, req.user.id]
     );
 
-    return res.json({ message: 'Cập nhật thành công' });
+    return res.json({ message: 'Cập nhật thông tin thành công.' });
   } catch (error) {
-    return res.status(500).json({ message: 'Lỗi server' });
+    return res.status(500).json({ message: 'Lỗi server.' });
   }
 };
 
@@ -169,7 +173,7 @@ exports.changePassword = async (req, res) => {
       : oldPassword === mat_khau_cu;
 
     if (!validOldPassword) {
-      return res.status(400).json({ message: 'Mật khẩu cũ không đúng' });
+      return res.status(400).json({ message: 'Mật khẩu cũ không đúng.' });
     }
 
     const hash = await bcrypt.hash(mat_khau_moi, 10);
@@ -178,8 +182,8 @@ exports.changePassword = async (req, res) => {
       [hash, req.user.id]
     );
 
-    return res.json({ message: 'Đổi mật khẩu thành công' });
+    return res.json({ message: 'Đổi mật khẩu thành công.' });
   } catch (error) {
-    return res.status(500).json({ message: 'Lỗi server' });
+    return res.status(500).json({ message: 'Lỗi server.' });
   }
 };

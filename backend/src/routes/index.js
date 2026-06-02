@@ -4,188 +4,162 @@ const db       = require('../config/db');
 const { auth, role } = require('../middlewares/auth');
 const authCtrl = require('../controllers/authController');
 const { parseImages, serializeImages } = require('../utils/images');
+const {
+  createVnpayPaymentUrl,
+  getClientIp,
+  hasVnpayConfig,
+  orderIdFromTxnRef,
+  verifyVnpayParams,
+} = require('../utils/vnpay');
 
-const createWarehouseInvoiceNumber = (type, warehouseId) =>
-  `HD-${type === 'nhap_kho' ? 'NK' : 'XK'}-${warehouseId}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+const addDays = (dateString, days) => {
+  const date = new Date(dateString);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+};
 
-async function syncStockAlert(conn, maKho, maSanPham) {
-  const [[product]] = await conn.query(
-    'SELECT ton_kho, ton_kho_toi_thieu FROM san_pham WHERE ma_san_pham=?',
-    [maSanPham]
+const nextDeliveryDate = (startDate, frequency) => {
+  if (frequency === 'hai_tuan') return addDays(startDate, 14);
+  if (frequency === 'hang_thang') {
+    const date = new Date(startDate);
+    date.setMonth(date.getMonth() + 1);
+    return date.toISOString().slice(0, 10);
+  }
+  return addDays(startDate, 7);
+};
+
+const frontendUrl = path => `${process.env.CLIENT_URL || 'http://localhost:3000'}${path}`;
+
+router.get('/', (req, res) => {
+  res.json({ message: 'Cho Nong San API dang chay.', version: '1.0.0' });
+});
+
+const getCompletedOrderCount = async (conn, buyerId) => {
+  const [[row]] = await conn.query(
+    "SELECT COUNT(*) AS total FROM don_hang WHERE ma_nguoi_mua=? AND trang_thai='da_giao'",
+    [buyerId]
   );
+  return Number(row?.total || 0);
+};
 
-  if (!product) return;
+const calculateOrderPromotion = async (conn, buyerId, subtotal, totalQuantity) => {
+  const safeSubtotal = Number(subtotal || 0);
+  const safeQuantity = Number(totalQuantity || 0);
+  const completedOrders = await getCompletedOrderCount(conn, buyerId);
+  const discounts = [];
 
-  if (Number(product.ton_kho) <= Number(product.ton_kho_toi_thieu || 0)) {
-    await conn.query(
-      `INSERT INTO canh_bao_kho (ma_san_pham, ma_kho, ton_hien_tai, ton_toi_thieu)
-       VALUES (?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE ton_hien_tai=?, ton_toi_thieu=?, da_xu_ly=0`,
-      [
-        maSanPham,
-        maKho,
-        product.ton_kho,
-        product.ton_kho_toi_thieu,
-        product.ton_kho,
-        product.ton_kho_toi_thieu,
-      ]
-    );
-  } else {
-    await conn.query(
-      'UPDATE canh_bao_kho SET ton_hien_tai=?, ton_toi_thieu=?, da_xu_ly=1, ngay_xu_ly=NOW() WHERE ma_san_pham=? AND ma_kho=?',
-      [product.ton_kho, product.ton_kho_toi_thieu, maSanPham, maKho]
-    );
-  }
-}
-
-async function createAutoWarehouseIssueInvoices(conn, orderId, items, actorId) {
-  const allocationsByWarehouse = new Map();
-
-  for (const item of items) {
-    const [stockRows] = await conn.query(
-      'SELECT ma_kho, so_luong, han_su_dung, vi_tri_kho FROM ton_kho WHERE ma_san_pham=? AND so_luong>0 ORDER BY han_su_dung IS NULL, han_su_dung ASC, so_luong DESC, ma_kho ASC',
-      [item.ma_san_pham]
-    );
-
-    let remaining = Number(item.so_luong);
-
-    for (const stockRow of stockRows) {
-      if (remaining <= 0) break;
-
-      const allocated = Math.min(remaining, Number(stockRow.so_luong));
-      remaining -= allocated;
-
-      await conn.query(
-        'UPDATE ton_kho SET so_luong=so_luong-? WHERE ma_kho=? AND ma_san_pham=?',
-        [allocated, stockRow.ma_kho, item.ma_san_pham]
-      );
-
-      if (!allocationsByWarehouse.has(stockRow.ma_kho)) {
-        allocationsByWarehouse.set(stockRow.ma_kho, []);
-      }
-
-      allocationsByWarehouse.get(stockRow.ma_kho).push({
-        ...item,
-        so_luong: allocated,
-        thanh_tien: allocated * Number(item.gia_ban),
-        han_su_dung: stockRow.han_su_dung,
-        vi_tri_kho: stockRow.vi_tri_kho,
-      });
-    }
-
-    if (stockRows.length > 0 && remaining > 0) {
-      throw new Error(`Tá»“n kho trong cÃ¡c kho khÃ´ng Ä‘á»§ cho sáº£n pháº©m "${item.ten_san_pham}"`);
-    }
+  if (safeQuantity >= 10) {
+    discounts.push({
+      code: 'BULK_QUANTITY',
+      label: 'Mua tu 10 san pham',
+      rate: 0.05,
+      amount: Math.round(safeSubtotal * 0.05),
+    });
   }
 
-  for (const [maKho, warehouseItems] of allocationsByWarehouse.entries()) {
-    const tongTien = warehouseItems.reduce((sum, item) => sum + Number(item.thanh_tien || 0), 0);
-    const [invoice] = await conn.query(
-      `INSERT INTO hoa_don
-        (so_hoa_don, loai_hoa_don, ma_kho, ma_nong_dan, ma_don_hang, nguoi_tao, tong_tien, ghi_chu)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  if (completedOrders >= 3) {
+    discounts.push({
+      code: 'LOYAL_CUSTOMER',
+      label: 'Khach hang mua nhieu lan',
+      rate: 0.07,
+      amount: Math.round(safeSubtotal * 0.07),
+    });
+  }
+
+  return {
+    completedOrders,
+    discountAmount: discounts.reduce((sum, discount) => sum + discount.amount, 0),
+    discounts,
+    note: discounts.map(discount => `${discount.label}: ${Math.round(discount.rate * 100)}%`).join('; ') || null,
+  };
+};
+
+const createOrderVnpayPaymentUrl = (req, order) =>
+  createVnpayPaymentUrl({
+    orderId: order.ma_don_hang || order.id,
+    amount: order.tong_thanh_toan,
+    ipAddr: getClientIp(req),
+  });
+
+async function handleVnpayResult(rawParams) {
+  const verification = verifyVnpayParams(rawParams);
+  const params = verification.params;
+  const orderId = orderIdFromTxnRef(params.vnp_TxnRef);
+
+  if (!verification.valid) {
+    return { ok: false, code: '97', orderId, message: 'Chu ky VNPAY khong hop le.' };
+  }
+
+  if (!orderId) {
+    return { ok: false, code: '01', orderId: null, message: 'Ma don hang VNPAY khong hop le.' };
+  }
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [orders] = await conn.query(
+      `SELECT dh.ma_don_hang, dh.tong_thanh_toan, dh.phuong_thuc_tt, dh.trang_thai_tt,
+              tt.trang_thai AS payment_status
+       FROM don_hang dh
+       LEFT JOIN thanh_toan tt ON tt.ma_don_hang = dh.ma_don_hang
+       WHERE dh.ma_don_hang = ?
+       LIMIT 1`,
+      [orderId]
+    );
+    const order = orders[0];
+
+    if (!order || order.phuong_thuc_tt !== 'vnpay') {
+      await conn.rollback();
+      return { ok: false, code: '01', orderId, message: 'Khong tim thay don VNPAY.' };
+    }
+
+    if (Number(params.vnp_Amount) !== Number(order.tong_thanh_toan) * 100) {
+      await conn.rollback();
+      return { ok: false, code: '04', orderId, message: 'So tien VNPAY khong khop.' };
+    }
+
+    const paid = order.trang_thai_tt === 'da_tt' || order.payment_status === 'thanh_cong';
+    const success = params.vnp_ResponseCode === '00' && params.vnp_TransactionStatus === '00';
+    const gatewayData = JSON.stringify(params);
+
+    if (paid) {
+      await conn.commit();
+      return { ok: true, code: '02', orderId, paid: true, message: 'Don hang da thanh toan.' };
+    }
+
+    await conn.query(
+      `UPDATE thanh_toan
+       SET ma_giao_dich = ?,
+           du_lieu_cong = ?,
+           trang_thai = ?,
+           ngay_thanh_toan = ?
+       WHERE ma_don_hang = ? AND phuong_thuc = 'vnpay'`,
       [
-        createWarehouseInvoiceNumber('xuat_kho', maKho),
-        'xuat_kho',
-        maKho,
-        null,
+        params.vnp_TransactionNo && params.vnp_TransactionNo !== '0' ? params.vnp_TransactionNo : null,
+        gatewayData,
+        success ? 'thanh_cong' : 'that_bai',
+        success ? new Date() : null,
         orderId,
-        actorId,
-        tongTien,
-        `Xuáº¥t kho tá»± Ä‘á»™ng tá»« Ä‘Æ¡n hÃ ng #${orderId}`,
       ]
     );
 
-    for (const item of warehouseItems) {
-      await conn.query(
-        `INSERT INTO chi_tiet_hoa_don
-          (ma_hoa_don, ma_san_pham, ten_san_pham, so_luong, don_vi, don_gia, thanh_tien, han_su_dung, vi_tri_kho)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          invoice.insertId,
-          item.ma_san_pham,
-          item.ten_san_pham,
-          item.so_luong,
-          item.don_vi,
-          item.gia_ban,
-          item.thanh_tien,
-          item.han_su_dung || null,
-          item.vi_tri_kho || null,
-        ]
-      );
-
-      const [[currentStock]] = await conn.query(
-        'SELECT so_luong FROM ton_kho WHERE ma_kho=? AND ma_san_pham=?',
-        [maKho, item.ma_san_pham]
-      );
-
-      const tonSau = Number(currentStock?.so_luong || 0);
-      const tonTruoc = tonSau + Number(item.so_luong);
-
-      await conn.query(
-        `INSERT INTO lich_su_kho
-          (ma_kho, ma_san_pham, ma_hoa_don, loai_phieu, so_luong, ton_truoc, ton_sau)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [maKho, item.ma_san_pham, invoice.insertId, 'xuat_kho', item.so_luong, tonTruoc, tonSau]
-      );
-
-      await syncStockAlert(conn, maKho, item.ma_san_pham);
+    if (success) {
+      await conn.query("UPDATE don_hang SET trang_thai_tt='da_tt' WHERE ma_don_hang=?", [orderId]);
     }
 
-    await conn.query(
-      "UPDATE hoa_don SET trang_thai='da_xac_nhan', ngay_xac_nhan=NOW() WHERE ma_hoa_don=?",
-      [invoice.insertId]
-    );
-  }
-}
-
-async function restoreWarehouseStockForOrder(conn, orderId) {
-  const [invoices] = await conn.query(
-    "SELECT * FROM hoa_don WHERE ma_don_hang=? AND loai_hoa_don='xuat_kho' AND trang_thai='da_xac_nhan'",
-    [orderId]
-  );
-
-  for (const invoice of invoices) {
-    const [items] = await conn.query(
-      'SELECT * FROM chi_tiet_hoa_don WHERE ma_hoa_don=?',
-      [invoice.ma_hoa_don]
-    );
-
-    for (const item of items) {
-      const [existing] = await conn.query(
-        'SELECT so_luong FROM ton_kho WHERE ma_kho=? AND ma_san_pham=?',
-        [invoice.ma_kho, item.ma_san_pham]
-      );
-
-      const tonTruoc = Number(existing[0]?.so_luong || 0);
-      const tonSau = tonTruoc + Number(item.so_luong);
-
-      if (!existing.length) {
-        await conn.query(
-          'INSERT INTO ton_kho (ma_kho, ma_san_pham, so_luong, han_su_dung, vi_tri_kho, ngay_nhap_kho) VALUES (?, ?, ?, ?, ?, NOW())',
-          [invoice.ma_kho, item.ma_san_pham, item.so_luong, item.han_su_dung || null, item.vi_tri_kho || null]
-        );
-      } else {
-        await conn.query(
-          'UPDATE ton_kho SET so_luong=?, han_su_dung=COALESCE(?, han_su_dung), vi_tri_kho=COALESCE(?, vi_tri_kho), ngay_nhap_kho=NOW() WHERE ma_kho=? AND ma_san_pham=?',
-          [tonSau, item.han_su_dung || null, item.vi_tri_kho || null, invoice.ma_kho, item.ma_san_pham]
-        );
-      }
-
-      await conn.query(
-        `INSERT INTO lich_su_kho
-          (ma_kho, ma_san_pham, ma_hoa_don, loai_phieu, so_luong, ton_truoc, ton_sau)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [invoice.ma_kho, item.ma_san_pham, invoice.ma_hoa_don, 'nhap_kho', item.so_luong, tonTruoc, tonSau]
-      );
-
-      await syncStockAlert(conn, invoice.ma_kho, item.ma_san_pham);
-    }
-
-    await conn.query(
-      "UPDATE hoa_don SET trang_thai='da_huy', ghi_chu=CONCAT(COALESCE(ghi_chu, ''), ?) WHERE ma_hoa_don=?",
-      [` | HoÃ n kho do há»§y Ä‘Æ¡n #${orderId}`, invoice.ma_hoa_don]
-    );
+    await conn.commit();
+    return {
+      ok: success,
+      code: success ? '00' : params.vnp_ResponseCode || '99',
+      orderId,
+      paid: success,
+      message: success ? 'Thanh toan VNPAY thanh cong.' : 'VNPAY chua xac nhan thanh toan.',
+    };
+  } catch (error) {
+    await conn.rollback();
+    throw error;
+  } finally {
+    conn.release();
   }
 }
 
@@ -215,20 +189,44 @@ router.get('/categories', async (req, res) => {
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 router.get('/products', async (req, res) => {
   try {
-    const { q, category, sort = 'moi_nhat', page = 1, limit = 12, min_price, max_price, province, in_stock } = req.query;
+    const {
+      q,
+      category,
+      sort = 'moi_nhat',
+      page = 1,
+      limit = 12,
+      min_price,
+      max_price,
+      province,
+      in_stock,
+    } = req.query;
     const offset = (page - 1) * limit;
     const params = [];
-    let where = 'WHERE sp.con_hoat_dong = 1 AND tk.con_hoat_dong = 1';
+    let where = 'WHERE sp.con_hoat_dong = 1';
 
     if (q) {
       where += ' AND (sp.ten_san_pham LIKE ? OR sp.mo_ta LIKE ?)';
       params.push(`%${q}%`, `%${q}%`);
     }
-    if (category) { where += ' AND sp.ma_danh_muc = ?'; params.push(category); }
-    if (min_price !== undefined && min_price !== '') { where += ' AND sp.gia_ban >= ?'; params.push(Number(min_price)); }
-    if (max_price !== undefined && max_price !== '') { where += ' AND sp.gia_ban <= ?'; params.push(Number(max_price)); }
-    if (province) { where += ' AND nd.tinh_thanh = ?'; params.push(province); }
-    if (String(in_stock) === '1') { where += ' AND sp.ton_kho > 0'; }
+    if (category) {
+      where += ' AND sp.ma_danh_muc = ?';
+      params.push(category);
+    }
+    if (min_price !== undefined && min_price !== '') {
+      where += ' AND sp.gia_ban >= ?';
+      params.push(Number(min_price));
+    }
+    if (max_price !== undefined && max_price !== '') {
+      where += ' AND sp.gia_ban <= ?';
+      params.push(Number(max_price));
+    }
+    if (province) {
+      where += ' AND nd.tinh_thanh = ?';
+      params.push(province);
+    }
+    if (String(in_stock) === '1') {
+      where += ' AND sp.ton_kho > 0';
+    }
 
     const ordMap = {
       moi_nhat: 'sp.ngay_tao DESC',
@@ -241,112 +239,179 @@ router.get('/products', async (req, res) => {
 
     const sql = `
       SELECT sp.ma_san_pham, sp.ten_san_pham, sp.gia_ban, sp.don_vi,
-             sp.ton_kho, sp.ton_kho_toi_thieu, sp.so_luong_ban,
+             sp.ton_kho, sp.so_luong_ban,
              sp.diem_danh_gia, sp.tong_danh_gia, sp.hinh_anh, sp.con_hoat_dong,
-             nd.ma_nong_dan, nd.ten_nong_trai, nd.tinh_thanh,
-             tk.ho_ten AS ten_nong_dan,
+             sp.ma_nong_dan,
+             COALESCE(nd.ten_nong_trai, 'Cửa hàng Nông Sản Việt') AS ten_nong_trai,
+             nd.tinh_thanh,
+             COALESCE(tk.ho_ten, 'Quản trị viên') AS ten_nong_dan,
              dm.ten_danh_muc, dm.bieu_tuong
       FROM san_pham sp
-      JOIN nong_dan  nd ON nd.ma_nong_dan  = sp.ma_nong_dan
-      JOIN tai_khoan tk ON tk.ma_tai_khoan = nd.ma_tai_khoan
-      JOIN danh_muc  dm ON dm.ma_danh_muc  = sp.ma_danh_muc
+      LEFT JOIN nong_dan nd ON nd.ma_nong_dan = sp.ma_nong_dan
+      LEFT JOIN tai_khoan tk ON tk.ma_tai_khoan = nd.ma_tai_khoan
+      JOIN danh_muc dm ON dm.ma_danh_muc = sp.ma_danh_muc
       ${where}
       ORDER BY ${ord}
       LIMIT ? OFFSET ?
     `;
     const [products] = await db.query(sql, [...params, +limit, +offset]);
     const [[{ total }]] = await db.query(
-      `SELECT COUNT(*) AS total FROM san_pham sp
-       JOIN nong_dan nd ON nd.ma_nong_dan=sp.ma_nong_dan
-       JOIN tai_khoan tk ON tk.ma_tai_khoan=nd.ma_tai_khoan
-       ${where}`, params
+      `SELECT COUNT(*) AS total
+       FROM san_pham sp
+       LEFT JOIN nong_dan nd ON nd.ma_nong_dan = sp.ma_nong_dan
+       LEFT JOIN tai_khoan tk ON tk.ma_tai_khoan = nd.ma_tai_khoan
+       ${where}`,
+      params
     );
 
-    products.forEach(p => {
-      p.images = parseImages(p.hinh_anh);
+    products.forEach(product => {
+      product.images = parseImages(product.hinh_anh);
     });
 
     res.json({ products, total, page: +page, limit: +limit });
-  } catch (e) { console.error(e); res.status(500).json({ message: e.message }); }
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: e.message });
+  }
 });
 
 router.get('/products/:id', async (req, res) => {
   try {
-    const [rows] = await db.query(`
+    const [rows] = await db.query(
+      `
       SELECT sp.*,
-             nd.ten_nong_trai, nd.tinh_thanh, nd.gioi_thieu, nd.da_xac_minh,
-             tk.ho_ten AS ten_nong_dan, tk.so_dien_thoai AS sdt_nd,
+             COALESCE(nd.ten_nong_trai, 'Cửa hàng Nông Sản Việt') AS ten_nong_trai,
+             nd.tinh_thanh,
+             COALESCE(nd.gioi_thieu, 'Sản phẩm được quản lý tập trung bởi quản trị viên để đảm bảo thông tin nhất quán và nguồn hàng rõ ràng.') AS gioi_thieu,
+             COALESCE(nd.da_xac_minh, 1) AS da_xac_minh,
+             COALESCE(tk.ho_ten, 'Quản trị viên') AS ten_nong_dan,
+             COALESCE(tk.so_dien_thoai, '') AS sdt_nd,
              dm.ten_danh_muc, dm.bieu_tuong
       FROM san_pham sp
-      JOIN nong_dan  nd ON nd.ma_nong_dan  = sp.ma_nong_dan
-      JOIN tai_khoan tk ON tk.ma_tai_khoan = nd.ma_tai_khoan
-      JOIN danh_muc  dm ON dm.ma_danh_muc  = sp.ma_danh_muc
+      LEFT JOIN nong_dan nd ON nd.ma_nong_dan = sp.ma_nong_dan
+      LEFT JOIN tai_khoan tk ON tk.ma_tai_khoan = nd.ma_tai_khoan
+      JOIN danh_muc dm ON dm.ma_danh_muc = sp.ma_danh_muc
       WHERE sp.ma_san_pham = ? AND sp.con_hoat_dong = 1
-    `, [req.params.id]);
-
-    if (!rows.length) return res.status(404).json({ message: 'KhÃ´ng tÃ¬m tháº¥y sáº£n pháº©m' });
-    const p = rows[0];
-    p.images = parseImages(p.hinh_anh);
-    res.json({ product: p });
-  } catch (e) { res.status(500).json({ message: e.message }); }
-});
-
-router.post('/products', auth, role('farmer'), async (req, res) => {
-  try {
-    const { ten_san_pham, mo_ta, gia_ban, don_vi, ton_kho = 0, ma_danh_muc, hinh_anh = [], ton_kho_toi_thieu = 10 } = req.body;
-    const [f] = await db.query('SELECT ma_nong_dan FROM nong_dan WHERE ma_tai_khoan=?', [req.user.id]);
-    if (!f.length) return res.status(403).json({ message: 'Báº¡n chÆ°a cÃ³ há»“ sÆ¡ nÃ´ng dÃ¢n' });
-    const slug = ten_san_pham.toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[Ä‘Ä]/g, 'd').replace(/\s+/g, '-')
-      .replace(/[^a-z0-9-]/g, '') + '-' + Date.now();
-    const [r] = await db.query(
-      'INSERT INTO san_pham (ma_nong_dan,ma_danh_muc,ten_san_pham,duong_dan,mo_ta,gia_ban,don_vi,ton_kho,ton_kho_toi_thieu,hinh_anh) VALUES (?,?,?,?,?,?,?,?,?,?)',
-      [f[0].ma_nong_dan, ma_danh_muc, ten_san_pham, slug, mo_ta, gia_ban, don_vi, ton_kho, ton_kho_toi_thieu, serializeImages(hinh_anh)]
+    `,
+      [req.params.id]
     );
-    res.status(201).json({ message: 'Táº¡o sáº£n pháº©m thÃ nh cÃ´ng', ma_san_pham: r.insertId });
-  } catch (e) { res.status(500).json({ message: e.message }); }
+
+    if (!rows.length) {
+      return res.status(404).json({ message: 'Không tìm thấy sản phẩm.' });
+    }
+
+    const product = rows[0];
+    product.images = parseImages(product.hinh_anh);
+    res.json({ product });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
 });
 
-router.put('/products/:id', auth, role('farmer'), async (req, res) => {
+router.get('/admin/products', auth, role('admin'), async (req, res) => {
   try {
-    const { ten_san_pham, mo_ta, gia_ban, don_vi, ton_kho, ma_danh_muc, hinh_anh = [], ton_kho_toi_thieu } = req.body;
+    const { q = '' } = req.query;
+    const params = [];
+    let where = 'WHERE 1=1';
+
+    if (q) {
+      where += ' AND (sp.ten_san_pham LIKE ? OR sp.mo_ta LIKE ?)';
+      params.push(`%${q}%`, `%${q}%`);
+    }
+
+    const [products] = await db.query(
+      `
+      SELECT sp.*,
+             dm.ten_danh_muc,
+             dm.bieu_tuong,
+             COALESCE(nd.ten_nong_trai, 'Cửa hàng Nông Sản Việt') AS ten_nong_trai,
+             COALESCE(tk.ho_ten, 'Quản trị viên') AS ten_nong_dan
+      FROM san_pham sp
+      LEFT JOIN danh_muc dm ON dm.ma_danh_muc = sp.ma_danh_muc
+      LEFT JOIN nong_dan nd ON nd.ma_nong_dan = sp.ma_nong_dan
+      LEFT JOIN tai_khoan tk ON tk.ma_tai_khoan = nd.ma_tai_khoan
+      ${where}
+      ORDER BY sp.ngay_tao DESC
+    `,
+      params
+    );
+
+    res.json({
+      products: products.map(product => ({
+        ...product,
+        images: parseImages(product.hinh_anh),
+      })),
+    });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+router.post('/products', auth, role('admin'), async (req, res) => {
+  try {
+    const {
+      ten_san_pham,
+      mo_ta,
+      gia_ban,
+      don_vi,
+      ton_kho = 0,
+      ma_danh_muc,
+      hinh_anh = [],
+    } = req.body;
+    const slug = ten_san_pham
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[đĐ]/g, 'd')
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '') + `-${Date.now()}`;
+
+    const [result] = await db.query(
+      `INSERT INTO san_pham
+        (ma_nong_dan, ma_danh_muc, ten_san_pham, duong_dan, mo_ta, gia_ban, don_vi, ton_kho, hinh_anh)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [null, ma_danh_muc, ten_san_pham, slug, mo_ta, gia_ban, don_vi, ton_kho, serializeImages(hinh_anh)]
+    );
+
+    res.status(201).json({ message: 'Tạo sản phẩm thành công.', ma_san_pham: result.insertId });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+router.put('/products/:id', auth, role('admin'), async (req, res) => {
+  try {
+    const {
+      ten_san_pham,
+      mo_ta,
+      gia_ban,
+      don_vi,
+      ton_kho,
+      ma_danh_muc,
+      hinh_anh = [],
+    } = req.body;
+
     await db.query(
-      'UPDATE san_pham SET ten_san_pham=?,mo_ta=?,gia_ban=?,don_vi=?,ton_kho=?,ma_danh_muc=?,hinh_anh=?,ton_kho_toi_thieu=? WHERE ma_san_pham=?',
-      [ten_san_pham, mo_ta, gia_ban, don_vi, ton_kho, ma_danh_muc, serializeImages(hinh_anh), ton_kho_toi_thieu, req.params.id]
+      `UPDATE san_pham
+       SET ten_san_pham=?, mo_ta=?, gia_ban=?, don_vi=?, ton_kho=?, ma_danh_muc=?, hinh_anh=?
+       WHERE ma_san_pham=?`,
+      [ten_san_pham, mo_ta, gia_ban, don_vi, ton_kho, ma_danh_muc, serializeImages(hinh_anh), req.params.id]
     );
-    res.json({ message: 'Cáº­p nháº­t thÃ nh cÃ´ng' });
-  } catch (e) { res.status(500).json({ message: e.message }); }
+
+    res.json({ message: 'Cập nhật sản phẩm thành công.' });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
 });
 
-router.patch('/products/:id/toggle', auth, role('farmer', 'admin'), async (req, res) => {
-  await db.query('UPDATE san_pham SET con_hoat_dong=NOT con_hoat_dong WHERE ma_san_pham=?', [req.params.id]);
-  res.json({ message: 'Cáº­p nháº­t thÃ nh cÃ´ng' });
+router.patch('/products/:id/toggle', auth, role('admin'), async (req, res) => {
+  await db.query('UPDATE san_pham SET con_hoat_dong = NOT con_hoat_dong WHERE ma_san_pham = ?', [req.params.id]);
+  res.json({ message: 'Đã cập nhật trạng thái sản phẩm.' });
 });
 
-router.delete('/products/:id', auth, role('farmer', 'admin'), async (req, res) => {
-  await db.query('DELETE FROM san_pham WHERE ma_san_pham=?', [req.params.id]);
-  res.json({ message: 'XoÃ¡ thÃ nh cÃ´ng' });
-});
-
-router.get('/farmer/products', auth, role('farmer'), async (req, res) => {
-  const [f] = await db.query('SELECT ma_nong_dan FROM nong_dan WHERE ma_tai_khoan=?', [req.user.id]);
-  if (!f.length) return res.json({ products: [] });
-  const [products] = await db.query(
-    'SELECT sp.*,dm.ten_danh_muc FROM san_pham sp JOIN danh_muc dm ON dm.ma_danh_muc=sp.ma_danh_muc WHERE sp.ma_nong_dan=? ORDER BY sp.ngay_tao DESC',
-    [f[0].ma_nong_dan]
-  );
-  products.forEach(p => { p.images = parseImages(p.hinh_anh); });
-  res.json({ products });
-});
-
-router.get('/farmer/products/low-stock', auth, role('farmer', 'admin'), async (req, res) => {
-  const [f] = await db.query('SELECT ma_nong_dan FROM nong_dan WHERE ma_tai_khoan=?', [req.user.id]);
-  const [products] = await db.query(
-    'SELECT * FROM san_pham WHERE ma_nong_dan=? AND ton_kho<=ton_kho_toi_thieu AND con_hoat_dong=1',
-    [f[0]?.ma_nong_dan]
-  );
-  res.json({ products });
+router.delete('/products/:id', auth, role('admin'), async (req, res) => {
+  await db.query('DELETE FROM san_pham WHERE ma_san_pham = ?', [req.params.id]);
+  res.json({ message: 'Đã xóa sản phẩm.' });
 });
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -358,10 +423,11 @@ router.get('/cart', auth, role('buyer'), async (req, res) => {
       SELECT gh.ma_san_pham AS product_id, gh.so_luong AS quantity,
              sp.ten_san_pham AS name, sp.gia_ban AS price,
              sp.don_vi AS unit, sp.hinh_anh AS images_raw,
-             sp.ton_kho AS stock, nd.ten_nong_trai AS farm_name
+             sp.ton_kho AS stock,
+             COALESCE(nd.ten_nong_trai, 'Cửa hàng Nông Sản Việt') AS farm_name
       FROM gio_hang gh
       JOIN san_pham sp ON sp.ma_san_pham = gh.ma_san_pham
-      JOIN nong_dan  nd ON nd.ma_nong_dan  = sp.ma_nong_dan
+      LEFT JOIN nong_dan nd ON nd.ma_nong_dan = sp.ma_nong_dan
       WHERE gh.ma_tai_khoan = ?
     `, [req.user.id]);
 
@@ -373,7 +439,23 @@ router.get('/cart', auth, role('buyer'), async (req, res) => {
         product: { id: i.product_id, name: i.name, price: i.price, unit: i.unit, images, stock: i.stock, farm_name: i.farm_name },
       };
     });
-    res.json({ cart });
+    const subtotal = cart.reduce((sum, item) => sum + Number(item.quantity) * Number(item.product?.price || 0), 0);
+    const totalQuantity = cart.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+    const promotion = await calculateOrderPromotion(db, req.user.id, subtotal, totalQuantity);
+    const shipping = subtotal > 500000 ? 0 : 30000;
+
+    res.json({
+      cart,
+      summary: {
+        subtotal,
+        totalQuantity,
+        shipping,
+        discountAmount: promotion.discountAmount,
+        discounts: promotion.discounts,
+        completedOrders: promotion.completedOrders,
+        total: Math.max(0, subtotal - promotion.discountAmount) + shipping,
+      },
+    });
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
@@ -411,10 +493,18 @@ router.delete('/cart', auth, role('buyer'), async (req, res) => {
 // ÄÆ N HÃ€NG
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 router.post('/orders', auth, role('buyer'), async (req, res) => {
+  const { phuong_thuc_tt = 'tien_mat' } = req.body;
+  if (!['tien_mat', 'vnpay'].includes(phuong_thuc_tt)) {
+    return res.status(400).json({ message: 'Phuong thuc thanh toan khong hop le' });
+  }
+  if (phuong_thuc_tt === 'vnpay' && !hasVnpayConfig()) {
+    return res.status(503).json({ message: 'Chua cau hinh tai khoan VNPAY cho website.' });
+  }
+
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
-    const { dia_chi_giao, ghi_chu, phuong_thuc_tt = 'tien_mat' } = req.body;
+    const { dia_chi_giao, ghi_chu } = req.body;
     if (!dia_chi_giao) return res.status(400).json({ message: 'Vui lÃ²ng nháº­p Ä‘á»‹a chá»‰ giao hÃ ng' });
 
     const [cart] = await conn.query(`
@@ -430,12 +520,15 @@ router.post('/orders', auth, role('buyer'), async (req, res) => {
         return res.status(400).json({ message: `"${i.ten_san_pham}" khÃ´ng Ä‘á»§ hÃ ng` });
 
     const tong_tien_hang  = cart.reduce((s, i) => s + i.gia_ban * i.so_luong, 0);
+    const tong_so_luong = cart.reduce((s, i) => s + Number(i.so_luong || 0), 0);
+    const promotion = await calculateOrderPromotion(conn, req.user.id, tong_tien_hang, tong_so_luong);
+    const giam_gia = promotion.discountAmount;
     const phi_van_chuyen  = tong_tien_hang > 500000 ? 0 : 30000;
-    const tong_thanh_toan = tong_tien_hang + phi_van_chuyen;
+    const tong_thanh_toan = Math.max(0, tong_tien_hang - giam_gia) + phi_van_chuyen;
 
     const [dh] = await conn.query(
-      'INSERT INTO don_hang (ma_nguoi_mua,tong_tien_hang,phi_van_chuyen,tong_thanh_toan,dia_chi_giao,ghi_chu,phuong_thuc_tt) VALUES (?,?,?,?,?,?,?)',
-      [req.user.id, tong_tien_hang, phi_van_chuyen, tong_thanh_toan, dia_chi_giao, ghi_chu || null, phuong_thuc_tt]
+      'INSERT INTO don_hang (ma_nguoi_mua,tong_tien_hang,phi_van_chuyen,giam_gia,tong_thanh_toan,dia_chi_giao,ghi_chu,phuong_thuc_tt,loai_don,ghi_chu_khuyen_mai) VALUES (?,?,?,?,?,?,?,?,?,?)',
+      [req.user.id, tong_tien_hang, phi_van_chuyen, giam_gia, tong_thanh_toan, dia_chi_giao, ghi_chu || null, phuong_thuc_tt, 'thuong', promotion.note]
     );
     const ma_don = dh.insertId;
 
@@ -452,15 +545,206 @@ router.post('/orders', auth, role('buyer'), async (req, res) => {
     await conn.query('DELETE FROM gio_hang WHERE ma_tai_khoan=?', [req.user.id]);
     await conn.query('INSERT INTO thanh_toan (ma_don_hang,phuong_thuc,so_tien) VALUES (?,?,?)',
       [ma_don, phuong_thuc_tt, tong_thanh_toan]);
-    await createAutoWarehouseIssueInvoices(conn, ma_don, cart, req.user.id);
-
     await conn.commit();
-    res.status(201).json({ message: 'Äáº·t hÃ ng thÃ nh cÃ´ng!', order: { id: ma_don, tong_thanh_toan } });
+    const order = { id: ma_don, tong_thanh_toan, giam_gia, khuyen_mai: promotion.discounts };
+    const payment_url = phuong_thuc_tt === 'vnpay' ? createOrderVnpayPaymentUrl(req, order) : null;
+    res.status(201).json({ message: 'Äáº·t hÃ ng thÃ nh cÃ´ng!', order, payment_url });
   } catch (e) {
     await conn.rollback();
     console.error(e);
     res.status(500).json({ message: e.message });
   } finally { conn.release(); }
+});
+
+router.get('/payments/vnpay/return', async (req, res) => {
+  try {
+    const result = await handleVnpayResult(req.query);
+    if (!result.orderId) {
+      return res.redirect(frontendUrl('/orders?vnpay=invalid'));
+    }
+
+    const paymentResult = result.paid ? 'success' : 'failed';
+    res.redirect(frontendUrl(`/orders/${result.orderId}?vnpay=${paymentResult}&code=${result.code}`));
+  } catch (error) {
+    console.error(error);
+    res.redirect(frontendUrl('/orders?vnpay=error'));
+  }
+});
+
+router.get('/payments/vnpay/ipn', async (req, res) => {
+  try {
+    const result = await handleVnpayResult(req.query);
+    res.json({ RspCode: result.code, Message: result.message });
+  } catch (error) {
+    console.error(error);
+    res.json({ RspCode: '99', Message: 'Loi cap nhat ket qua VNPAY.' });
+  }
+});
+
+router.post('/orders/preorder', auth, role('buyer'), async (req, res) => {
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+    const {
+      product_id,
+      quantity = 1,
+      dia_chi_giao,
+      ghi_chu,
+      phuong_thuc_tt = 'tien_mat',
+      ngay_giao_du_kien,
+    } = req.body;
+
+    if (!product_id || Number(quantity) <= 0) {
+      return res.status(400).json({ message: 'Thông tin đặt trước chưa hợp lệ' });
+    }
+
+    if (!dia_chi_giao?.trim()) {
+      return res.status(400).json({ message: 'Vui lòng nhập địa chỉ giao hàng' });
+    }
+
+    if (!ngay_giao_du_kien) {
+      return res.status(400).json({ message: 'Vui lòng chọn ngày giao dự kiến' });
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    if (ngay_giao_du_kien <= today) {
+      return res.status(400).json({ message: 'Ngày giao dự kiến phải sau ngày hiện tại' });
+    }
+
+    const [products] = await conn.query(
+      `SELECT sp.ma_san_pham, sp.ten_san_pham, sp.gia_ban, sp.don_vi, sp.hinh_anh, sp.ma_nong_dan
+       FROM san_pham sp
+       WHERE sp.ma_san_pham=? AND sp.con_hoat_dong=1`,
+      [product_id]
+    );
+
+    if (!products.length) {
+      return res.status(404).json({ message: 'Không tìm thấy sản phẩm để đặt trước' });
+    }
+
+    const product = products[0];
+    const qty = Number(quantity);
+    const tong_tien_hang = Number(product.gia_ban) * qty;
+    const promotion = await calculateOrderPromotion(conn, req.user.id, tong_tien_hang, qty);
+    const giam_gia = promotion.discountAmount;
+    const phi_van_chuyen = tong_tien_hang > 500000 ? 0 : 30000;
+    const tong_thanh_toan = Math.max(0, tong_tien_hang - giam_gia) + phi_van_chuyen;
+
+    const [dh] = await conn.query(
+      `INSERT INTO don_hang
+        (ma_nguoi_mua,tong_tien_hang,phi_van_chuyen,giam_gia,tong_thanh_toan,dia_chi_giao,ghi_chu,phuong_thuc_tt,loai_don,ngay_giao_du_kien,ghi_chu_he_thong,ghi_chu_khuyen_mai)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [
+        req.user.id,
+        tong_tien_hang,
+        phi_van_chuyen,
+        giam_gia,
+        tong_thanh_toan,
+        dia_chi_giao.trim(),
+        ghi_chu || null,
+        phuong_thuc_tt,
+        'dat_truoc',
+        ngay_giao_du_kien,
+        `Đơn đặt trước cho ngày ${ngay_giao_du_kien}`,
+        promotion.note,
+      ]
+    );
+
+    const img = parseImages(product.hinh_anh);
+    await conn.query(
+      `INSERT INTO chi_tiet_don_hang
+        (ma_don_hang,ma_san_pham,ma_nong_dan,ten_san_pham,hinh_san_pham,don_vi,so_luong,gia_tai_thoi_diem,thanh_tien)
+       VALUES (?,?,?,?,?,?,?,?,?)`,
+      [dh.insertId, product.ma_san_pham, product.ma_nong_dan, product.ten_san_pham, img[0] || null, product.don_vi, qty, product.gia_ban, tong_tien_hang]
+    );
+
+    await conn.query(
+      'INSERT INTO thanh_toan (ma_don_hang,phuong_thuc,so_tien) VALUES (?,?,?)',
+      [dh.insertId, phuong_thuc_tt, tong_thanh_toan]
+    );
+
+    await conn.commit();
+    res.status(201).json({
+      message: 'Đặt trước thành công',
+      order: { id: dh.insertId, tong_thanh_toan, giam_gia, khuyen_mai: promotion.discounts, loai_don: 'dat_truoc' },
+    });
+  } catch (e) {
+    await conn.rollback();
+    res.status(500).json({ message: e.message });
+  } finally {
+    conn.release();
+  }
+});
+
+router.post('/subscriptions', auth, role('buyer'), async (req, res) => {
+  try {
+    const {
+      product_id,
+      quantity = 1,
+      dia_chi_giao,
+      ghi_chu,
+      phuong_thuc_tt = 'tien_mat',
+      ngay_bat_dau,
+      tan_suat_giao = 'hang_tuan',
+      so_ky_giao = 4,
+    } = req.body;
+
+    if (!product_id || Number(quantity) <= 0) {
+      return res.status(400).json({ message: 'Thông tin đăng ký chưa hợp lệ' });
+    }
+
+    if (!dia_chi_giao?.trim() || !ngay_bat_dau) {
+      return res.status(400).json({ message: 'Vui lòng nhập đủ địa chỉ và ngày bắt đầu' });
+    }
+
+    const validFrequencies = ['hang_tuan', 'hai_tuan', 'hang_thang'];
+    if (!validFrequencies.includes(tan_suat_giao)) {
+      return res.status(400).json({ message: 'Tần suất giao không hợp lệ' });
+    }
+
+    const [products] = await db.query(
+      `SELECT ma_san_pham, ten_san_pham, gia_ban, don_vi, ma_nong_dan
+       FROM san_pham
+       WHERE ma_san_pham=? AND con_hoat_dong=1`,
+      [product_id]
+    );
+
+    if (!products.length) {
+      return res.status(404).json({ message: 'Không tìm thấy sản phẩm để đăng ký giao định kỳ' });
+    }
+
+    const product = products[0];
+    const qty = Number(quantity);
+    const cycles = Math.max(2, Number(so_ky_giao || 4));
+
+    const [result] = await db.query(
+      `INSERT INTO dang_ky_giao_dinh_ky
+        (ma_nguoi_mua,ma_san_pham,ma_nong_dan,so_luong,don_vi,gia_tam_tinh,tan_suat_giao,so_ky_giao,ngay_bat_dau,ngay_giao_tiep_theo,dia_chi_giao,phuong_thuc_tt,ghi_chu)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [
+        req.user.id,
+        product.ma_san_pham,
+        product.ma_nong_dan,
+        qty,
+        product.don_vi,
+        Number(product.gia_ban),
+        tan_suat_giao,
+        cycles,
+        ngay_bat_dau,
+        ngay_bat_dau,
+        dia_chi_giao.trim(),
+        phuong_thuc_tt,
+        ghi_chu || null,
+      ]
+    );
+
+    res.status(201).json({
+      message: 'Đăng ký giao định kỳ thành công',
+      subscription: { id: result.insertId, next_delivery_date: ngay_bat_dau },
+    });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
 });
 
 router.get('/orders', auth, role('buyer'), async (req, res) => {
@@ -470,14 +754,80 @@ router.get('/orders', auth, role('buyer'), async (req, res) => {
   res.json({ orders });
 });
 
+router.post('/orders/:id/vnpay-payment', auth, role('buyer'), async (req, res) => {
+  if (!hasVnpayConfig()) {
+    return res.status(503).json({ message: 'Chua cau hinh tai khoan VNPAY cho website.' });
+  }
+
+  const [orders] = await db.query(
+    `SELECT ma_don_hang, tong_thanh_toan, phuong_thuc_tt, trang_thai_tt, trang_thai
+     FROM don_hang
+     WHERE ma_don_hang=? AND ma_nguoi_mua=?
+     LIMIT 1`,
+    [req.params.id, req.user.id]
+  );
+  const order = orders[0];
+
+  if (!order || order.phuong_thuc_tt !== 'vnpay') {
+    return res.status(404).json({ message: 'Khong tim thay don hang thanh toan VNPAY.' });
+  }
+  if (order.trang_thai === 'da_huy') {
+    return res.status(400).json({ message: 'Don hang da huy khong the thanh toan.' });
+  }
+  if (order.trang_thai_tt === 'da_tt') {
+    return res.status(400).json({ message: 'Don hang da duoc thanh toan.' });
+  }
+
+  res.json({ payment_url: createOrderVnpayPaymentUrl(req, order) });
+});
+
+router.get('/subscriptions', auth, role('buyer'), async (req, res) => {
+  const [subscriptions] = await db.query(
+    `SELECT dk.*, sp.ten_san_pham, sp.hinh_anh,
+            COALESCE(nd.ten_nong_trai, 'Cửa hàng Nông Sản Việt') AS ten_nong_trai
+     FROM dang_ky_giao_dinh_ky dk
+     JOIN san_pham sp ON sp.ma_san_pham = dk.ma_san_pham
+     LEFT JOIN nong_dan nd ON nd.ma_nong_dan = dk.ma_nong_dan
+     WHERE dk.ma_nguoi_mua=?
+     ORDER BY dk.ngay_tao DESC`,
+    [req.user.id]
+  );
+  subscriptions.forEach(item => {
+    item.images = parseImages(item.hinh_anh);
+  });
+  res.json({ subscriptions });
+});
+
+router.patch('/subscriptions/:id/cancel', auth, role('buyer'), async (req, res) => {
+  const [result] = await db.query(
+    `UPDATE dang_ky_giao_dinh_ky
+     SET trang_thai='da_huy'
+     WHERE ma_dang_ky=? AND ma_nguoi_mua=? AND trang_thai IN ('dang_hoat_dong','tam_dung')`,
+    [req.params.id, req.user.id]
+  );
+  if (!result.affectedRows) {
+    return res.status(404).json({ message: 'Không tìm thấy đăng ký phù hợp để hủy' });
+  }
+  res.json({ message: 'Đã hủy đăng ký giao định kỳ' });
+});
+
 router.get('/orders/:id', auth, async (req, res) => {
   const [orders] = await db.query(
-    'SELECT dh.*,tk.ho_ten AS ten_nguoi_mua,tk.so_dien_thoai FROM don_hang dh JOIN tai_khoan tk ON tk.ma_tai_khoan=dh.ma_nguoi_mua WHERE dh.ma_don_hang=?',
+    `SELECT dh.*, tk.ho_ten AS ten_nguoi_mua, tk.so_dien_thoai
+     FROM don_hang dh
+     JOIN tai_khoan tk ON tk.ma_tai_khoan = dh.ma_nguoi_mua
+     WHERE dh.ma_don_hang = ?`,
     [req.params.id]
   );
-  if (!orders.length) return res.status(404).json({ message: 'KhÃ´ng tÃ¬m tháº¥y Ä‘Æ¡n hÃ ng' });
+  if (!orders.length) return res.status(404).json({ message: 'Không tìm thấy đơn hàng.' });
+  const order = orders[0];
+  const isOwner = String(order.ma_nguoi_mua) === String(req.user.id);
+  const isAdmin = req.user.vai_tro === 'quan_tri';
+  if (!isOwner && !isAdmin) {
+    return res.status(403).json({ message: 'Bạn không có quyền xem đơn hàng này.' });
+  }
   const [items] = await db.query('SELECT * FROM chi_tiet_don_hang WHERE ma_don_hang=?', [req.params.id]);
-  res.json({ order: orders[0], items });
+  res.json({ order, items });
 });
 
 router.patch('/orders/:id/cancel', auth, role('buyer'), async (req, res) => {
@@ -493,7 +843,6 @@ router.patch('/orders/:id/cancel', auth, role('buyer'), async (req, res) => {
     for (const i of items) {
       await conn.query('UPDATE san_pham SET ton_kho=ton_kho+? WHERE ma_san_pham=?', [i.so_luong, i.ma_san_pham]);
     }
-    await restoreWarehouseStockForOrder(conn, req.params.id);
     await conn.commit();
     res.json({ message: 'Huy don thanh cong' });
   } catch (e) {
@@ -504,19 +853,15 @@ router.patch('/orders/:id/cancel', auth, role('buyer'), async (req, res) => {
   }
 });
 
-router.get('/farmer/orders', auth, role('farmer'), async (req, res) => {
-  const [f] = await db.query('SELECT ma_nong_dan FROM nong_dan WHERE ma_tai_khoan=?', [req.user.id]);
-  const [orders] = await db.query(`
-    SELECT DISTINCT dh.*,tk.ho_ten AS ten_nguoi_mua,tk.so_dien_thoai
-    FROM don_hang dh
-    JOIN chi_tiet_don_hang ct ON ct.ma_don_hang=dh.ma_don_hang
-    JOIN tai_khoan tk ON tk.ma_tai_khoan=dh.ma_nguoi_mua
-    WHERE ct.ma_nong_dan=? ORDER BY dh.ngay_tao DESC
-  `, [f[0]?.ma_nong_dan]);
-  res.json({ orders });
+router.get('/farmer/orders', auth, async (req, res) => {
+  res.status(410).json({ message: 'Chức năng nông dân đã được gỡ khỏi hệ thống.' });
 });
 
-router.patch('/orders/:id/status', auth, role('farmer', 'admin'), async (req, res) => {
+router.get('/farmer/subscriptions', auth, async (req, res) => {
+  res.status(410).json({ message: 'Chức năng nông dân đã được gỡ khỏi hệ thống.' });
+});
+
+router.patch('/orders/:id/status', auth, role('admin'), async (req, res) => {
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
@@ -532,7 +877,6 @@ router.patch('/orders/:id/status', auth, role('farmer', 'admin'), async (req, re
       for (const item of items) {
         await conn.query('UPDATE san_pham SET ton_kho=ton_kho+? WHERE ma_san_pham=?', [item.so_luong, item.ma_san_pham]);
       }
-      await restoreWarehouseStockForOrder(conn, req.params.id);
     }
     if (trang_thai === 'da_giao') {
       await conn.query("UPDATE thanh_toan SET trang_thai='thanh_cong',ngay_thanh_toan=NOW() WHERE ma_don_hang=? AND phuong_thuc='tien_mat'", [req.params.id]);
@@ -573,300 +917,44 @@ router.post('/reviews', auth, role('buyer'), async (req, res) => {
 });
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// KHO HÃ€NG
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-router.get('/warehouses', auth, role('admin'), async (req, res) => {
-  const [w] = await db.query('SELECT kh.*,tk.ho_ten AS ten_quan_ly FROM kho_hang kh JOIN tai_khoan tk ON tk.ma_tai_khoan=kh.ma_quan_ly WHERE kh.con_hoat_dong=1');
-  res.json({ warehouses: w });
-});
-
-const getWarehouseLocationByLabel = async (warehouseId, label, conn = db) => {
-  if (!label) return null;
-  const [rows] = await conn.query(
-    `SELECT ma_vi_tri, ma_vi_tri_code, ten_vi_tri
-     FROM vi_tri_kho_hang
-     WHERE ma_kho = ?
-       AND con_su_dung = 1
-       AND (ten_vi_tri = ? OR ma_vi_tri_code = ?)
-     LIMIT 1`,
-    [warehouseId, label, label]
-  );
-  return rows[0] || null;
-};
-
-router.get('/warehouses/:id/locations', auth, role('admin'), async (req, res) => {
-  const [locations] = await db.query(
-    `SELECT ma_vi_tri, ma_vi_tri_code, ten_vi_tri, mo_ta
-     FROM vi_tri_kho_hang
-     WHERE ma_kho = ?
-       AND con_su_dung = 1
-     ORDER BY ten_vi_tri ASC`,
-    [req.params.id]
-  );
-
-  res.json({ locations });
-});
-
-router.get('/warehouses/:id/stock', auth, role('admin'), async (req, res) => {
-  const [s] = await db.query(`
-    SELECT tk2.*,sp.ten_san_pham AS product_name,sp.don_vi AS unit,
-           sp.ton_kho_toi_thieu AS min_stock,
-           CASE WHEN tk2.so_luong<=sp.ton_kho_toi_thieu THEN 1 ELSE 0 END AS is_low_stock
-    FROM ton_kho tk2 JOIN san_pham sp ON sp.ma_san_pham=tk2.ma_san_pham
-    WHERE tk2.ma_kho=?
-    ORDER BY tk2.han_su_dung IS NULL, tk2.han_su_dung ASC, sp.ten_san_pham ASC
-  `, [req.params.id]);
-  res.json({ stock: s });
-});
-
-router.patch('/warehouses/:warehouseId/stock/:productId', auth, role('admin'), async (req, res) => {
-  const { han_su_dung, vi_tri_kho, ngay_nhap_kho } = req.body;
-
-  const [existing] = await db.query(
-    'SELECT ma_kho, ma_san_pham FROM ton_kho WHERE ma_kho=? AND ma_san_pham=? LIMIT 1',
-    [req.params.warehouseId, req.params.productId]
-  );
-
-  if (!existing.length) {
-    return res.status(404).json({ message: 'Khong tim thay dong ton kho can cap nhat' });
-  }
-
-  if (vi_tri_kho) {
-    const location = await getWarehouseLocationByLabel(req.params.warehouseId, vi_tri_kho);
-    if (!location) {
-      return res.status(400).json({ message: 'Vi tri kho khong hop le voi kho da chon' });
-    }
-  }
-
-  await db.query(
-    `UPDATE ton_kho
-     SET han_su_dung=?,
-         vi_tri_kho=?,
-         ngay_nhap_kho=?
-     WHERE ma_kho=? AND ma_san_pham=?`,
-    [
-      han_su_dung || null,
-      vi_tri_kho?.trim() || null,
-      ngay_nhap_kho || null,
-      req.params.warehouseId,
-      req.params.productId,
-    ]
-  );
-
-  res.json({ message: 'Cap nhat thong tin ton kho thanh cong' });
-});
-
-router.get('/invoices', auth, role('admin'), async (req, res) => {
-  const [inv] = await db.query(`
-    SELECT hd.*,kh.ten_kho AS warehouse_name,tk.ho_ten AS created_by_name
-    FROM hoa_don hd
-    JOIN kho_hang kh ON kh.ma_kho=hd.ma_kho
-    JOIN tai_khoan tk ON tk.ma_tai_khoan=hd.nguoi_tao
-    ORDER BY hd.ngay_tao DESC
-  `);
-  res.json({ invoices: inv });
-});
-
-router.get('/invoices/:id', auth, role('admin'), async (req, res) => {
-  try {
-    const [rows] = await db.query(`
-      SELECT hd.*, kh.ten_kho AS warehouse_name, kh.dia_diem AS warehouse_location,
-             tk.ho_ten AS created_by_name, tk.email AS created_by_email
-      FROM hoa_don hd
-      JOIN kho_hang kh ON kh.ma_kho = hd.ma_kho
-      JOIN tai_khoan tk ON tk.ma_tai_khoan = hd.nguoi_tao
-      WHERE hd.ma_hoa_don = ?
-    `, [req.params.id]);
-
-    if (!rows.length) {
-      return res.status(404).json({ message: 'Khong tim thay hoa don' });
-    }
-
-    const [items] = await db.query(`
-      SELECT ct.*, sp.ton_kho AS tong_ton_toan_he_thong, sp.ton_kho_toi_thieu
-      FROM chi_tiet_hoa_don ct
-      LEFT JOIN san_pham sp ON sp.ma_san_pham = ct.ma_san_pham
-      WHERE ct.ma_hoa_don = ?
-      ORDER BY ct.ma_chi_tiet
-    `, [req.params.id]);
-
-    res.json({ invoice: rows[0], items });
-  } catch (e) {
-    res.status(500).json({ message: e.message });
-  }
-});
-
-router.post('/invoices', auth, role('admin'), async (req, res) => {
-  const conn = await db.getConnection();
-  try {
-    await conn.beginTransaction();
-    const { loai_hoa_don, ma_kho, ma_nong_dan, ma_don_hang, ghi_chu, items } = req.body;
-    for (const item of items || []) {
-      if (item.vi_tri_kho) {
-        const location = await getWarehouseLocationByLabel(ma_kho, item.vi_tri_kho, conn);
-        if (!location) {
-          await conn.rollback();
-          return res.status(400).json({ message: `Vi tri kho khong hop le cho san pham ${item.ten_san_pham}` });
-        }
-      }
-    }
-    const so_hoa_don = `HD-${loai_hoa_don === 'nhap_kho' ? 'NK' : 'XK'}-${Date.now()}`;
-    const tong_tien  = items.reduce((s, i) => s + i.so_luong * i.don_gia, 0);
-    const [hd] = await conn.query(
-      'INSERT INTO hoa_don (so_hoa_don,loai_hoa_don,ma_kho,ma_nong_dan,ma_don_hang,nguoi_tao,tong_tien,ghi_chu) VALUES (?,?,?,?,?,?,?,?)',
-      [so_hoa_don, loai_hoa_don, ma_kho, ma_nong_dan || null, ma_don_hang || null, req.user.id, tong_tien, ghi_chu]
-    );
-    for (const i of items)
-      await conn.query(
-        'INSERT INTO chi_tiet_hoa_don (ma_hoa_don,ma_san_pham,ten_san_pham,so_luong,don_vi,don_gia,thanh_tien,han_su_dung,vi_tri_kho) VALUES (?,?,?,?,?,?,?,?,?)',
-        [hd.insertId, i.ma_san_pham, i.ten_san_pham, i.so_luong, i.don_vi, i.don_gia, i.so_luong * i.don_gia, i.han_su_dung || null, i.vi_tri_kho || null]
-      );
-    await conn.commit();
-    res.status(201).json({ message: 'Táº¡o hoÃ¡ Ä‘Æ¡n thÃ nh cÃ´ng', ma_hoa_don: hd.insertId });
-  } catch (e) { await conn.rollback(); res.status(500).json({ message: e.message }); }
-  finally { conn.release(); }
-});
-
-router.patch('/invoices/:id/confirm', auth, role('admin'), async (req, res) => {
-  const conn = await db.getConnection();
-  try {
-    await conn.beginTransaction();
-    const [hdRows] = await conn.query('SELECT * FROM hoa_don WHERE ma_hoa_don=?', [req.params.id]);
-    if (!hdRows.length || hdRows[0].trang_thai !== 'nhap')
-      return res.status(400).json({ message: 'HoÃ¡ Ä‘Æ¡n khÃ´ng há»£p lá»‡ hoáº·c Ä‘Ã£ xÃ¡c nháº­n' });
-    const hd = hdRows[0];
-    const [items] = await conn.query('SELECT * FROM chi_tiet_hoa_don WHERE ma_hoa_don=?', [hd.ma_hoa_don]);
-
-    for (const item of items) {
-      const [tk] = await conn.query('SELECT so_luong FROM ton_kho WHERE ma_kho=? AND ma_san_pham=?', [hd.ma_kho, item.ma_san_pham]);
-      const ton_truoc = tk[0]?.so_luong || 0;
-      const ton_sau   = hd.loai_hoa_don === 'nhap_kho' ? ton_truoc + item.so_luong : ton_truoc - item.so_luong;
-
-      if (!tk.length)
-        await conn.query(
-          'INSERT INTO ton_kho (ma_kho,ma_san_pham,so_luong,han_su_dung,vi_tri_kho,ngay_nhap_kho) VALUES (?,?,?,?,?,NOW())',
-          [hd.ma_kho, item.ma_san_pham, item.so_luong, item.han_su_dung || null, item.vi_tri_kho || null]
-        );
-      else
-        await conn.query(
-          'UPDATE ton_kho SET so_luong=?, han_su_dung=COALESCE(?, han_su_dung), vi_tri_kho=COALESCE(?, vi_tri_kho), ngay_nhap_kho=COALESCE(ngay_nhap_kho, NOW()) WHERE ma_kho=? AND ma_san_pham=?',
-          [ton_sau, item.han_su_dung || null, item.vi_tri_kho || null, hd.ma_kho, item.ma_san_pham]
-        );
-
-      if (hd.loai_hoa_don === 'nhap_kho')
-        await conn.query('UPDATE san_pham SET ton_kho=ton_kho+? WHERE ma_san_pham=?', [item.so_luong, item.ma_san_pham]);
-
-      await conn.query(
-        'INSERT INTO lich_su_kho (ma_kho,ma_san_pham,ma_hoa_don,loai_phieu,so_luong,ton_truoc,ton_sau) VALUES (?,?,?,?,?,?,?)',
-        [hd.ma_kho, item.ma_san_pham, hd.ma_hoa_don, hd.loai_hoa_don, item.so_luong, ton_truoc, ton_sau]
-      );
-
-      const [sp] = await conn.query('SELECT ton_kho,ton_kho_toi_thieu FROM san_pham WHERE ma_san_pham=?', [item.ma_san_pham]);
-      if (sp[0] && sp[0].ton_kho <= sp[0].ton_kho_toi_thieu)
-        await conn.query(
-          'INSERT INTO canh_bao_kho (ma_san_pham,ma_kho,ton_hien_tai,ton_toi_thieu) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE ton_hien_tai=?,da_xu_ly=0',
-          [item.ma_san_pham, hd.ma_kho, sp[0].ton_kho, sp[0].ton_kho_toi_thieu, sp[0].ton_kho]
-        );
-    }
-
-    await conn.query("UPDATE hoa_don SET trang_thai='da_xac_nhan',ngay_xac_nhan=NOW() WHERE ma_hoa_don=?", [hd.ma_hoa_don]);
-    await conn.commit();
-    res.json({ message: 'XÃ¡c nháº­n hoÃ¡ Ä‘Æ¡n thÃ nh cÃ´ng!' });
-  } catch (e) { await conn.rollback(); console.error(e); res.status(500).json({ message: e.message }); }
-  finally { conn.release(); }
-});
-
-router.patch('/invoices/:id/cancel', auth, role('admin'), async (req, res) => {
-  await db.query("UPDATE hoa_don SET trang_thai='da_huy' WHERE ma_hoa_don=?", [req.params.id]);
-  res.json({ message: 'Huá»· hoÃ¡ Ä‘Æ¡n thÃ nh cÃ´ng' });
-});
-
-router.get('/inventory-logs', auth, role('admin'), async (req, res) => {
-  const [logs] = await db.query(`
-    SELECT ls.*,sp.ten_san_pham AS product_name,kh.ten_kho AS warehouse_name
-    FROM lich_su_kho ls
-    JOIN san_pham sp ON sp.ma_san_pham=ls.ma_san_pham
-    JOIN kho_hang kh ON kh.ma_kho=ls.ma_kho
-    ORDER BY ls.ngay_tao DESC LIMIT 200
-  `);
-  res.json({ logs });
-});
-
-router.get('/stock-alerts', auth, role('admin'), async (req, res) => {
-  const [alerts] = await db.query(`
-    SELECT cb.*,sp.ten_san_pham AS product_name,kh.ten_kho AS warehouse_name
-    FROM canh_bao_kho cb
-    JOIN san_pham sp ON sp.ma_san_pham=cb.ma_san_pham
-    JOIN kho_hang kh ON kh.ma_kho=cb.ma_kho
-    ORDER BY cb.da_xu_ly ASC, cb.ngay_tao DESC
-  `);
-  res.json({ alerts });
-});
-
-router.patch('/stock-alerts/:id/resolve', auth, role('admin'), async (req, res) => {
-  await db.query('UPDATE canh_bao_kho SET da_xu_ly=1,ngay_xu_ly=NOW() WHERE ma_canh_bao=?', [req.params.id]);
-  res.json({ message: 'ÄÃ£ Ä‘Ã¡nh dáº¥u xá»­ lÃ½' });
-});
-
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // DASHBOARD
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 router.get('/admin/dashboard', auth, role('admin'), async (req, res) => {
   try {
-    const [[{ tong_tk }]]   = await db.query('SELECT COUNT(*) AS tong_tk FROM tai_khoan');
-    const [[{ tong_nd }]]   = await db.query('SELECT COUNT(*) AS tong_nd FROM nong_dan WHERE da_xac_minh=1');
-    const [[{ tong_dh }]]   = await db.query('SELECT COUNT(*) AS tong_dh FROM don_hang');
-    const [[{ doanh_thu }]] = await db.query("SELECT COALESCE(SUM(tong_thanh_toan),0) AS doanh_thu FROM don_hang WHERE trang_thai='da_giao'");
-    const [cho_duyet]       = await db.query('SELECT tk.ho_ten,tk.email,nd.ten_nong_trai,nd.ngay_tao FROM nong_dan nd JOIN tai_khoan tk ON tk.ma_tai_khoan=nd.ma_tai_khoan WHERE nd.da_xac_minh=0 LIMIT 5');
-    const [top_sp]          = await db.query('SELECT ten_san_pham,so_luong_ban,gia_ban FROM san_pham ORDER BY so_luong_ban DESC LIMIT 5');
-    res.json({ tong_tk, tong_nd, tong_dh, doanh_thu, cho_duyet, top_sp });
-  } catch (e) { res.status(500).json({ message: e.message }); }
-});
-
-router.get('/farmer/dashboard', auth, role('farmer'), async (req, res) => {
-  try {
-    const [f] = await db.query('SELECT ma_nong_dan FROM nong_dan WHERE ma_tai_khoan=?', [req.user.id]);
-    const fid = f[0]?.ma_nong_dan;
-    const [[{ tong_don }]]  = await db.query('SELECT COUNT(DISTINCT ma_don_hang) AS tong_don FROM chi_tiet_don_hang WHERE ma_nong_dan=?', [fid]);
-    const [[{ doanh_thu }]] = await db.query("SELECT COALESCE(SUM(ct.thanh_tien),0) AS doanh_thu FROM chi_tiet_don_hang ct JOIN don_hang dh ON dh.ma_don_hang=ct.ma_don_hang WHERE ct.ma_nong_dan=? AND dh.trang_thai='da_giao'", [fid]);
-    const [san_pham]        = await db.query('SELECT ten_san_pham,so_luong_ban,ton_kho,ton_kho_toi_thieu FROM san_pham WHERE ma_nong_dan=? ORDER BY so_luong_ban DESC LIMIT 5', [fid]);
-    res.json({ tong_don, doanh_thu, san_pham });
-  } catch (e) { res.status(500).json({ message: e.message }); }
-});
-
-router.get('/farmer/profile', auth, role('farmer'), async (req, res) => {
-  try {
-    const [rows] = await db.query(`
-      SELECT nd.*, tk.ho_ten, tk.email, tk.so_dien_thoai, tk.dia_chi
-      FROM nong_dan nd
-      JOIN tai_khoan tk ON tk.ma_tai_khoan = nd.ma_tai_khoan
-      WHERE nd.ma_tai_khoan = ?
-      LIMIT 1
-    `, [req.user.id]);
-
-    if (!rows.length) {
-      return res.status(404).json({ message: 'KhÃ´ng tÃ¬m tháº¥y há»“ sÆ¡ nÃ´ng tráº¡i' });
-    }
-
-    res.json({ profile: rows[0] });
-  } catch (e) {
-    res.status(500).json({ message: e.message });
-  }
-});
-
-router.put('/farmer/profile', auth, role('farmer'), async (req, res) => {
-  try {
-    const { ten_nong_trai, gioi_thieu, tinh_thanh, quan_huyen } = req.body;
-
-    await db.query(
-      'UPDATE nong_dan SET ten_nong_trai=?, gioi_thieu=?, tinh_thanh=?, quan_huyen=? WHERE ma_tai_khoan=?',
-      [ten_nong_trai, gioi_thieu || null, tinh_thanh || null, quan_huyen || null, req.user.id]
+    const [[{ tong_tk }]] = await db.query(
+      "SELECT COUNT(*) AS tong_tk FROM tai_khoan WHERE vai_tro <> 'nong_dan'"
     );
-
-    res.json({ message: 'Cáº­p nháº­t há»“ sÆ¡ nÃ´ng tráº¡i thÃ nh cÃ´ng' });
+    const [[{ tong_sp }]] = await db.query('SELECT COUNT(*) AS tong_sp FROM san_pham');
+    const [[{ tong_dh }]] = await db.query('SELECT COUNT(*) AS tong_dh FROM don_hang');
+    const [[{ doanh_thu }]] = await db.query(
+      "SELECT COALESCE(SUM(tong_thanh_toan),0) AS doanh_thu FROM don_hang WHERE trang_thai='da_giao'"
+    );
+    const [gan_day] = await db.query(
+      `SELECT dh.ma_don_hang, dh.ngay_tao, dh.trang_thai, dh.tong_thanh_toan, tk.ho_ten AS ten_nguoi_mua
+       FROM don_hang dh
+       JOIN tai_khoan tk ON tk.ma_tai_khoan = dh.ma_nguoi_mua
+       ORDER BY dh.ngay_tao DESC
+       LIMIT 5`
+    );
+    const [top_sp] = await db.query(
+      'SELECT ten_san_pham, so_luong_ban, gia_ban FROM san_pham ORDER BY so_luong_ban DESC LIMIT 5'
+    );
+    res.json({ tong_tk, tong_sp, tong_dh, doanh_thu, gan_day, top_sp });
   } catch (e) {
     res.status(500).json({ message: e.message });
   }
+});
+
+router.get('/farmer/dashboard', auth, async (req, res) => {
+  res.status(410).json({ message: 'Chức năng nông dân đã được gỡ khỏi hệ thống.' });
+});
+
+router.get('/farmer/profile', auth, async (req, res) => {
+  res.status(410).json({ message: 'Chức năng nông dân đã được gỡ khỏi hệ thống.' });
+});
+
+router.put('/farmer/profile', auth, async (req, res) => {
+  res.status(410).json({ message: 'Chức năng nông dân đã được gỡ khỏi hệ thống.' });
 });
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -875,9 +963,9 @@ router.put('/farmer/profile', auth, role('farmer'), async (req, res) => {
 router.get('/admin/accounts', auth, role('admin'), async (req, res) => {
   const { q, vai_tro, page = 1, limit = 15 } = req.query;
   const offset = (page - 1) * limit, params = [];
-  let where = 'WHERE 1=1';
+  let where = "WHERE vai_tro <> 'nong_dan'";
   if (q) { where += ' AND (ho_ten LIKE ? OR email LIKE ?)'; params.push(`%${q}%`, `%${q}%`); }
-  if (vai_tro) { where += ' AND vai_tro=?'; params.push(vai_tro); }
+  if (vai_tro && vai_tro !== 'nong_dan') { where += ' AND vai_tro=?'; params.push(vai_tro); }
   const [accounts] = await db.query(`SELECT ma_tai_khoan,ho_ten,email,so_dien_thoai,vai_tro,con_hoat_dong,ngay_tao FROM tai_khoan ${where} ORDER BY ngay_tao DESC LIMIT ? OFFSET ?`, [...params, +limit, +offset]);
   const [[{ total }]] = await db.query(`SELECT COUNT(*) AS total FROM tai_khoan ${where}`, params);
   res.json({ accounts, total });
@@ -889,18 +977,15 @@ router.patch('/admin/accounts/:id/toggle', auth, role('admin'), async (req, res)
 });
 
 router.get('/admin/farmers', auth, role('admin'), async (req, res) => {
-  const { q, da_xac_minh } = req.query;
-  const params = [];
-  let where = 'WHERE 1=1';
-  if (q) { where += ' AND (tk.ho_ten LIKE ? OR nd.ten_nong_trai LIKE ?)'; params.push(`%${q}%`, `%${q}%`); }
-  if (da_xac_minh !== undefined && da_xac_minh !== '') { where += ' AND nd.da_xac_minh=?'; params.push(da_xac_minh); }
-  const [farmers] = await db.query(`SELECT nd.*,tk.ho_ten,tk.email,tk.so_dien_thoai FROM nong_dan nd JOIN tai_khoan tk ON tk.ma_tai_khoan=nd.ma_tai_khoan ${where} ORDER BY nd.da_xac_minh ASC, nd.ngay_tao DESC`, params);
-  res.json({ farmers });
+  res.status(410).json({ message: 'Khu vực quản lý nông dân đã được gỡ khỏi hệ thống.' });
 });
 
 router.patch('/admin/farmers/:id/verify', auth, role('admin'), async (req, res) => {
-  await db.query('UPDATE nong_dan SET da_xac_minh=1,ngay_xac_minh=NOW() WHERE ma_nong_dan=?', [req.params.id]);
-  res.json({ message: 'ÄÃ£ duyá»‡t há»“ sÆ¡ nÃ´ng dÃ¢n' });
+  res.status(410).json({ message: 'Khu vực quản lý nông dân đã được gỡ khỏi hệ thống.' });
+});
+
+router.delete('/admin/farmers/:id', auth, role('admin'), async (req, res) => {
+  res.status(410).json({ message: 'Khu vực quản lý nông dân đã được gỡ khỏi hệ thống.' });
 });
 
 router.get('/admin/orders', auth, role('admin'), async (req, res) => {
@@ -911,6 +996,76 @@ router.get('/admin/orders', auth, role('admin'), async (req, res) => {
   const [orders] = await db.query(`SELECT dh.*,tk.ho_ten AS ten_nguoi_mua,tk.so_dien_thoai FROM don_hang dh JOIN tai_khoan tk ON tk.ma_tai_khoan=dh.ma_nguoi_mua ${where} ORDER BY dh.ngay_tao DESC LIMIT ? OFFSET ?`, [...params, +limit, +offset]);
   const [[{ total }]] = await db.query(`SELECT COUNT(*) AS total FROM don_hang dh ${where}`, params);
   res.json({ orders, total });
+});
+
+router.get('/admin/subscriptions', auth, role('admin'), async (req, res) => {
+  const [subscriptions] = await db.query(
+    `SELECT dk.*, sp.ten_san_pham,
+            COALESCE(nd.ten_nong_trai, 'Cửa hàng Nông Sản Việt') AS ten_nong_trai,
+            buyer.ho_ten AS ten_nguoi_mua
+     FROM dang_ky_giao_dinh_ky dk
+     JOIN san_pham sp ON sp.ma_san_pham = dk.ma_san_pham
+     LEFT JOIN nong_dan nd ON nd.ma_nong_dan = dk.ma_nong_dan
+     JOIN tai_khoan buyer ON buyer.ma_tai_khoan = dk.ma_nguoi_mua
+     ORDER BY dk.ngay_tao DESC`
+  );
+  res.json({ subscriptions });
+});
+
+router.patch('/admin/subscriptions/:id/deliver', auth, role('admin'), async (req, res) => {
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [subscriptions] = await conn.query(
+      `SELECT *
+       FROM dang_ky_giao_dinh_ky
+       WHERE ma_dang_ky=? AND trang_thai IN ('dang_hoat_dong','tam_dung')
+       FOR UPDATE`,
+      [req.params.id]
+    );
+
+    if (!subscriptions.length) {
+      await conn.rollback();
+      return res.status(404).json({ message: 'Khong tim thay dang ky dang hoat dong.' });
+    }
+
+    const subscription = subscriptions[0];
+    const deliveredCycles = Math.min(
+      Number(subscription.so_ky_giao),
+      Number(subscription.so_ky_da_giao || 0) + 1
+    );
+    const completed = deliveredCycles >= Number(subscription.so_ky_giao);
+    const nextDate = completed
+      ? subscription.ngay_giao_tiep_theo
+      : nextDeliveryDate(subscription.ngay_giao_tiep_theo, subscription.tan_suat_giao);
+
+    await conn.query(
+      `UPDATE dang_ky_giao_dinh_ky
+       SET so_ky_da_giao=?,
+           ngay_giao_tiep_theo=?,
+           trang_thai=?
+       WHERE ma_dang_ky=?`,
+      [deliveredCycles, nextDate, completed ? 'hoan_tat' : 'dang_hoat_dong', req.params.id]
+    );
+
+    await conn.commit();
+    res.json({
+      message: completed ? 'Da hoan tat dang ky giao dinh ky.' : 'Da ghi nhan mot ky giao.',
+      subscription: {
+        id: Number(req.params.id),
+        so_ky_da_giao: deliveredCycles,
+        so_ky_giao: Number(subscription.so_ky_giao),
+        ngay_giao_tiep_theo: nextDate,
+        trang_thai: completed ? 'hoan_tat' : 'dang_hoat_dong',
+      },
+    });
+  } catch (e) {
+    await conn.rollback();
+    res.status(500).json({ message: e.message });
+  } finally {
+    conn.release();
+  }
 });
 
 router.get('/admin/categories', auth, role('admin'), async (req, res) => {

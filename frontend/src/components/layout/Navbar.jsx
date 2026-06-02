@@ -1,153 +1,125 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
+
+const links = [
+  { to: '/', label: 'Trang chủ' },
+  { to: '/products', label: 'Sản phẩm' },
+  { to: '/about', label: 'Về chúng tôi' },
+  { to: '/about#news', label: 'Tin tức' },
+];
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const { totalItems } = useCart();
   const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const initials = useMemo(() => {
+    if (!user?.name) return 'FT';
+    return user.name.split(' ').slice(0, 2).map(part => part.charAt(0).toUpperCase()).join('');
+  }, [user?.name]);
+
+  const handleSearch = event => {
+    event.preventDefault();
+    navigate(search.trim() ? `/products?q=${encodeURIComponent(search.trim())}` : '/products');
+    setMobileOpen(false);
+  };
 
   const handleLogout = () => {
     logout();
+    setMenuOpen(false);
     navigate('/');
-    setDropdownOpen(false);
-    setOpen(false);
   };
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-stone-200 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
-        <Link to="/" className="flex items-center gap-3 text-stone-900">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-800 text-lg text-white">
-            🌿
-          </div>
-          <div className="leading-tight">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-stone-400">Chợ nông sản</p>
-            <p className="text-base font-bold">Nông sản sạch mỗi ngày</p>
-          </div>
-        </Link>
-
-        <div className="hidden items-center gap-6 text-sm font-medium md:flex">
-          <Link to="/" className="text-stone-600 transition-colors hover:text-emerald-800">Trang chủ</Link>
-          <Link to="/products" className="text-stone-600 transition-colors hover:text-emerald-800">Sản phẩm</Link>
-          {user?.role === 'admin' && <Link to="/admin" className="text-stone-600 transition-colors hover:text-emerald-800">Quản trị</Link>}
-          {user?.role === 'farmer' && <Link to="/farmer/dashboard" className="text-stone-600 transition-colors hover:text-emerald-800">Nông trại</Link>}
-          {user?.role === 'farmer' && <Link to="/farmer/products" className="text-stone-600 transition-colors hover:text-emerald-800">Sản phẩm của tôi</Link>}
-          {user?.role === 'farmer' && <Link to="/farmer/orders" className="text-stone-600 transition-colors hover:text-emerald-800">Đơn hàng</Link>}
+    <header className="sticky top-0 z-40 border-b border-[#edf0ed] bg-[#f5f3f3]/95 backdrop-blur">
+      <div className="market-page flex min-h-20 items-center justify-between gap-4">
+        <div className="flex items-center gap-8">
+          <Link to="/" className="whitespace-nowrap text-xl font-bold text-[#0f5238] md:text-2xl">Farm2Table</Link>
+          <nav className="hidden items-center gap-6 md:flex">
+            {links.map(item => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  `border-b-2 py-2 text-sm ${isActive ? 'border-[#0f5238] font-bold text-[#0f5238]' : 'border-transparent text-[#404943] hover:text-[#0f5238]'}`
+                }
+              >
+                {item.label}
+              </NavLink>
+            ))}
+            {user?.role === 'buyer' ? <NavLink to="/orders" className="text-sm text-[#404943] hover:text-[#0f5238]">Đơn hàng</NavLink> : null}
+            {user?.role === 'admin' ? <NavLink to="/admin" className="text-sm text-[#404943] hover:text-[#0f5238]">Quản trị</NavLink> : null}
+          </nav>
         </div>
 
         <div className="flex items-center gap-2">
-          {user?.role === 'buyer' && (
-            <Link to="/cart" className="relative rounded-full p-2 text-stone-600 transition-colors hover:bg-stone-100 hover:text-emerald-800">
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-9H5.4M7 13L5.4 5M7 13l-2.3 2.3c-.6.6-.2 1.7.7 1.7H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              {totalItems > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-700 text-xs font-bold text-white">
+          <form onSubmit={handleSearch} className="hidden items-center rounded-lg bg-[#efeded] px-3 lg:flex">
+            <span className="material-symbols-outlined text-[20px] text-[#404943]">search</span>
+            <input
+              value={search}
+              onChange={event => setSearch(event.target.value)}
+              placeholder="Tìm kiếm nông sản..."
+              className="w-48 bg-transparent px-2 py-3 text-sm outline-none"
+            />
+          </form>
+
+          {user?.role === 'buyer' ? (
+            <Link to="/cart" aria-label="Giỏ hàng" className="relative rounded-lg p-2 text-[#0f5238] hover:bg-[#e4e2e2]">
+              <span className="material-symbols-outlined">shopping_cart</span>
+              {totalItems ? (
+                <span className="absolute right-0 top-0 min-w-[17px] rounded-full bg-[#a33d23] px-1 text-center text-[10px] font-bold text-white">
                   {totalItems}
                 </span>
-              )}
+              ) : null}
             </Link>
-          )}
+          ) : null}
 
           {user ? (
             <div className="relative">
-              <button
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex items-center gap-2 rounded-full px-3 py-1.5 transition-colors hover:bg-stone-100"
-              >
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-800 text-sm font-bold text-white">
-                  {user.name?.charAt(0).toUpperCase()}
-                </div>
-                <span className="hidden text-sm font-medium text-stone-700 sm:block">{user.name}</span>
+              <button onClick={() => setMenuOpen(prev => !prev)} className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#d7ddd8] bg-white text-xs font-bold text-[#0f5238]">
+                {initials}
               </button>
-
-              {dropdownOpen && (
-                <div className="absolute right-0 mt-2 w-60 overflow-hidden rounded-2xl border border-stone-200 bg-white py-1 shadow-xl">
-                  <div className="border-b border-stone-100 px-4 py-3">
-                    <p className="text-sm font-semibold text-stone-900">{user.name}</p>
-                    <p className="text-xs uppercase tracking-[0.16em] text-stone-400">{user.role}</p>
+              {menuOpen ? (
+                <div className="absolute right-0 top-12 w-64 rounded-xl border border-[#d7ddd8] bg-white p-3 shadow-xl">
+                  <div className="rounded-lg bg-[#f5f3f3] p-3">
+                    <p className="font-semibold">{user.name}</p>
+                    <p className="mt-1 text-xs text-[#404943]">{user.role === 'admin' ? 'Quản trị viên' : 'Người mua'}</p>
                   </div>
-
-                  <Link to="/profile" onClick={() => setDropdownOpen(false)} className="block px-4 py-2.5 text-sm text-stone-700 transition-colors hover:bg-stone-50">
-                    Hồ sơ cá nhân
-                  </Link>
-
-                  {user.role === 'buyer' && (
-                    <Link to="/orders" onClick={() => setDropdownOpen(false)} className="block px-4 py-2.5 text-sm text-stone-700 transition-colors hover:bg-stone-50">
-                      Đơn hàng của tôi
-                    </Link>
-                  )}
-                  {user.role === 'farmer' && (
-                    <Link to="/farmer/profile" onClick={() => setDropdownOpen(false)} className="block px-4 py-2.5 text-sm text-stone-700 transition-colors hover:bg-stone-50">
-                      Hồ sơ nông trại
-                    </Link>
-                  )}
-                  {user.role === 'farmer' && (
-                    <Link to="/farmer/dashboard" onClick={() => setDropdownOpen(false)} className="block px-4 py-2.5 text-sm text-stone-700 transition-colors hover:bg-stone-50">
-                      Tổng quan nông trại
-                    </Link>
-                  )}
-                  {user.role === 'farmer' && (
-                    <Link to="/farmer/products" onClick={() => setDropdownOpen(false)} className="block px-4 py-2.5 text-sm text-stone-700 transition-colors hover:bg-stone-50">
-                      Quản lý sản phẩm
-                    </Link>
-                  )}
-                  {user.role === 'farmer' && (
-                    <Link to="/farmer/orders" onClick={() => setDropdownOpen(false)} className="block px-4 py-2.5 text-sm text-stone-700 transition-colors hover:bg-stone-50">
-                      Đơn hàng khách mua
-                    </Link>
-                  )}
-                  {user.role === 'admin' && (
-                    <Link to="/admin/warehouse" onClick={() => setDropdownOpen(false)} className="block px-4 py-2.5 text-sm text-stone-700 transition-colors hover:bg-stone-50">
-                      Quản lý kho
-                    </Link>
-                  )}
-
-                  <div className="my-1 border-t border-stone-100" />
-                  <button onClick={handleLogout} className="block w-full px-4 py-2.5 text-left text-sm text-red-600 transition-colors hover:bg-red-50">
-                    Đăng xuất
-                  </button>
+                  <Link to="/profile" onClick={() => setMenuOpen(false)} className="mt-2 block rounded-lg px-3 py-2 text-sm hover:bg-[#f5f3f3]">Hồ sơ cá nhân</Link>
+                  {user.role === 'buyer' ? <Link to="/orders" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-2 text-sm hover:bg-[#f5f3f3]">Đơn hàng của tôi</Link> : null}
+                  <button onClick={handleLogout} className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-red-700 hover:bg-red-50">Đăng xuất</button>
                 </div>
-              )}
+              ) : null}
             </div>
           ) : (
-            <div className="hidden items-center gap-2 md:flex">
-              <Link to="/login" className="rounded-full px-4 py-2 text-sm font-medium text-emerald-800 transition-colors hover:bg-emerald-50">
-                Đăng nhập
-              </Link>
-              <Link to="/register" className="rounded-full bg-emerald-800 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-900">
-                Đăng ký
-              </Link>
-            </div>
+            <Link to="/login" aria-label="Đăng nhập" className="rounded-lg p-2 text-[#0f5238] hover:bg-[#e4e2e2]">
+              <span className="material-symbols-outlined">person</span>
+            </Link>
           )}
 
-          <button onClick={() => setOpen(!open)} className="rounded-full p-2 text-stone-600 md:hidden">
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={open ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'} />
-            </svg>
+          <button onClick={() => setMobileOpen(prev => !prev)} className="rounded-lg p-2 text-[#0f5238] hover:bg-[#e4e2e2] md:hidden" aria-label="Mở menu">
+            <span className="material-symbols-outlined">menu</span>
           </button>
         </div>
       </div>
 
-      {open && (
-        <div className="border-t border-stone-200 bg-white px-4 py-3 md:hidden">
-          <div className="space-y-1">
-            <Link to="/" onClick={() => setOpen(false)} className="block rounded-xl px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50">Trang chủ</Link>
-            <Link to="/products" onClick={() => setOpen(false)} className="block rounded-xl px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50">Sản phẩm</Link>
-            {!user && <Link to="/login" onClick={() => setOpen(false)} className="block rounded-xl px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50">Đăng nhập</Link>}
-            {!user && <Link to="/register" onClick={() => setOpen(false)} className="block rounded-xl px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50">Đăng ký</Link>}
-            {user?.role === 'farmer' && <Link to="/farmer/dashboard" onClick={() => setOpen(false)} className="block rounded-xl px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50">Nông trại</Link>}
-            {user?.role === 'farmer' && <Link to="/farmer/profile" onClick={() => setOpen(false)} className="block rounded-xl px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50">Hồ sơ nông trại</Link>}
-            {user?.role === 'farmer' && <Link to="/farmer/products" onClick={() => setOpen(false)} className="block rounded-xl px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50">Sản phẩm của tôi</Link>}
-            {user?.role === 'farmer' && <Link to="/farmer/orders" onClick={() => setOpen(false)} className="block rounded-xl px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50">Đơn hàng</Link>}
-            {user?.role === 'admin' && <Link to="/admin" onClick={() => setOpen(false)} className="block rounded-xl px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50">Quản trị</Link>}
-          </div>
+      {mobileOpen ? (
+        <div className="market-page border-t border-[#edf0ed] py-4 md:hidden">
+          <form onSubmit={handleSearch} className="mb-3 flex rounded-lg bg-[#efeded] px-3">
+            <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Tìm kiếm nông sản..." className="min-w-0 flex-1 bg-transparent py-3 text-sm outline-none" />
+            <button className="material-symbols-outlined text-[#0f5238]">search</button>
+          </form>
+          <nav className="grid gap-1">
+            {links.map(item => <Link key={item.to} to={item.to} onClick={() => setMobileOpen(false)} className="rounded-lg px-3 py-2 text-sm hover:bg-white">{item.label}</Link>)}
+            {user?.role === 'buyer' ? <Link to="/orders" onClick={() => setMobileOpen(false)} className="rounded-lg px-3 py-2 text-sm hover:bg-white">Đơn hàng</Link> : null}
+          </nav>
         </div>
-      )}
-    </nav>
+      ) : null}
+    </header>
   );
 }

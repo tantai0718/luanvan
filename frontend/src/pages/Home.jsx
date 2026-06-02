@@ -9,6 +9,13 @@ const placeholderImage = 'https://placehold.co/600x760/edf3ee/0f5238?text=Farm2T
 const heroImage =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuCpKqCds0V0p9eOQLlKBtzEb9nwKWAkRQhupzixmGjwfkphXEDaQrwTEHUl4wvWX32nEDFILK_94oyjM4kv7qU4szPTfCxRm3jkYrA09mtkRRsxbusjm875LZSOVXHbrc-UMJvdbcgO4bbtqzjUs1u3ssBnslNa02KIAYcRnZVI-NPN1AWgZbRIITt3sOukKbfZ2EAn5ObI5y-k42C0xNLy3Cyj1RtAf3KsuBuhRMA_f5q-KNWKhCUiD5KlitBU1PypuRctIFOiKfk';
 const farmerImage = '/images/farm2table-ecology.png';
+const heroSlides = [
+  { src: heroImage, alt: 'Nong san tuoi tren ban go' },
+  { src: '/images/raucu.webp', alt: 'Rau cu sach nhieu mau sac' },
+  { src: '/images/trai_cay.webp', alt: 'Trai cay tuoi ngon' },
+  { src: '/images/ngucoc.jpg', alt: 'Ngu coc va cac loai hat' },
+  { src: '/images/gia_vi.jpg', alt: 'Gia vi va thao moc' },
+];
 const featuredCategorySlugs = ['rau-cu', 'trai-cay', 'ngu-coc', 'gia-vi'];
 const categoryImages = {
   'rau-cu': '/images/raucu.webp',
@@ -60,6 +67,7 @@ export default function Home() {
   const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
+  const [activeHeroSlide, setActiveHeroSlide] = useState(0);
   const [loading, setLoading] = useState(true);
   const featuredCategories = featuredCategorySlugs
     .map(slug => categories.find(category => category.slug === slug))
@@ -74,10 +82,27 @@ export default function Home() {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveHeroSlide(current => (current + 1) % heroSlides.length);
+    }, 4200);
+
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <div className="market-shell">
       <section className="relative flex min-h-[520px] items-end overflow-hidden md:min-h-[600px] md:items-center">
-        <img src={heroImage} alt="Rau củ tươi trên bàn gỗ" className="absolute inset-0 h-full w-full object-cover" />
+        {heroSlides.map((slide, index) => (
+          <img
+            key={slide.src}
+            src={slide.src}
+            alt={slide.alt}
+            className={`absolute inset-0 h-full w-full object-cover transition-all duration-1000 ease-out ${
+              index === activeHeroSlide ? 'scale-100 opacity-100' : 'scale-105 opacity-0'
+            }`}
+          />
+        ))}
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(10,25,18,.82),rgba(10,25,18,.36),rgba(10,25,18,.18))]" />
         <div className="market-page relative py-12 text-white">
           <p className="inline-flex rounded-full bg-[#2d6a4f] px-4 py-2 text-xs font-bold uppercase">Tươi ngon mỗi ngày</p>
@@ -88,6 +113,18 @@ export default function Home() {
           <div className="mt-8 flex flex-wrap gap-3">
             <button onClick={() => navigate('/products')} className="rounded-xl bg-[#0f5238] px-7 py-4 text-sm font-semibold text-white shadow-lg">Mua sắm ngay</button>
             <button onClick={() => navigate('/about')} className="rounded-xl border border-white/40 bg-white/15 px-7 py-4 text-sm font-semibold text-white backdrop-blur">Tìm hiểu thêm</button>
+          </div>
+          <div className="mt-8 flex gap-2" aria-label="Ảnh banner">
+            {heroSlides.map((slide, index) => (
+              <button
+                key={slide.src}
+                onClick={() => setActiveHeroSlide(index)}
+                aria-label={`Chuyển đến ảnh banner ${index + 1}`}
+                className={`h-2.5 rounded-full transition-all ${
+                  index === activeHeroSlide ? 'w-9 bg-white' : 'w-2.5 bg-white/45 hover:bg-white/75'
+                }`}
+              />
+            ))}
           </div>
         </div>
       </section>

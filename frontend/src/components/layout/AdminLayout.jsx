@@ -1,105 +1,108 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
-const MENU = [
-  { path: '/admin', icon: '📊', label: 'Tổng quan' },
-  { path: '/admin/accounts', icon: '👥', label: 'Tài khoản' },
-  { path: '/admin/farmers', icon: '🌾', label: 'Duyệt nông dân' },
-  { path: '/admin/categories', icon: '📂', label: 'Danh mục' },
-  { path: '/admin/products', icon: '🥬', label: 'Sản phẩm' },
-  { path: '/admin/orders', icon: '🛒', label: 'Đơn hàng' },
-  { path: '/admin/warehouse', icon: '🏭', label: 'Kho và hóa đơn' },
+const menuItems = [
+  { path: '/admin', icon: 'dashboard', label: 'Tổng quan' },
+  { path: '/admin/accounts', icon: 'group', label: 'Tài khoản' },
+  { path: '/admin/categories', icon: 'category', label: 'Danh mục' },
+  { path: '/admin/products', icon: 'inventory_2', label: 'Sản phẩm' },
+  { path: '/admin/orders', icon: 'receipt_long', label: 'Đơn hàng' },
 ];
 
 export default function AdminLayout({ children }) {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const currentTitle = useMemo(() => {
+    const matched = menuItems.find(item =>
+      location.pathname === item.path || (item.path !== '/admin' && location.pathname.startsWith(item.path))
+    );
+    return matched?.label || 'Quản trị';
+  }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
     navigate('/');
   };
 
-  const currentTitle =
-    MENU.find(item => location.pathname === item.path || (item.path !== '/admin' && location.pathname.startsWith(item.path)))?.label ||
-    'Quản trị';
-
   return (
-    <div className="flex h-screen overflow-hidden bg-stone-100">
-      <aside className={`${collapsed ? 'w-16' : 'w-60'} flex shrink-0 flex-col bg-stone-900 text-white transition-all duration-300`}>
-        <div className="flex items-center gap-3 border-b border-stone-700 px-4 py-5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-700 text-lg">
-            🌿
-          </div>
-          {!collapsed && (
-            <div className="leading-tight">
-              <p className="text-sm font-bold">Chợ Nông Sản</p>
-              <p className="text-xs text-stone-400">Khu vực quản trị</p>
+    <div className="market-shell">
+      <div className="border-b border-[#dce7df] bg-[#1a7a4a] text-white">
+        <div className="market-page flex items-center justify-between gap-4 py-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15">
+              <span className="material-symbols-outlined">shield_person</span>
             </div>
-          )}
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/70">
+                Khu vực quản trị
+              </p>
+              <p className="text-lg font-bold">{currentTitle}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden rounded-2xl bg-white/10 px-4 py-2 text-sm md:block">
+              {user?.name} · ID {user?.id}
+            </div>
+            <button
+              onClick={() => setMobileOpen(prev => !prev)}
+              className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 md:hidden"
+              aria-label={mobileOpen ? 'Đóng menu' : 'Mở menu'}
+            >
+              <span className="material-symbols-outlined">{mobileOpen ? 'close' : 'menu'}</span>
+            </button>
+          </div>
         </div>
+      </div>
 
-        <nav className="flex-1 overflow-y-auto py-3">
-          {MENU.map(item => {
-            const active = location.pathname === item.path || (item.path !== '/admin' && location.pathname.startsWith(item.path));
+      <div className="market-page grid gap-6 py-6 lg:grid-cols-[260px_1fr]">
+        <aside className={`${mobileOpen ? 'block' : 'hidden'} lg:block`}>
+          <div className="market-panel overflow-hidden">
+            <div className="border-b border-[#dce7df] bg-[#f3f7f4] p-5">
+              <p className="text-sm font-semibold text-slate-900">{user?.name}</p>
+              <p className="mt-1 text-xs text-slate-500">Quản trị viên · ID {user?.id}</p>
+            </div>
 
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`mx-2 mb-1 flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm transition-all ${
-                  active ? 'bg-emerald-700 text-white' : 'text-stone-400 hover:bg-stone-800 hover:text-white'
-                }`}
+            <nav className="p-3">
+              {menuItems.map(item => {
+                const active =
+                  location.pathname === item.path ||
+                  (item.path !== '/admin' && location.pathname.startsWith(item.path));
+
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setMobileOpen(false)}
+                    className={`mb-2 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium ${
+                      active
+                        ? 'bg-[#1a7a4a] text-white shadow-md'
+                        : 'text-slate-700 hover:bg-[#f3f7f4]'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[19px]">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+
+            <div className="border-t border-[#dce7df] p-3">
+              <button
+                onClick={handleLogout}
+                className="w-full rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-100"
               >
-                <span className="shrink-0 text-base">{item.icon}</span>
-                {!collapsed && <span className="font-medium">{item.label}</span>}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="border-t border-stone-700 p-3">
-          {!collapsed && (
-            <div className="mb-2 flex items-center gap-2 px-2 py-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-700 text-xs font-bold">
-                {user?.name?.charAt(0).toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-medium text-white">{user?.name}</p>
-                <p className="text-xs text-stone-500">Quản trị viên</p>
-              </div>
+                Đăng xuất
+              </button>
             </div>
-          )}
-
-          <button
-            onClick={handleLogout}
-            className={`w-full rounded-xl px-2 py-2 text-xs text-stone-400 transition-all hover:bg-stone-800 hover:text-white ${collapsed ? 'text-center' : 'text-left'}`}
-          >
-            {collapsed ? '🚪' : '🚪 Đăng xuất'}
-          </button>
-
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="mt-1 w-full py-2 text-center text-xs text-stone-500 transition-colors hover:text-white"
-          >
-            {collapsed ? '→' : '←'}
-          </button>
-        </div>
-      </aside>
-
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex shrink-0 items-center justify-between border-b border-stone-200 bg-white px-6 py-3">
-          <h1 className="text-sm font-semibold text-stone-700">{currentTitle}</h1>
-          <div className="flex items-center gap-2 text-xs text-stone-500">
-            <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
-            <span>{user?.name}</span>
           </div>
-        </header>
+        </aside>
 
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <main className="min-w-0">{children}</main>
       </div>
     </div>
   );
