@@ -43,6 +43,5 @@ Mở trình duyệt:
 ## 🔑 Tài khoản đăng nhập (sau khi chạy reset-password.js)
 | Vai trò   | Email                   | Mật khẩu   |
 |-----------|-------------------------|------------|
-| Admin     | admin@chonongsan.vn     | matkhau123 |
-| Nông dân  | hung.tran@gmail.com     | matkhau123 |
-| Người mua | tuan.vo@gmail.com       | matkhau123 |
+| Admin     | admin@chonongsan.vn     | 123456     |
+| Người mua | tuan.vo@gmail.com       | 123456     |
