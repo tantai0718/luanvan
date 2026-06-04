@@ -1,47 +1,44 @@
-// ================================================
-// CHẠY FILE NÀY TRƯỚC KHI ĐĂNG NHẬP
-// Lệnh: node reset-password.js
-// ================================================
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
-const mysql  = require('mysql2/promise');
+const mysql = require('mysql2/promise');
 
 async function main() {
-  console.log('\n🔄 Đang kết nối MySQL...');
+  console.log('Dang ket noi MySQL...');
 
   const db = await mysql.createConnection({
-    host:     process.env.DB_HOST     || 'localhost',
-    port:     Number(process.env.DB_PORT) || 3306,
-    user:     process.env.DB_USER     || 'root',
+    host: process.env.DB_HOST || 'localhost',
+    port: Number(process.env.DB_PORT) || 3306,
+    user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME     || 'cho_nong_san_sach',
-    charset:  'utf8mb4',
+    database: process.env.DB_NAME || 'cho_nong_san',
+    charset: 'utf8mb4',
   });
 
-  console.log('✅ Kết nối MySQL thành công!');
-  console.log('🔐 Đang tạo hash bcrypt cho "matkhau123"...');
+  const password = process.argv[2] || '123456';
+  const hash = await bcrypt.hash(password, 10);
+  const [result] = await db.execute('UPDATE nguoi_dung SET mat_khau = ?', [hash]);
 
-  const hash = await bcrypt.hash('matkhau123', 10);
-  console.log('✅ Hash mới:', hash);
+  const [accounts] = await db.execute(
+    `SELECT nd.ho_ten, nd.email, vt.ten_vai_tro
+     FROM nguoi_dung nd
+     LEFT JOIN vai_tro vt ON vt.mavt = nd.mavt
+     ORDER BY nd.mand`
+  );
 
-  const [result] = await db.execute('UPDATE tai_khoan SET mat_khau = ?', [hash]);
-  console.log(`\n✅ Đã reset mật khẩu cho ${result.affectedRows} tài khoản!`);
-
-  // Hiển thị tài khoản đã reset
-  const [accounts] = await db.execute('SELECT ho_ten, email, vai_tro FROM tai_khoan');
-  console.log('\n📋 Danh sách tài khoản:');
-  accounts.forEach(a => console.log(`   ${a.vai_tro.padEnd(12)} | ${a.email.padEnd(30)} | ${a.ho_ten}`));
-
-  console.log('\n🎉 Tất cả tài khoản dùng mật khẩu: matkhau123');
-  console.log('👉 Bây giờ hãy đăng nhập!\n');
+  console.log(`Da reset mat khau cho ${result.affectedRows} tai khoan.`);
+  console.log(`Mat khau moi: ${password}`);
+  console.log('Danh sach tai khoan:');
+  accounts.forEach(account => {
+    console.log(`- ${(account.ten_vai_tro || 'User').padEnd(8)} | ${account.email} | ${account.ho_ten}`);
+  });
 
   await db.end();
 }
 
-main().catch(e => {
-  console.error('\n❌ Lỗi:', e.message);
-  if (e.code === 'ECONNREFUSED') console.error('   MySQL chưa chạy hoặc sai host/port');
-  if (e.code === 'ER_ACCESS_DENIED_ERROR') console.error('   Sai username/password MySQL trong .env');
-  if (e.code === 'ER_BAD_DB_ERROR') console.error('   Database không tồn tại — hãy import file SQL trước');
+main().catch(error => {
+  console.error('Loi:', error.message);
+  if (error.code === 'ECONNREFUSED') console.error('MySQL/WampServer chua chay hoac sai host/port.');
+  if (error.code === 'ER_ACCESS_DENIED_ERROR') console.error('Sai DB_USER/DB_PASSWORD trong backend/.env.');
+  if (error.code === 'ER_BAD_DB_ERROR') console.error('Chua import database cho_nong_san.sql.');
   process.exit(1);
 });

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { orderAPI } from '../services/api';
+import { pickProductImage } from '../utils/marketImages';
 
 const formatCurrency = value => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
 
@@ -143,11 +144,11 @@ export default function Cart() {
                   copy="Thanh toán bằng tiền mặt khi shipper giao hàng."
                 />
                 <PaymentChoice
-                  checked={form.phuong_thuc_tt === 'vnpay'}
-                  onChange={() => setForm({ ...form, phuong_thuc_tt: 'vnpay' })}
-                  icon="account_balance_wallet"
-                  title="Thanh toán trực tuyến qua VNPAY"
-                  copy="Chuyển sang cổng VNPAY sau khi hệ thống ghi nhận đơn."
+                  checked={form.phuong_thuc_tt === 'banking'}
+                  onChange={() => setForm({ ...form, phuong_thuc_tt: 'banking' })}
+                  icon="account_balance"
+                  title="Chuyển khoản ngân hàng"
+                  copy="Hệ thống ghi nhận đơn và bộ phận hỗ trợ sẽ xác nhận thanh toán."
                 />
               </div>
             </section>
@@ -157,20 +158,27 @@ export default function Cart() {
             <section className="market-panel p-6 md:p-8">
               <h2 className="text-xl font-bold">Đơn hàng của bạn</h2>
               <div className="mt-6 space-y-5 border-b border-[#d7ddd8] pb-6">
-                {items.map(item => (
-                  <div key={item.product_id} className="flex gap-4">
-                    <img src={item.product?.images?.[0] || 'https://placehold.co/96x96/edf3ee/0f5238?text=FT'} alt={item.product?.name} className="h-20 w-20 rounded-lg object-cover" />
-                    <div className="min-w-0 flex-1">
-                      <p className="line-clamp-2 text-sm font-semibold">{item.product?.name}</p>
-                      <p className="mt-1 text-xs text-[#404943]">{item.quantity} {item.product?.unit}</p>
-                      <p className="mt-2 text-sm font-semibold text-[#0f5238]">{formatCurrency(item.quantity * Number(item.product?.price || 0))}</p>
+                {items.map(item => {
+                  const product = {
+                    ten_san_pham: item.product?.name,
+                    ma_danh_muc: item.product?.category_id,
+                    images: item.product?.images || [],
+                  };
+                  return (
+                    <div key={item.product_id} className="flex gap-4">
+                      <img src={pickProductImage(product)} alt={item.product?.name} className="h-20 w-20 rounded-lg object-cover" />
+                      <div className="min-w-0 flex-1">
+                        <p className="line-clamp-2 text-sm font-semibold">{item.product?.name}</p>
+                        <p className="mt-1 text-xs text-[#404943]">{item.quantity} {item.product?.unit}</p>
+                        <p className="mt-2 text-sm font-semibold text-[#0f5238]">{formatCurrency(item.quantity * Number(item.product?.price || 0))}</p>
+                      </div>
+                      <div className="grid content-start gap-1">
+                        <button onClick={() => updateItem(item.product_id, item.quantity + 1)} className="rounded border border-[#d7ddd8] px-2 text-sm">+</button>
+                        <button onClick={() => (item.quantity > 1 ? updateItem(item.product_id, item.quantity - 1) : removeItem(item.product_id))} className="rounded border border-[#d7ddd8] px-2 text-sm">-</button>
+                      </div>
                     </div>
-                    <div className="grid content-start gap-1">
-                      <button onClick={() => updateItem(item.product_id, item.quantity + 1)} className="rounded border border-[#d7ddd8] px-2 text-sm">+</button>
-                      <button onClick={() => (item.quantity > 1 ? updateItem(item.product_id, item.quantity - 1) : removeItem(item.product_id))} className="rounded border border-[#d7ddd8] px-2 text-sm">-</button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               <div className="space-y-4 py-6 text-sm">
                 <div className="flex justify-between gap-4 text-[#404943]"><span>Tạm tính</span><span>{formatCurrency(totalPrice)}</span></div>
@@ -191,7 +199,7 @@ export default function Cart() {
               </div>
               {error ? <p className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
               <button onClick={handleOrder} disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0f5238] px-5 py-4 text-sm font-bold text-white shadow-md hover:bg-[#0a402b] disabled:opacity-60">
-                {loading ? 'Đang xử lý...' : form.phuong_thuc_tt === 'vnpay' ? 'Thanh toán qua VNPAY' : 'Đặt hàng ngay'}
+                {loading ? 'Đang xử lý...' : 'Đặt hàng ngay'}
                 {!loading ? <span className="material-symbols-outlined">arrow_forward</span> : null}
               </button>
             </section>

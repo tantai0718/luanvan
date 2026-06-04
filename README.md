@@ -1,47 +1,59 @@
-# 🌱 Chợ Nông Sản Sạch
+# Cho Nong San
 
-## ▶️ CÁCH CHẠY (làm theo đúng thứ tự)
+## Cach chay voi database moi
 
-### BƯỚC 1 — Import database
-Mở **MySQL Workbench** → File → Open SQL Script → chọn `cho_nong_san_sach.sql` → chạy (Ctrl+Shift+Enter)
+### 1. Import database
+Mo WampServer/phpMyAdmin hoac MySQL Workbench, import file:
 
-### BƯỚC 2 — Tạo file .env
+```text
+cho_nong_san.sql
 ```
-cd backend
-copy .env.example .env
-```
-Mở file `.env` vừa tạo, sửa dòng `DB_PASSWORD=` thành mật khẩu MySQL của bạn.
-Ví dụ nếu MySQL không có mật khẩu thì giữ nguyên `DB_PASSWORD=`
 
-### BƯỚC 3 — Cài thư viện
-Mở terminal tại thư mục gốc (nơi có file package.json này):
+File nay tao database `cho_nong_san`.
+
+### 2. Cau hinh backend
+File `backend/.env` da duoc dat san:
+
+```env
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=cho_nong_san
 ```
+
+Neu MySQL cua ban co mat khau, sua `DB_PASSWORD`.
+
+### 3. Cai thu vien
+
+```bash
 npm install
 npm run install:all
 ```
 
-### BƯỚC 4 — Reset mật khẩu (QUAN TRỌNG - bắt buộc làm 1 lần)
-```
+### 4. Reset mat khau tai khoan mau
+
+```bash
 cd backend
 node reset-password.js
-```
-Phải thấy: ✅ Đã reset mật khẩu cho 10 tài khoản!
-```
 cd ..
 ```
 
-### BƯỚC 5 — Chạy ứng dụng
-```
+Mat khau mac dinh sau khi reset la `123456`.
+
+### 5. Chay ung dung
+
+```bash
 npm run dev
 ```
-Mở trình duyệt:
-- 🌐 Frontend: http://localhost:3000
-- 🔌 Backend:  http://localhost:5000
 
----
+Frontend: http://localhost:3000
+Backend: http://localhost:5000
 
-## 🔑 Tài khoản đăng nhập (sau khi chạy reset-password.js)
-| Vai trò   | Email                   | Mật khẩu   |
-|-----------|-------------------------|------------|
-| Admin     | admin@chonongsan.vn     | 123456     |
-| Người mua | tuan.vo@gmail.com       | 123456     |
+## Tai khoan mau sau khi reset password
+
+| Vai tro | Email | Mat khau |
+|---|---|---|
+| Admin | minhgiau.admin@gmail.com | 123456 |
+| User | thimua.user@gmail.com | 123456 |
+| User | vankhach.user@gmail.com | 123456 |

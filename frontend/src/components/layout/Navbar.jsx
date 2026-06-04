@@ -36,7 +36,7 @@ export default function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[#edf0ed] bg-[#f5f3f3]/95 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-[#e4e2e2] bg-[#f5f3f3]/95 shadow-sm backdrop-blur">
       <div className="market-page flex min-h-20 items-center justify-between gap-4">
         <div className="flex items-center gap-8">
           <Link to="/" className="whitespace-nowrap text-xl font-bold text-[#0f5238] md:text-2xl">Farm2Table</Link>
@@ -46,25 +46,27 @@ export default function Navbar() {
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `border-b-2 py-2 text-sm ${isActive ? 'border-[#0f5238] font-bold text-[#0f5238]' : 'border-transparent text-[#404943] hover:text-[#0f5238]'}`
+                  `rounded-lg border-b-2 px-1 py-2 text-sm transition ${
+                    isActive ? 'border-[#0f5238] font-bold text-[#0f5238]' : 'border-transparent text-[#404943] hover:bg-[#e4e2e2]/60 hover:text-[#0f5238]'
+                  }`
                 }
               >
                 {item.label}
               </NavLink>
             ))}
-            {user?.role === 'buyer' ? <NavLink to="/orders" className="text-sm text-[#404943] hover:text-[#0f5238]">Đơn hàng</NavLink> : null}
-            {user?.role === 'admin' ? <NavLink to="/admin" className="text-sm text-[#404943] hover:text-[#0f5238]">Quản trị</NavLink> : null}
+            {user?.role === 'buyer' ? <NavLink to="/orders" className="rounded-lg px-1 py-2 text-sm text-[#404943] hover:text-[#0f5238]">Đơn hàng</NavLink> : null}
+            {user?.role === 'admin' ? <NavLink to="/admin" className="rounded-lg px-1 py-2 text-sm text-[#404943] hover:text-[#0f5238]">Quản trị</NavLink> : null}
           </nav>
         </div>
 
         <div className="flex items-center gap-2">
-          <form onSubmit={handleSearch} className="hidden items-center rounded-lg bg-[#efeded] px-3 lg:flex">
+          <form onSubmit={handleSearch} className="hidden items-center rounded-xl bg-[#efeded] px-3 lg:flex">
             <span className="material-symbols-outlined text-[20px] text-[#404943]">search</span>
             <input
               value={search}
               onChange={event => setSearch(event.target.value)}
               placeholder="Tìm kiếm nông sản..."
-              className="w-48 bg-transparent px-2 py-3 text-sm outline-none"
+              className="w-52 bg-transparent px-2 py-3 text-sm outline-none"
             />
           </form>
 
@@ -109,7 +111,7 @@ export default function Navbar() {
       </div>
 
       {mobileOpen ? (
-        <div className="market-page border-t border-[#edf0ed] py-4 md:hidden">
+        <div className="market-page border-t border-[#e4e2e2] py-4 md:hidden">
           <form onSubmit={handleSearch} className="mb-3 flex rounded-lg bg-[#efeded] px-3">
             <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Tìm kiếm nông sản..." className="min-w-0 flex-1 bg-transparent py-3 text-sm outline-none" />
             <button className="material-symbols-outlined text-[#0f5238]">search</button>

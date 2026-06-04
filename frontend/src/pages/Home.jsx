@@ -3,26 +3,16 @@ import { Link, useNavigate } from 'react-router-dom';
 import { categoryAPI, productAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { pickCategoryImage, pickProductImage } from '../utils/marketImages';
 
 const formatCurrency = value => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
-const placeholderImage = 'https://placehold.co/600x760/edf3ee/0f5238?text=Farm2Table';
-const heroImage =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuCpKqCds0V0p9eOQLlKBtzEb9nwKWAkRQhupzixmGjwfkphXEDaQrwTEHUl4wvWX32nEDFILK_94oyjM4kv7qU4szPTfCxRm3jkYrA09mtkRRsxbusjm875LZSOVXHbrc-UMJvdbcgO4bbtqzjUs1u3ssBnslNa02KIAYcRnZVI-NPN1AWgZbRIITt3sOukKbfZ2EAn5ObI5y-k42C0xNLy3Cyj1RtAf3KsuBuhRMA_f5q-KNWKhCUiD5KlitBU1PypuRctIFOiKfk';
-const farmerImage = '/images/farm2table-ecology.png';
+
 const heroSlides = [
-  { src: heroImage, alt: 'Nong san tuoi tren ban go' },
-  { src: '/images/raucu.webp', alt: 'Rau cu sach nhieu mau sac' },
-  { src: '/images/trai_cay.webp', alt: 'Trai cay tuoi ngon' },
-  { src: '/images/ngucoc.jpg', alt: 'Ngu coc va cac loai hat' },
-  { src: '/images/gia_vi.jpg', alt: 'Gia vi va thao moc' },
+  { src: '/images/raucu.webp', alt: 'Rau củ sạch nhiều màu sắc' },
+  { src: '/images/trai_cay.webp', alt: 'Trái cây tươi ngon' },
+  { src: '/images/ngucoc.jpg', alt: 'Ngũ cốc và các loại hạt' },
+  { src: '/images/gia_vi.jpg', alt: 'Gia vị và thảo mộc' },
 ];
-const featuredCategorySlugs = ['rau-cu', 'trai-cay', 'ngu-coc', 'gia-vi'];
-const categoryImages = {
-  'rau-cu': '/images/raucu.webp',
-  'trai-cay': '/images/trai_cay.webp',
-  'ngu-coc': '/images/ngucoc.jpg',
-  'gia-vi': '/images/gia_vi.jpg',
-};
 
 function ProductCard({ product }) {
   const { user } = useAuth();
@@ -33,18 +23,17 @@ function ProductCard({ product }) {
   const handleAdd = async event => {
     event.preventDefault();
     event.stopPropagation();
-    if (!user) return;
-    if (user.role !== 'buyer' || stock <= 0) return;
+    if (!user || user.role !== 'buyer' || stock <= 0) return;
     await addToCart(product.ma_san_pham, 1);
     setAdded(true);
     setTimeout(() => setAdded(false), 1200);
   };
 
   return (
-    <Link to={`/products/${product.ma_san_pham}`} className="group min-w-[260px] overflow-hidden rounded-2xl border border-[#d7ddd8] bg-white shadow-sm hover:-translate-y-1 hover:shadow-lg md:min-w-0">
+    <Link to={`/products/${product.ma_san_pham}`} className="group min-w-[260px] overflow-hidden rounded-2xl border border-[#d7ddd8] bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg md:min-w-0">
       <div className="relative aspect-[4/5] overflow-hidden bg-[#efeded]">
-        <img src={product.images?.[0] || placeholderImage} alt={product.ten_san_pham} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-        {stock > 0 ? <span className="absolute left-4 top-4 rounded-full bg-[#a33d23] px-3 py-1 text-xs font-semibold text-white">Tươi mới</span> : null}
+        <img src={pickProductImage(product)} alt={product.ten_san_pham} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+        <span className="absolute left-4 top-4 rounded-full bg-[#a33d23] px-3 py-1 text-xs font-semibold text-white">Tươi mới</span>
       </div>
       <div className="p-5">
         <p className="text-xs text-[#404943]">{product.ten_danh_muc || product.ten_nong_trai || 'Nông sản'}</p>
@@ -54,7 +43,7 @@ function ProductCard({ product }) {
             <p className="text-xl font-bold text-[#0f5238]">{formatCurrency(product.gia_ban)}</p>
             <p className="text-xs text-[#404943]">/ {product.don_vi}</p>
           </div>
-          <button onClick={handleAdd} aria-label={`Thêm ${product.ten_san_pham} vào giỏ`} className={`flex h-10 w-10 items-center justify-center rounded-full ${added ? 'bg-[#b1f0ce] text-[#0f5238]' : 'bg-[#b1f0ce] text-[#0f5238] hover:bg-[#0f5238] hover:text-white'}`}>
+          <button onClick={handleAdd} aria-label={`Thêm ${product.ten_san_pham} vào giỏ`} className={`flex h-10 w-10 items-center justify-center rounded-full ${added ? 'bg-[#0f5238] text-white' : 'bg-[#b1f0ce] text-[#0f5238] hover:bg-[#0f5238] hover:text-white'}`}>
             <span className="material-symbols-outlined">add</span>
           </button>
         </div>
@@ -69,9 +58,6 @@ export default function Home() {
   const [products, setProducts] = useState([]);
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
   const [loading, setLoading] = useState(true);
-  const featuredCategories = featuredCategorySlugs
-    .map(slug => categories.find(category => category.slug === slug))
-    .filter(Boolean);
 
   useEffect(() => {
     categoryAPI.getAll().then(data => setCategories(data.categories || [])).catch(() => setCategories([]));
@@ -86,9 +72,10 @@ export default function Home() {
     const timer = setInterval(() => {
       setActiveHeroSlide(current => (current + 1) % heroSlides.length);
     }, 4200);
-
     return () => clearInterval(timer);
   }, []);
+
+  const featuredCategories = categories.slice(0, 4);
 
   return (
     <div className="market-shell">
@@ -98,12 +85,10 @@ export default function Home() {
             key={slide.src}
             src={slide.src}
             alt={slide.alt}
-            className={`absolute inset-0 h-full w-full object-cover transition-all duration-1000 ease-out ${
-              index === activeHeroSlide ? 'scale-100 opacity-100' : 'scale-105 opacity-0'
-            }`}
+            className={`absolute inset-0 h-full w-full object-cover transition-all duration-1000 ease-out ${index === activeHeroSlide ? 'scale-100 opacity-100' : 'scale-105 opacity-0'}`}
           />
         ))}
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(10,25,18,.82),rgba(10,25,18,.36),rgba(10,25,18,.18))]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(10,25,18,.82),rgba(10,25,18,.38),rgba(10,25,18,.16))]" />
         <div className="market-page relative py-12 text-white">
           <p className="inline-flex rounded-full bg-[#2d6a4f] px-4 py-2 text-xs font-bold uppercase">Tươi ngon mỗi ngày</p>
           <h1 className="mt-5 max-w-3xl text-4xl font-bold leading-tight md:text-6xl">Nông sản sạch từ tâm</h1>
@@ -120,9 +105,7 @@ export default function Home() {
                 key={slide.src}
                 onClick={() => setActiveHeroSlide(index)}
                 aria-label={`Chuyển đến ảnh banner ${index + 1}`}
-                className={`h-2.5 rounded-full transition-all ${
-                  index === activeHeroSlide ? 'w-9 bg-white' : 'w-2.5 bg-white/45 hover:bg-white/75'
-                }`}
+                className={`h-2.5 rounded-full transition-all ${index === activeHeroSlide ? 'w-9 bg-white' : 'w-2.5 bg-white/45 hover:bg-white/75'}`}
               />
             ))}
           </div>
@@ -144,11 +127,11 @@ export default function Home() {
               onClick={() => navigate(`/products?category=${category.id}`)}
               className={`group relative overflow-hidden rounded-2xl text-left ${index === 0 ? 'md:col-span-2 md:row-span-2' : index === 1 ? 'md:col-span-2' : ''}`}
             >
-              <img src={categoryImages[category.slug]} alt={category.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+              <img src={pickCategoryImage(category)} alt={category.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
               <span className="absolute inset-0 bg-gradient-to-t from-[#0f5238]/90 via-[#0f5238]/15 to-transparent" />
               <span className="absolute bottom-0 left-0 p-5 text-white">
                 <strong className="block text-lg font-bold">{category.name}</strong>
-                <small className="mt-1 block text-white/80">{category.icon || 'Farm2Table'} Nguồn hàng chọn lọc</small>
+                <small className="mt-1 block text-white/80">Nguồn hàng chọn lọc</small>
               </span>
             </button>
           ))}
@@ -174,7 +157,7 @@ export default function Home() {
       <section className="market-page grid gap-8 py-14 lg:grid-cols-2 lg:items-center lg:py-20">
         <div className="relative max-w-xl">
           <div className="absolute -left-6 -top-6 h-44 w-44 rounded-full bg-[#e4e2e2]" />
-          <img src={farmerImage} alt="Nông dân Farm2Table" className="relative aspect-[5/4] w-full rounded-[24px] object-cover shadow-lg" />
+          <img src="/images/farm2table-ecology.png" alt="Nông dân Farm2Table" className="relative aspect-[5/4] w-full rounded-[24px] object-cover shadow-lg" />
         </div>
         <div>
           <p className="stitch-kicker">Về những người bạn</p>

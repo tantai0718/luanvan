@@ -3,18 +3,41 @@ const jwt = require('jsonwebtoken');
 const db = require('../config/db');
 const { JWT_SECRET, isBcryptHash } = require('../config/auth');
 
+const roleFromUser = user => {
+  if (user.vai_tro) return user.vai_tro;
+  if (Number(user.mavt) === 1 || String(user.ten_vai_tro || '').toLowerCase().includes('admin')) {
+    return 'quan_tri';
+  }
+  return 'nguoi_mua';
+};
+
 const mapRole = value => (value === 'quan_tri' ? 'admin' : 'buyer');
 
-const fmtUser = tk => ({
-  id: tk.ma_tai_khoan,
-  name: tk.ho_ten,
-  email: tk.email,
-  phone: tk.so_dien_thoai || '',
-  avatar: tk.anh_dai_dien || '',
-  address: tk.dia_chi || '',
-  vai_tro: tk.vai_tro,
-  role: mapRole(tk.vai_tro),
-});
+const fmtUser = user => {
+  const vai_tro = roleFromUser(user);
+  return {
+    id: user.mand,
+    name: user.ho_ten,
+    email: user.email,
+    phone: user.sdt || '',
+    avatar: '',
+    address: user.dia_chi || '',
+    vai_tro,
+    role: mapRole(vai_tro),
+  };
+};
+
+const findUserByEmail = async email => {
+  const [rows] = await db.query(
+    `SELECT nd.*, vt.ten_vai_tro
+     FROM nguoi_dung nd
+     LEFT JOIN vai_tro vt ON vt.mavt = nd.mavt
+     WHERE TRIM(LOWER(nd.email)) = ?
+     LIMIT 1`,
+    [email]
+  );
+  return rows[0] || null;
+};
 
 exports.register = async (req, res) => {
   try {
@@ -24,32 +47,27 @@ exports.register = async (req, res) => {
     const cleanPhone = (so_dien_thoai || '').trim();
 
     if (!cleanName || !cleanEmail || !mat_khau) {
-      return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin.' });
+      return res.status(400).json({ message: 'Vui long dien day du thong tin.' });
     }
 
     if (mat_khau.length < 6) {
-      return res.status(400).json({ message: 'Mật khẩu phải có ít nhất 6 ký tự.' });
+      return res.status(400).json({ message: 'Mat khau phai co it nhat 6 ky tu.' });
     }
 
-    const [existedUsers] = await db.query(
-      'SELECT ma_tai_khoan FROM tai_khoan WHERE TRIM(LOWER(email)) = ?',
-      [cleanEmail]
-    );
-
-    if (existedUsers.length > 0) {
-      return res.status(400).json({ message: 'Email đã được sử dụng.' });
+    if (await findUserByEmail(cleanEmail)) {
+      return res.status(400).json({ message: 'Email da duoc su dung.' });
     }
 
     const hash = await bcrypt.hash(mat_khau, 10);
     await db.query(
-      'INSERT INTO tai_khoan (ho_ten, email, so_dien_thoai, mat_khau, vai_tro) VALUES (?, ?, ?, ?, ?)',
-      [cleanName, cleanEmail, cleanPhone || null, hash, 'nguoi_mua']
+      'INSERT INTO nguoi_dung (mavt, ho_ten, email, mat_khau, sdt, dia_chi, trang_thai) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [2, cleanName, cleanEmail, hash, cleanPhone || null, null, 1]
     );
 
-    return res.status(201).json({ message: 'Đăng ký thành công.' });
+    return res.status(201).json({ message: 'Dang ky thanh cong.' });
   } catch (error) {
     console.error('[register]', error);
-    return res.status(500).json({ message: `Lỗi server: ${error.message}` });
+    return res.status(500).json({ message: `Loi server: ${error.message}` });
   }
 };
 
@@ -59,131 +77,92 @@ exports.login = async (req, res) => {
     const cleanEmail = (email || '').trim().toLowerCase();
 
     if (!cleanEmail || !mat_khau) {
-      return res.status(400).json({ message: 'Vui lòng nhập email và mật khẩu.' });
+      return res.status(400).json({ message: 'Vui long nhap email va mat khau.' });
     }
 
-    const [rows] = await db.query(
-      'SELECT * FROM tai_khoan WHERE TRIM(LOWER(email)) = ?',
-      [cleanEmail]
-    );
-
-    if (rows.length === 0) {
-      return res.status(400).json({ message: 'Email hoặc mật khẩu không đúng.' });
+    const user = await findUserByEmail(cleanEmail);
+    if (!user) {
+      return res.status(400).json({ message: 'Email hoac mat khau khong dung.' });
     }
 
-    const tk = rows[0];
-
-    if (tk.vai_tro === 'nong_dan') {
-      return res.status(403).json({
-        message: 'Hệ thống hiện không còn hỗ trợ vai trò nông dân. Vui lòng liên hệ quản trị viên.',
-      });
+    if (!user.trang_thai) {
+      return res.status(403).json({ message: 'Tai khoan da bi khoa.' });
     }
 
-    if (!tk.con_hoat_dong) {
-      return res.status(403).json({ message: 'Tài khoản đã bị khóa.' });
-    }
-
-    let match = false;
-
-    try {
-      if (isBcryptHash(tk.mat_khau)) {
-        match = await bcrypt.compare(mat_khau, tk.mat_khau);
-      } else {
-        match = tk.mat_khau === mat_khau;
-
-        if (match) {
-          const upgradedHash = await bcrypt.hash(mat_khau, 10);
-          await db.query(
-            'UPDATE tai_khoan SET mat_khau = ? WHERE ma_tai_khoan = ?',
-            [upgradedHash, tk.ma_tai_khoan]
-          );
-        }
-      }
-    } catch (hashError) {
-      console.error('[login] password error:', hashError.message);
-      return res.status(500).json({ message: 'Không thể xử lý mật khẩu của tài khoản này.' });
-    }
+    const password = user.mat_khau || '';
+    const match = isBcryptHash(password)
+      ? await bcrypt.compare(mat_khau, password)
+      : password === mat_khau;
 
     if (!match) {
-      return res.status(400).json({ message: 'Email hoặc mật khẩu không đúng.' });
+      return res.status(400).json({ message: 'Email hoac mat khau khong dung.' });
     }
 
-    const token = jwt.sign(
-      { id: tk.ma_tai_khoan, vai_tro: tk.vai_tro },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
+    if (!isBcryptHash(password)) {
+      const upgradedHash = await bcrypt.hash(mat_khau, 10);
+      await db.query('UPDATE nguoi_dung SET mat_khau = ? WHERE mand = ?', [upgradedHash, user.mand]);
+    }
 
-    return res.json({ token, user: fmtUser(tk) });
+    const vai_tro = roleFromUser(user);
+    const token = jwt.sign({ id: user.mand, vai_tro }, JWT_SECRET, { expiresIn: '24h' });
+    return res.json({ token, user: fmtUser(user) });
   } catch (error) {
     console.error('[login]', error);
-    return res.status(500).json({ message: `Lỗi server: ${error.message}` });
+    return res.status(500).json({ message: `Loi server: ${error.message}` });
   }
 };
 
 exports.me = async (req, res) => {
   try {
     const [rows] = await db.query(
-      'SELECT * FROM tai_khoan WHERE ma_tai_khoan = ?',
+      `SELECT nd.*, vt.ten_vai_tro
+       FROM nguoi_dung nd
+       LEFT JOIN vai_tro vt ON vt.mavt = nd.mavt
+       WHERE nd.mand = ?
+       LIMIT 1`,
       [req.user.id]
     );
 
     if (!rows.length) {
-      return res.status(404).json({ message: 'Không tìm thấy tài khoản.' });
-    }
-
-    if (rows[0].vai_tro === 'nong_dan') {
-      return res.status(403).json({
-        message: 'Tài khoản này không còn được hỗ trợ trong phiên bản hiện tại.',
-      });
+      return res.status(404).json({ message: 'Khong tim thay tai khoan.' });
     }
 
     return res.json({ user: fmtUser(rows[0]) });
   } catch (error) {
-    return res.status(500).json({ message: 'Lỗi server.' });
+    return res.status(500).json({ message: `Loi server: ${error.message}` });
   }
 };
 
 exports.updateProfile = async (req, res) => {
   try {
     const { ho_ten, so_dien_thoai, dia_chi } = req.body;
-
     await db.query(
-      'UPDATE tai_khoan SET ho_ten = ?, so_dien_thoai = ?, dia_chi = ? WHERE ma_tai_khoan = ?',
+      'UPDATE nguoi_dung SET ho_ten = ?, sdt = ?, dia_chi = ? WHERE mand = ?',
       [ho_ten, so_dien_thoai, dia_chi, req.user.id]
     );
-
-    return res.json({ message: 'Cập nhật thông tin thành công.' });
+    return res.json({ message: 'Cap nhat thong tin thanh cong.' });
   } catch (error) {
-    return res.status(500).json({ message: 'Lỗi server.' });
+    return res.status(500).json({ message: `Loi server: ${error.message}` });
   }
 };
 
 exports.changePassword = async (req, res) => {
   try {
     const { mat_khau_cu, mat_khau_moi } = req.body;
-    const [rows] = await db.query(
-      'SELECT mat_khau FROM tai_khoan WHERE ma_tai_khoan = ?',
-      [req.user.id]
-    );
-
+    const [rows] = await db.query('SELECT mat_khau FROM nguoi_dung WHERE mand = ?', [req.user.id]);
     const oldPassword = rows[0]?.mat_khau || '';
     const validOldPassword = isBcryptHash(oldPassword)
       ? await bcrypt.compare(mat_khau_cu, oldPassword)
       : oldPassword === mat_khau_cu;
 
     if (!validOldPassword) {
-      return res.status(400).json({ message: 'Mật khẩu cũ không đúng.' });
+      return res.status(400).json({ message: 'Mat khau cu khong dung.' });
     }
 
     const hash = await bcrypt.hash(mat_khau_moi, 10);
-    await db.query(
-      'UPDATE tai_khoan SET mat_khau = ? WHERE ma_tai_khoan = ?',
-      [hash, req.user.id]
-    );
-
-    return res.json({ message: 'Đổi mật khẩu thành công.' });
+    await db.query('UPDATE nguoi_dung SET mat_khau = ? WHERE mand = ?', [hash, req.user.id]);
+    return res.json({ message: 'Doi mat khau thanh cong.' });
   } catch (error) {
-    return res.status(500).json({ message: 'Lỗi server.' });
+    return res.status(500).json({ message: `Loi server: ${error.message}` });
   }
 };
