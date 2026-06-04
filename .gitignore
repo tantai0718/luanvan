@@ -17,6 +17,7 @@ stitch_reference/
 !**/.env.example
 
 coverage/
+backend/upload/
 npm-debug.log*
 yarn-error.log*
 .DS_Store

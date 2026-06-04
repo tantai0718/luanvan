@@ -1,4 +1,6 @@
 const express = require('express');
+const fs = require('fs/promises');
+const path = require('path');
 const router = express.Router();
 const db = require('../config/db');
 const { auth, role } = require('../middlewares/auth');
@@ -21,6 +23,34 @@ const toDbStatus = status => ({
 
 const paymentToDb = method => (method === 'tien_mat' ? 'tien_mat' : 'banking');
 const paymentStatusToApp = status => (status === 'da_thanh_toan' ? 'da_tt' : 'chua_tt');
+const uploadDir = path.join(__dirname, '..', '..', 'upload', 'products');
+
+const apiBaseUrl = () => {
+  const configured = process.env.API_PUBLIC_URL || process.env.SERVER_URL;
+  if (configured) return configured.replace(/\/$/, '');
+  return `http://localhost:${process.env.PORT || 5000}`;
+};
+
+const saveDataUrlImage = async value => {
+  const match = /^data:image\/(png|jpe?g|webp|gif);base64,([a-zA-Z0-9+/=\r\n]+)$/.exec(value || '');
+  if (!match) return value;
+
+  const ext = match[1].replace('jpeg', 'jpg');
+  const buffer = Buffer.from(match[2].replace(/\s/g, ''), 'base64');
+  const fileName = `product-${Date.now()}-${Math.random().toString(16).slice(2)}.${ext}`;
+  await fs.mkdir(uploadDir, { recursive: true });
+  await fs.writeFile(path.join(uploadDir, fileName), buffer);
+  return `${apiBaseUrl()}/upload/products/${fileName}`;
+};
+
+const normalizeStoredProductImages = async values => {
+  const images = Array.isArray(values) ? values.filter(Boolean) : [];
+  const stored = [];
+  for (const image of images) {
+    stored.push(await saveDataUrlImage(image));
+  }
+  return stored;
+};
 
 const normalizeImagePath = value => {
   if (!value) return null;
@@ -204,7 +234,7 @@ router.post('/products', auth, role('admin'), async (req, res) => {
        VALUES (?, ?, ?, ?, ?, ?, 1, NOW())`,
       [ma_danh_muc, ten_san_pham, gia_ban, ton_kho, don_vi, 'Toan quoc']
     );
-    const images = Array.isArray(hinh_anh) ? hinh_anh.filter(Boolean) : [];
+    const images = await normalizeStoredProductImages(hinh_anh);
     for (const [index, image] of images.entries()) {
       await conn.query(
         `INSERT INTO hinh_anh_video (masp, duong_dan, loai, thumbnail, thu_tu, la_chinh, ngay_tao)
@@ -234,7 +264,7 @@ router.put('/products/:id', auth, role('admin'), async (req, res) => {
       [ten_san_pham, gia_ban, don_vi, ton_kho, ma_danh_muc, req.params.id]
     );
     await conn.query('DELETE FROM hinh_anh_video WHERE masp=?', [req.params.id]);
-    const images = Array.isArray(hinh_anh) ? hinh_anh.filter(Boolean) : [];
+    const images = await normalizeStoredProductImages(hinh_anh);
     for (const [index, image] of images.entries()) {
       await conn.query(
         `INSERT INTO hinh_anh_video (masp, duong_dan, loai, thumbnail, thu_tu, la_chinh, ngay_tao)
