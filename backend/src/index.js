@@ -20,8 +20,8 @@ io.on('connection', socket => {
 });
 
 app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:3000', credentials: true }));
-app.use(express.json({ limit: '25mb' }));
-app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use('/upload', express.static(path.join(__dirname, '..', 'upload')));
 app.use((req, res, next) => { req.io = io; next(); });
 

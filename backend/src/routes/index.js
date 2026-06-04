@@ -56,27 +56,29 @@ const normalizeStoredProductImages = async values => {
 const ensureBannerTable = async () => {
   await db.query(`
     CREATE TABLE IF NOT EXISTS banner (
-      mabanner INT AUTO_INCREMENT PRIMARY KEY,
+      mabn INT AUTO_INCREMENT PRIMARY KEY,
+      mand INT NOT NULL,
       tieu_de VARCHAR(150) NULL,
-      mo_ta VARCHAR(500) NULL,
       hinh_anh VARCHAR(255) NOT NULL,
-      thu_tu INT NOT NULL DEFAULT 1,
+      mo_ta VARCHAR(500) NULL,
+      vi_tri ENUM('top','middle','bottom') NULL DEFAULT 'top',
+      thu_tu_hien_thi INT NOT NULL DEFAULT 1,
+      ngay_bat_dau DATETIME NULL,
+      ngay_ket_thuc DATETIME NULL,
       trang_thai TINYINT(1) NOT NULL DEFAULT 1,
-      ngay_tao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      ngay_cap_nhat DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ngay_tao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
 };
 
 const mapBanner = banner => ({
-  id: banner.mabanner,
+  id: banner.mabn,
   title: banner.tieu_de,
   description: banner.mo_ta,
   image: banner.hinh_anh,
-  order: banner.thu_tu,
+  order: banner.thu_tu_hien_thi,
   active: Boolean(banner.trang_thai),
   created_at: banner.ngay_tao,
-  updated_at: banner.ngay_cap_nhat,
 });
 
 const normalizeImagePath = value => {
@@ -163,7 +165,7 @@ router.get('/banners', async (req, res) => {
     const [banners] = await db.query(
       `SELECT * FROM banner
        WHERE trang_thai = 1
-       ORDER BY thu_tu ASC, mabanner DESC`
+       ORDER BY thu_tu_hien_thi ASC, mabn DESC`
     );
     res.json({ banners: banners.map(mapBanner) });
   } catch (error) {
@@ -714,7 +716,7 @@ router.get('/admin/categories', auth, role('admin'), async (req, res) => {
 router.get('/admin/banners', auth, role('admin'), async (req, res) => {
   try {
     await ensureBannerTable();
-    const [banners] = await db.query('SELECT * FROM banner ORDER BY thu_tu ASC, mabanner DESC');
+    const [banners] = await db.query('SELECT * FROM banner ORDER BY thu_tu_hien_thi ASC, mabn DESC');
     res.json({ banners: banners.map(mapBanner) });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -729,9 +731,9 @@ router.post('/admin/banners', auth, role('admin'), async (req, res) => {
     if (!storedImage) return res.status(400).json({ message: 'Vui long chon anh banner.' });
 
     const [result] = await db.query(
-      `INSERT INTO banner (tieu_de, mo_ta, hinh_anh, thu_tu, trang_thai, ngay_tao)
-       VALUES (?, ?, ?, ?, ?, NOW())`,
-      [title || null, description || null, storedImage, Number(order) || 1, active ? 1 : 0]
+      `INSERT INTO banner (mand, tieu_de, hinh_anh, mo_ta, vi_tri, thu_tu_hien_thi, trang_thai, ngay_tao)
+       VALUES (?, ?, ?, ?, 'top', ?, ?, NOW())`,
+      [req.user.id, title || null, storedImage, description || null, Number(order) || 1, active ? 1 : 0]
     );
     res.status(201).json({ message: 'Tao banner thanh cong.', id: result.insertId });
   } catch (error) {
@@ -748,9 +750,9 @@ router.put('/admin/banners/:id', auth, role('admin'), async (req, res) => {
 
     await db.query(
       `UPDATE banner
-       SET tieu_de=?, mo_ta=?, hinh_anh=?, thu_tu=?, trang_thai=?
-       WHERE mabanner=?`,
-      [title || null, description || null, storedImage, Number(order) || 1, active ? 1 : 0, req.params.id]
+       SET tieu_de=?, hinh_anh=?, mo_ta=?, thu_tu_hien_thi=?, trang_thai=?
+       WHERE mabn=?`,
+      [title || null, storedImage, description || null, Number(order) || 1, active ? 1 : 0, req.params.id]
     );
     res.json({ message: 'Cap nhat banner thanh cong.' });
   } catch (error) {
@@ -761,7 +763,7 @@ router.put('/admin/banners/:id', auth, role('admin'), async (req, res) => {
 router.patch('/admin/banners/:id/toggle', auth, role('admin'), async (req, res) => {
   try {
     await ensureBannerTable();
-    await db.query('UPDATE banner SET trang_thai = NOT trang_thai WHERE mabanner=?', [req.params.id]);
+    await db.query('UPDATE banner SET trang_thai = NOT trang_thai WHERE mabn=?', [req.params.id]);
     res.json({ message: 'Cap nhat banner thanh cong.' });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -771,7 +773,7 @@ router.patch('/admin/banners/:id/toggle', auth, role('admin'), async (req, res) 
 router.delete('/admin/banners/:id', auth, role('admin'), async (req, res) => {
   try {
     await ensureBannerTable();
-    await db.query('DELETE FROM banner WHERE mabanner=?', [req.params.id]);
+    await db.query('DELETE FROM banner WHERE mabn=?', [req.params.id]);
     res.json({ message: 'Xoa banner thanh cong.' });
   } catch (error) {
     res.status(500).json({ message: error.message });
