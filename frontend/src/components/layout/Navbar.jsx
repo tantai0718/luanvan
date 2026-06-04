@@ -87,9 +87,9 @@ export default function Navbar() {
                 {initials}
               </button>
               {menuOpen ? (
-                <div className="absolute right-0 top-12 w-64 rounded-xl border border-[#d7ddd8] bg-white p-3 shadow-xl">
+                <div className="absolute right-0 top-12 w-64 rounded-xl border border-[#d7ddd8] bg-white p-3 text-[#1b1c1c] shadow-xl">
                   <div className="rounded-lg bg-[#f5f3f3] p-3">
-                    <p className="font-semibold">{user.name}</p>
+                    <p className="font-semibold text-[#0f3f26]">{user.name}</p>
                     <p className="mt-1 text-xs text-[#404943]">{user.role === 'admin' ? 'Quản trị viên' : 'Người mua'}</p>
                   </div>
                   <Link to="/profile" onClick={() => setMenuOpen(false)} className="mt-2 block rounded-lg px-3 py-2 text-sm hover:bg-[#f5f3f3]">Hồ sơ cá nhân</Link>
