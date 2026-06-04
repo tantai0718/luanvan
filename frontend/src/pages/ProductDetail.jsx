@@ -212,12 +212,12 @@ export default function ProductDetail() {
   return (
     <div className="market-shell pb-10">
       <div className="market-page space-y-8 py-8 md:py-10">
-        <nav className="flex items-center gap-2 text-sm text-slate-500">
-          <Link to="/" className="hover:text-[#1a7a4a]">Trang chủ</Link>
+        <nav className="flex items-center gap-2 text-sm text-white/70">
+          <Link to="/" className="hover:text-white">Trang chủ</Link>
           <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-          <Link to="/products" className="hover:text-[#1a7a4a]">Sản phẩm</Link>
+          <Link to="/products" className="hover:text-white">Sản phẩm</Link>
           <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-          <span className="text-slate-700">{product.ten_san_pham}</span>
+          <span className="text-white">{product.ten_san_pham}</span>
         </nav>
 
         <section className="grid gap-10 border-b border-[#d7ddd8] pb-8 lg:grid-cols-12">
@@ -245,10 +245,10 @@ export default function ProductDetail() {
               <span className="material-symbols-outlined text-[18px]">verified</span>
               <span className="text-sm font-semibold">Nguồn hàng chọn lọc</span>
             </div>
-            <h1 className="text-3xl font-bold text-[#1b1c1c] md:text-4xl">{product.ten_san_pham}</h1>
+            <h1 className="text-3xl font-bold text-white md:text-4xl">{product.ten_san_pham}</h1>
             <div className="mt-4 flex items-center gap-3 text-sm">
               <span className="text-[#713900]">★ {Number(product.diem_danh_gia || 0).toFixed(1)}</span>
-              <span className="text-[#707973]">({product.tong_danh_gia || reviews.length} đánh giá)</span>
+              <span className="text-white/70">({product.tong_danh_gia || reviews.length} đánh giá)</span>
               <span className="rounded-full bg-[#ffdad2] px-3 py-1 text-[#83260e]">{product.ten_danh_muc || 'Nông sản'}</span>
             </div>
 
@@ -260,10 +260,10 @@ export default function ProductDetail() {
               <p className="mt-2 text-xs italic text-[#707973]">Giá đã bao gồm VAT nếu có.</p>
             </div>
 
-            <div className="mt-6 space-y-4 border-y border-[#d7ddd8] py-5 text-sm text-[#404943]">
-              <div className="flex justify-between gap-3"><span>Nguồn hàng</span><strong className="text-[#1b1c1c]">{product.ten_nong_trai || 'Farm2Table'}</strong></div>
-              <div className="flex justify-between gap-3"><span>Khu vực</span><strong className="text-[#1b1c1c]">{product.tinh_thanh || 'Toàn quốc'}</strong></div>
-              <div className="flex justify-between gap-3"><span>Tồn kho</span><strong className="text-[#1b1c1c]">{stock > 0 ? `${stock} ${product.don_vi}` : 'Tạm hết'}</strong></div>
+            <div className="mt-6 space-y-4 border-y border-[#2d6a4f] py-5 text-sm text-white/75">
+              <div className="flex justify-between gap-3"><span>Nguồn hàng</span><strong className="text-white">{product.ten_nong_trai || 'Farm2Table'}</strong></div>
+              <div className="flex justify-between gap-3"><span>Khu vực</span><strong className="text-white">{product.tinh_thanh || 'Toàn quốc'}</strong></div>
+              <div className="flex justify-between gap-3"><span>Tồn kho</span><strong className="text-white">{stock > 0 ? `${stock} ${product.don_vi}` : 'Tạm hết'}</strong></div>
             </div>
 
             <div className="mt-6">
@@ -278,7 +278,7 @@ export default function ProductDetail() {
                     <span className="material-symbols-outlined">add</span>
                   </button>
                 </div>
-                <span className="text-sm text-[#707973]">Còn {stock} trong kho</span>
+                <span className="text-sm text-white/70">Còn {stock} trong kho</span>
               </div>
             </div>
 

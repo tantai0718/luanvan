@@ -13,10 +13,10 @@ export default function About() {
       <section className="market-page grid gap-10 py-10 lg:grid-cols-[1fr_520px] lg:items-center lg:py-16">
         <div>
           <p className="stitch-kicker">Hành trình từ tâm</p>
-          <h1 className="mt-4 max-w-3xl text-4xl font-bold leading-tight text-[#1b1c1c] md:text-5xl">
+          <h1 className="mt-4 max-w-3xl text-4xl font-bold leading-tight text-white md:text-5xl">
             Gói trọn tinh túy đất trời vào từng bữa ăn gia đình.
           </h1>
-          <p className="mt-5 max-w-2xl text-base leading-8 text-[#404943]">
+          <p className="mt-5 max-w-2xl text-base leading-8 text-white/75">
             Farm2Table rút ngắn khoảng cách giữa người nông dân tận tụy và bàn ăn của bạn bằng những sản phẩm sạch,
             thông tin rõ ràng và trải nghiệm mua hàng liền mạch.
           </p>
@@ -24,7 +24,7 @@ export default function About() {
             <Link to="/products" className="rounded-lg bg-[#0f5238] px-6 py-3 text-sm font-semibold text-white">
               Mua nông sản sạch
             </Link>
-            <Link to="/products" className="rounded-lg border border-[#707973] px-6 py-3 text-sm font-semibold text-[#0f5238]">
+            <Link to="/products" className="rounded-lg border border-[#b1f0ce] px-6 py-3 text-sm font-semibold text-[#b1f0ce]">
               Khám phá mùa vụ
             </Link>
           </div>

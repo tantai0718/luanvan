@@ -116,7 +116,7 @@ export default function Home() {
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
             <h2 className="text-3xl font-bold">Danh mục nổi bật</h2>
-            <p className="mt-2 text-sm text-[#404943]">Khám phá nguồn dinh dưỡng từ thiên nhiên.</p>
+            <p className="mt-2 text-sm text-white/75">Khám phá nguồn dinh dưỡng từ thiên nhiên.</p>
           </div>
           <Link to="/products" className="stitch-link text-sm">Xem tất cả</Link>
         </div>
@@ -138,7 +138,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="bg-[#f5f3f3] py-14 md:py-20">
+      <section className="bg-[#0f5238] py-14 md:py-20">
         <div className="market-page">
           <div className="mb-8 flex items-center gap-3">
             <span className="material-symbols-outlined text-[#a33d23]">bolt</span>
@@ -162,28 +162,28 @@ export default function Home() {
         <div>
           <p className="stitch-kicker">Về những người bạn</p>
           <h2 className="mt-4 text-4xl font-bold leading-tight">Câu chuyện từ những bàn tay cần mẫn</h2>
-          <p className="mt-5 text-base leading-8 text-[#404943]">
+          <p className="mt-5 text-base leading-8 text-white/75">
             Mỗi sản phẩm bắt đầu từ nông trại thật, quy trình thật và mong muốn đưa thực phẩm sạch đến gần hơn với gia đình Việt.
           </p>
           <div className="mt-6 grid gap-4">
             <div className="flex gap-3">
               <span className="material-symbols-outlined rounded-lg bg-[#b1f0ce] p-2 text-[#0f5238]">qr_code_2</span>
-              <p className="text-sm leading-6 text-[#404943]"><strong className="block text-[#1b1c1c]">Minh bạch 100%</strong>Quét mã và theo dõi nguồn gốc sản phẩm.</p>
+              <p className="text-sm leading-6 text-white/75"><strong className="block text-white">Minh bạch 100%</strong>Quét mã và theo dõi nguồn gốc sản phẩm.</p>
             </div>
             <div className="flex gap-3">
               <span className="material-symbols-outlined rounded-lg bg-[#ffdad2] p-2 text-[#a33d23]">eco</span>
-              <p className="text-sm leading-6 text-[#404943]"><strong className="block text-[#1b1c1c]">Canh tác bền vững</strong>Ưu tiên nông sản an toàn và theo mùa.</p>
+              <p className="text-sm leading-6 text-white/75"><strong className="block text-white">Canh tác bền vững</strong>Ưu tiên nông sản an toàn và theo mùa.</p>
             </div>
           </div>
           <Link to="/about" className="mt-7 inline-flex rounded-lg border border-[#0f5238] px-5 py-3 text-sm font-semibold text-[#0f5238]">Gặp gỡ Farm2Table</Link>
         </div>
       </section>
 
-      <section className="bg-[#e7eeea] py-14">
+      <section className="bg-[#0f5238] py-14">
         <div className="market-page text-center">
           <span className="material-symbols-outlined text-[#0f5238]">mail</span>
           <h2 className="mt-4 text-3xl font-bold">Nhận thông tin nông sản sạch</h2>
-          <p className="mt-2 text-sm text-[#404943]">Theo dõi mùa vụ và ưu đãi giao hàng mới nhất.</p>
+          <p className="mt-2 text-sm text-white/75">Theo dõi mùa vụ và ưu đãi giao hàng mới nhất.</p>
           <div className="mx-auto mt-6 flex max-w-xl flex-col gap-3 sm:flex-row">
             <input className="market-field flex-1 px-4 py-3 text-sm" placeholder="Địa chỉ email của bạn" />
             <button className="rounded-lg bg-[#0f5238] px-6 py-3 text-sm font-semibold text-white">Đăng ký ngay</button>

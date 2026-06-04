@@ -98,24 +98,24 @@ export default function Products() {
       <div className="market-page grid gap-8 py-8 lg:grid-cols-[260px_1fr] lg:py-12">
         <aside className="space-y-8 lg:sticky lg:top-28 lg:self-start">
           <section>
-            <h2 className="text-sm font-bold uppercase tracking-wide text-[#404943]">Loại sản phẩm</h2>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-[#b1f0ce]">Loại sản phẩm</h2>
             <div className="mt-5 grid gap-3">
               <button onClick={() => setParam('category', '')} className="flex items-center gap-3 text-left text-sm">
                 <span className={`h-5 w-5 rounded border ${!category ? 'border-[#0f5238] bg-[#0f5238]' : 'border-[#707973] bg-white'}`} />
-                Tất cả
+                <span className="text-white/85">Tất cả</span>
               </button>
               {categories.map(item => (
                 <button key={item.id} onClick={() => setParam('category', String(item.id))} className="flex items-center gap-3 text-left text-sm">
                   <span className={`h-5 w-5 rounded border ${category === String(item.id) ? 'border-[#0f5238] bg-[#0f5238]' : 'border-[#707973] bg-white'}`} />
-                  {item.name}
+                  <span className="text-white/85">{item.name}</span>
                 </button>
               ))}
             </div>
           </section>
 
           <section>
-            <h2 className="text-sm font-bold uppercase tracking-wide text-[#404943]">Tình trạng</h2>
-            <button onClick={() => setParam('in_stock', inStock === '1' ? '' : '1')} className={`mt-4 rounded-full border px-4 py-2 text-sm ${inStock === '1' ? 'border-[#0f5238] bg-[#0f5238] text-white' : 'border-[#d7ddd8] bg-white text-[#404943]'}`}>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-[#b1f0ce]">Tình trạng</h2>
+            <button onClick={() => setParam('in_stock', inStock === '1' ? '' : '1')} className={`mt-4 rounded-full border px-4 py-2 text-sm ${inStock === '1' ? 'border-[#b1f0ce] bg-[#b1f0ce] text-[#063d2b]' : 'border-[#2d6a4f] bg-white/10 text-white'}`}>
               Chỉ hiện còn hàng
             </button>
           </section>
@@ -149,9 +149,9 @@ export default function Products() {
           </div>
 
           <div className="mt-5 flex gap-2 overflow-x-auto pb-2 lg:hidden">
-            <button onClick={() => setParam('category', '')} className={`whitespace-nowrap rounded-full px-4 py-2 text-sm ${!category ? 'bg-[#0f5238] text-white' : 'bg-white'}`}>Tất cả</button>
-            {categories.map(item => <button key={item.id} onClick={() => setParam('category', String(item.id))} className={`whitespace-nowrap rounded-full px-4 py-2 text-sm ${category === String(item.id) ? 'bg-[#0f5238] text-white' : 'bg-white'}`}>{item.name}</button>)}
-            <button onClick={() => setParam('in_stock', inStock === '1' ? '' : '1')} className={`whitespace-nowrap rounded-full px-4 py-2 text-sm ${inStock === '1' ? 'bg-[#a33d23] text-white' : 'bg-white'}`}>Còn hàng</button>
+            <button onClick={() => setParam('category', '')} className={`whitespace-nowrap rounded-full px-4 py-2 text-sm ${!category ? 'bg-[#b1f0ce] text-[#063d2b]' : 'bg-white/10 text-white'}`}>Tất cả</button>
+            {categories.map(item => <button key={item.id} onClick={() => setParam('category', String(item.id))} className={`whitespace-nowrap rounded-full px-4 py-2 text-sm ${category === String(item.id) ? 'bg-[#b1f0ce] text-[#063d2b]' : 'bg-white/10 text-white'}`}>{item.name}</button>)}
+            <button onClick={() => setParam('in_stock', inStock === '1' ? '' : '1')} className={`whitespace-nowrap rounded-full px-4 py-2 text-sm ${inStock === '1' ? 'bg-[#ffdad2] text-[#83260e]' : 'bg-white/10 text-white'}`}>Còn hàng</button>
           </div>
 
           {loading ? (

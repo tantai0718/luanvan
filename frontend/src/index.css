@@ -13,14 +13,17 @@
 :root {
   color-scheme: light;
   --market-green: #0f5238;
+  --market-green-dark: #063d2b;
+  --market-green-deep: #042f22;
   --market-green-light: #b1f0ce;
   --market-green-mid: #2d6a4f;
   --market-orange: #a33d23;
-  --market-cream: #fbf9f8;
+  --market-cream: #063d2b;
   --market-ink: #1b1c1c;
+  --market-on-dark: #f7fff9;
   --market-muted: #404943;
-  --market-border: #d7ddd8;
-  --market-surface-low: #f5f3f3;
+  --market-border: #2d6a4f;
+  --market-surface-low: #0f5238;
 }
 
 html {
@@ -30,7 +33,7 @@ html {
 body {
   font-family: 'Be Vietnam Pro', sans-serif;
   background: var(--market-cream);
-  color: var(--market-ink);
+  color: var(--market-on-dark);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -75,7 +78,10 @@ img {
 
 .market-shell {
   min-height: 100vh;
-  background: var(--market-cream);
+  background:
+    radial-gradient(circle at top left, rgba(177, 240, 206, 0.12), transparent 34%),
+    linear-gradient(180deg, var(--market-green-dark), var(--market-green-deep));
+  color: var(--market-on-dark);
 }
 
 .market-page {
@@ -86,8 +92,13 @@ img {
 .market-panel {
   border: 1px solid var(--market-border);
   background: #fff;
+  color: var(--market-ink);
   border-radius: 16px;
-  box-shadow: 0 10px 28px rgba(15, 82, 56, 0.07);
+  box-shadow: 0 18px 38px rgba(0, 24, 16, 0.22);
+}
+
+.market-shell .bg-white {
+  color: var(--market-ink);
 }
 
 .market-section-title {
@@ -145,7 +156,7 @@ img {
 }
 
 .stitch-kicker {
-  color: var(--market-green);
+  color: var(--market-green-light);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -153,7 +164,7 @@ img {
 }
 
 .stitch-link {
-  color: var(--market-green);
+  color: var(--market-green-light);
   font-weight: 600;
 }
 

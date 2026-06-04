@@ -36,7 +36,7 @@ export default function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[#e4e2e2] bg-[#f5f3f3]/95 shadow-sm backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-[#2d6a4f] bg-[#063d2b]/95 shadow-sm backdrop-blur">
       <div className="market-page flex min-h-20 items-center justify-between gap-4">
         <div className="flex items-center gap-8">
           <Link to="/" className="whitespace-nowrap text-xl font-bold text-[#0f5238] md:text-2xl">Farm2Table</Link>
@@ -47,31 +47,31 @@ export default function Navbar() {
                 to={item.to}
                 className={({ isActive }) =>
                   `rounded-lg border-b-2 px-1 py-2 text-sm transition ${
-                    isActive ? 'border-[#0f5238] font-bold text-[#0f5238]' : 'border-transparent text-[#404943] hover:bg-[#e4e2e2]/60 hover:text-[#0f5238]'
+                    isActive ? 'border-[#b1f0ce] font-bold text-[#b1f0ce]' : 'border-transparent text-white/80 hover:bg-white/10 hover:text-white'
                   }`
                 }
               >
                 {item.label}
               </NavLink>
             ))}
-            {user?.role === 'buyer' ? <NavLink to="/orders" className="rounded-lg px-1 py-2 text-sm text-[#404943] hover:text-[#0f5238]">Đơn hàng</NavLink> : null}
-            {user?.role === 'admin' ? <NavLink to="/admin" className="rounded-lg px-1 py-2 text-sm text-[#404943] hover:text-[#0f5238]">Quản trị</NavLink> : null}
+            {user?.role === 'buyer' ? <NavLink to="/orders" className="rounded-lg px-1 py-2 text-sm text-white/80 hover:text-white">Đơn hàng</NavLink> : null}
+            {user?.role === 'admin' ? <NavLink to="/admin" className="rounded-lg px-1 py-2 text-sm text-white/80 hover:text-white">Quản trị</NavLink> : null}
           </nav>
         </div>
 
         <div className="flex items-center gap-2">
-          <form onSubmit={handleSearch} className="hidden items-center rounded-xl bg-[#efeded] px-3 lg:flex">
-            <span className="material-symbols-outlined text-[20px] text-[#404943]">search</span>
+          <form onSubmit={handleSearch} className="hidden items-center rounded-xl bg-white/10 px-3 lg:flex">
+            <span className="material-symbols-outlined text-[20px] text-white/75">search</span>
             <input
               value={search}
               onChange={event => setSearch(event.target.value)}
               placeholder="Tìm kiếm nông sản..."
-              className="w-52 bg-transparent px-2 py-3 text-sm outline-none"
+              className="w-52 bg-transparent px-2 py-3 text-sm text-white outline-none placeholder:text-white/60"
             />
           </form>
 
           {user?.role === 'buyer' ? (
-            <Link to="/cart" aria-label="Giỏ hàng" className="relative rounded-lg p-2 text-[#0f5238] hover:bg-[#e4e2e2]">
+            <Link to="/cart" aria-label="Giỏ hàng" className="relative rounded-lg p-2 text-[#b1f0ce] hover:bg-white/10">
               <span className="material-symbols-outlined">shopping_cart</span>
               {totalItems ? (
                 <span className="absolute right-0 top-0 min-w-[17px] rounded-full bg-[#a33d23] px-1 text-center text-[10px] font-bold text-white">
@@ -83,7 +83,7 @@ export default function Navbar() {
 
           {user ? (
             <div className="relative">
-              <button onClick={() => setMenuOpen(prev => !prev)} className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#d7ddd8] bg-white text-xs font-bold text-[#0f5238]">
+              <button onClick={() => setMenuOpen(prev => !prev)} className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#b1f0ce]/40 bg-white/10 text-xs font-bold text-white">
                 {initials}
               </button>
               {menuOpen ? (
@@ -99,26 +99,26 @@ export default function Navbar() {
               ) : null}
             </div>
           ) : (
-            <Link to="/login" aria-label="Đăng nhập" className="rounded-lg p-2 text-[#0f5238] hover:bg-[#e4e2e2]">
+            <Link to="/login" aria-label="Đăng nhập" className="rounded-lg p-2 text-[#b1f0ce] hover:bg-white/10">
               <span className="material-symbols-outlined">person</span>
             </Link>
           )}
 
-          <button onClick={() => setMobileOpen(prev => !prev)} className="rounded-lg p-2 text-[#0f5238] hover:bg-[#e4e2e2] md:hidden" aria-label="Mở menu">
+          <button onClick={() => setMobileOpen(prev => !prev)} className="rounded-lg p-2 text-[#b1f0ce] hover:bg-white/10 md:hidden" aria-label="Mở menu">
             <span className="material-symbols-outlined">menu</span>
           </button>
         </div>
       </div>
 
       {mobileOpen ? (
-        <div className="market-page border-t border-[#e4e2e2] py-4 md:hidden">
-          <form onSubmit={handleSearch} className="mb-3 flex rounded-lg bg-[#efeded] px-3">
-            <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Tìm kiếm nông sản..." className="min-w-0 flex-1 bg-transparent py-3 text-sm outline-none" />
-            <button className="material-symbols-outlined text-[#0f5238]">search</button>
+        <div className="market-page border-t border-[#2d6a4f] py-4 md:hidden">
+          <form onSubmit={handleSearch} className="mb-3 flex rounded-lg bg-white/10 px-3">
+            <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Tìm kiếm nông sản..." className="min-w-0 flex-1 bg-transparent py-3 text-sm text-white outline-none placeholder:text-white/60" />
+            <button className="material-symbols-outlined text-[#b1f0ce]">search</button>
           </form>
           <nav className="grid gap-1">
-            {links.map(item => <Link key={item.to} to={item.to} onClick={() => setMobileOpen(false)} className="rounded-lg px-3 py-2 text-sm hover:bg-white">{item.label}</Link>)}
-            {user?.role === 'buyer' ? <Link to="/orders" onClick={() => setMobileOpen(false)} className="rounded-lg px-3 py-2 text-sm hover:bg-white">Đơn hàng</Link> : null}
+            {links.map(item => <Link key={item.to} to={item.to} onClick={() => setMobileOpen(false)} className="rounded-lg px-3 py-2 text-sm text-white/85 hover:bg-white/10">{item.label}</Link>)}
+            {user?.role === 'buyer' ? <Link to="/orders" onClick={() => setMobileOpen(false)} className="rounded-lg px-3 py-2 text-sm text-white/85 hover:bg-white/10">Đơn hàng</Link> : null}
           </nav>
         </div>
       ) : null}

@@ -84,10 +84,10 @@ export default function Cart() {
   return (
     <div className="market-shell">
       <div className="market-page py-8 md:py-12">
-        <div className="mb-8 flex items-center gap-2 text-sm font-semibold text-[#404943]">
+        <div className="mb-8 flex items-center gap-2 text-sm font-semibold text-white/70">
           <span>Giỏ hàng</span>
           <span className="material-symbols-outlined text-[18px]">chevron_right</span>
-          <span className="text-[#0f5238]">Thanh toán</span>
+          <span className="text-[#b1f0ce]">Thanh toán</span>
         </div>
         <h1 className="mb-9 text-4xl font-bold">Hoàn tất đơn hàng</h1>
 
