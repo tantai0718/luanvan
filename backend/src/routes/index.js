@@ -726,14 +726,14 @@ router.get('/admin/banners', auth, role('admin'), async (req, res) => {
 router.post('/admin/banners', auth, role('admin'), async (req, res) => {
   try {
     await ensureBannerTable();
-    const { title = '', description = '', image, link = '', order = 1, active = true } = req.body;
+    const { title = '', description = '', image, order = 1, active = true } = req.body;
     const storedImage = await saveDataUrlImage(image, 'banners', 'banner');
     if (!storedImage) return res.status(400).json({ message: 'Vui long chon anh banner.' });
 
     const [result] = await db.query(
       `INSERT INTO banner (tieu_de, mo_ta, hinh_anh, lien_ket, thu_tu, trang_thai, ngay_tao)
        VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-      [title || null, description || null, storedImage, link || null, Number(order) || 1, active ? 1 : 0]
+      [title || null, description || null, storedImage, null, Number(order) || 1, active ? 1 : 0]
     );
     res.status(201).json({ message: 'Tao banner thanh cong.', id: result.insertId });
   } catch (error) {
@@ -744,7 +744,7 @@ router.post('/admin/banners', auth, role('admin'), async (req, res) => {
 router.put('/admin/banners/:id', auth, role('admin'), async (req, res) => {
   try {
     await ensureBannerTable();
-    const { title = '', description = '', image, link = '', order = 1, active = true } = req.body;
+    const { title = '', description = '', image, order = 1, active = true } = req.body;
     const storedImage = await saveDataUrlImage(image, 'banners', 'banner');
     if (!storedImage) return res.status(400).json({ message: 'Vui long chon anh banner.' });
 
@@ -752,7 +752,7 @@ router.put('/admin/banners/:id', auth, role('admin'), async (req, res) => {
       `UPDATE banner
        SET tieu_de=?, mo_ta=?, hinh_anh=?, lien_ket=?, thu_tu=?, trang_thai=?
        WHERE mabanner=?`,
-      [title || null, description || null, storedImage, link || null, Number(order) || 1, active ? 1 : 0, req.params.id]
+      [title || null, description || null, storedImage, null, Number(order) || 1, active ? 1 : 0, req.params.id]
     );
     res.json({ message: 'Cap nhat banner thanh cong.' });
   } catch (error) {

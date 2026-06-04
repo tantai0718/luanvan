@@ -6,7 +6,6 @@ const emptyForm = {
   title: '',
   description: '',
   image: '',
-  link: '',
   order: 1,
   active: true,
 };
@@ -80,8 +79,6 @@ function BannerFormModal({ initialData, onClose, onDone }) {
           <Input label="Thứ tự hiển thị" type="number" min="1" value={form.order} onChange={event => setForm({ ...form, order: event.target.value })} />
         </div>
 
-        <Input label="Link khi bấm banner" value={form.link || ''} placeholder="/products hoặc https://..." onChange={event => setForm({ ...form, link: event.target.value })} />
-
         <div>
           <label className="mb-2 block text-sm font-medium text-slate-700">Mô tả</label>
           <textarea
@@ -152,7 +149,6 @@ function BannerCard({ banner, onEdit, onToggle, onDelete }) {
           </div>
         </div>
         {banner.description ? <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-600">{banner.description}</p> : null}
-        {banner.link ? <p className="mt-3 truncate text-xs text-[#1a7a4a]">{banner.link}</p> : null}
         <div className="mt-4 flex gap-2">
           <Btn size="sm" variant="outline" className="flex-1 justify-center" onClick={() => onEdit(banner)}>Sửa</Btn>
           <Btn size="sm" variant={banner.active ? 'ghost' : 'primary'} className="flex-1 justify-center" onClick={() => onToggle(banner.id)}>
