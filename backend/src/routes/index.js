@@ -60,7 +60,6 @@ const ensureBannerTable = async () => {
       tieu_de VARCHAR(150) NULL,
       mo_ta VARCHAR(500) NULL,
       hinh_anh VARCHAR(255) NOT NULL,
-      lien_ket VARCHAR(255) NULL,
       thu_tu INT NOT NULL DEFAULT 1,
       trang_thai TINYINT(1) NOT NULL DEFAULT 1,
       ngay_tao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -74,7 +73,6 @@ const mapBanner = banner => ({
   title: banner.tieu_de,
   description: banner.mo_ta,
   image: banner.hinh_anh,
-  link: banner.lien_ket,
   order: banner.thu_tu,
   active: Boolean(banner.trang_thai),
   created_at: banner.ngay_tao,
@@ -731,9 +729,9 @@ router.post('/admin/banners', auth, role('admin'), async (req, res) => {
     if (!storedImage) return res.status(400).json({ message: 'Vui long chon anh banner.' });
 
     const [result] = await db.query(
-      `INSERT INTO banner (tieu_de, mo_ta, hinh_anh, lien_ket, thu_tu, trang_thai, ngay_tao)
-       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-      [title || null, description || null, storedImage, null, Number(order) || 1, active ? 1 : 0]
+      `INSERT INTO banner (tieu_de, mo_ta, hinh_anh, thu_tu, trang_thai, ngay_tao)
+       VALUES (?, ?, ?, ?, ?, NOW())`,
+      [title || null, description || null, storedImage, Number(order) || 1, active ? 1 : 0]
     );
     res.status(201).json({ message: 'Tao banner thanh cong.', id: result.insertId });
   } catch (error) {
@@ -750,9 +748,9 @@ router.put('/admin/banners/:id', auth, role('admin'), async (req, res) => {
 
     await db.query(
       `UPDATE banner
-       SET tieu_de=?, mo_ta=?, hinh_anh=?, lien_ket=?, thu_tu=?, trang_thai=?
+       SET tieu_de=?, mo_ta=?, hinh_anh=?, thu_tu=?, trang_thai=?
        WHERE mabanner=?`,
-      [title || null, description || null, storedImage, null, Number(order) || 1, active ? 1 : 0, req.params.id]
+      [title || null, description || null, storedImage, Number(order) || 1, active ? 1 : 0, req.params.id]
     );
     res.json({ message: 'Cap nhat banner thanh cong.' });
   } catch (error) {
