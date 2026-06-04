@@ -15,6 +15,7 @@ import AdminDashboard  from './pages/admin/Dashboard';
 import AdminAccounts   from './pages/admin/Accounts';
 import AdminCategories from './pages/admin/Categories';
 import AdminProducts   from './pages/admin/Products';
+import AdminBanners    from './pages/admin/Banners';
 import AdminOrders     from './pages/admin/Orders';
 import About           from './pages/About';
 
@@ -57,6 +58,7 @@ function AppRoutes() {
       <Route path="/admin/accounts"   element={<AP><AdminAccounts/></AP>}/>
       <Route path="/admin/categories" element={<AP><AdminCategories/></AP>}/>
       <Route path="/admin/products"   element={<AP><AdminProducts/></AP>}/>
+      <Route path="/admin/banners"    element={<AP><AdminBanners/></AP>}/>
       <Route path="/admin/orders"     element={<AP><AdminOrders/></AP>}/>
       <Route path="*" element={<Navigate to="/"/>}/>
     </Routes>

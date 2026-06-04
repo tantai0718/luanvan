@@ -23,7 +23,7 @@ const toDbStatus = status => ({
 
 const paymentToDb = method => (method === 'tien_mat' ? 'tien_mat' : 'banking');
 const paymentStatusToApp = status => (status === 'da_thanh_toan' ? 'da_tt' : 'chua_tt');
-const uploadDir = path.join(__dirname, '..', '..', 'upload', 'products');
+const uploadRoot = path.join(__dirname, '..', '..', 'upload');
 
 const apiBaseUrl = () => {
   const configured = process.env.API_PUBLIC_URL || process.env.SERVER_URL;
@@ -31,16 +31,17 @@ const apiBaseUrl = () => {
   return `http://localhost:${process.env.PORT || 5000}`;
 };
 
-const saveDataUrlImage = async value => {
+const saveDataUrlImage = async (value, folder = 'products', prefix = 'product') => {
   const match = /^data:image\/(png|jpe?g|webp|gif);base64,([a-zA-Z0-9+/=\r\n]+)$/.exec(value || '');
   if (!match) return value;
 
   const ext = match[1].replace('jpeg', 'jpg');
   const buffer = Buffer.from(match[2].replace(/\s/g, ''), 'base64');
-  const fileName = `product-${Date.now()}-${Math.random().toString(16).slice(2)}.${ext}`;
+  const uploadDir = path.join(uploadRoot, folder);
+  const fileName = `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}.${ext}`;
   await fs.mkdir(uploadDir, { recursive: true });
   await fs.writeFile(path.join(uploadDir, fileName), buffer);
-  return `${apiBaseUrl()}/upload/products/${fileName}`;
+  return `${apiBaseUrl()}/upload/${folder}/${fileName}`;
 };
 
 const normalizeStoredProductImages = async values => {
@@ -51,6 +52,34 @@ const normalizeStoredProductImages = async values => {
   }
   return stored;
 };
+
+const ensureBannerTable = async () => {
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS banner (
+      mabanner INT AUTO_INCREMENT PRIMARY KEY,
+      tieu_de VARCHAR(150) NULL,
+      mo_ta VARCHAR(500) NULL,
+      hinh_anh VARCHAR(255) NOT NULL,
+      lien_ket VARCHAR(255) NULL,
+      thu_tu INT NOT NULL DEFAULT 1,
+      trang_thai TINYINT(1) NOT NULL DEFAULT 1,
+      ngay_tao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      ngay_cap_nhat DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+  `);
+};
+
+const mapBanner = banner => ({
+  id: banner.mabanner,
+  title: banner.tieu_de,
+  description: banner.mo_ta,
+  image: banner.hinh_anh,
+  link: banner.lien_ket,
+  order: banner.thu_tu,
+  active: Boolean(banner.trang_thai),
+  created_at: banner.ngay_tao,
+  updated_at: banner.ngay_cap_nhat,
+});
 
 const normalizeImagePath = value => {
   if (!value) return null;
@@ -129,6 +158,20 @@ router.post('/auth/login', authCtrl.login);
 router.get('/auth/me', auth, authCtrl.me);
 router.put('/auth/profile', auth, authCtrl.updateProfile);
 router.put('/auth/change-password', auth, authCtrl.changePassword);
+
+router.get('/banners', async (req, res) => {
+  try {
+    await ensureBannerTable();
+    const [banners] = await db.query(
+      `SELECT * FROM banner
+       WHERE trang_thai = 1
+       ORDER BY thu_tu ASC, mabanner DESC`
+    );
+    res.json({ banners: banners.map(mapBanner) });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 router.get('/categories', async (req, res) => {
   try {
@@ -668,6 +711,73 @@ router.get('/admin/categories', auth, role('admin'), async (req, res) => {
      ORDER BY madm`
   );
   res.json({ categories });
+});
+
+router.get('/admin/banners', auth, role('admin'), async (req, res) => {
+  try {
+    await ensureBannerTable();
+    const [banners] = await db.query('SELECT * FROM banner ORDER BY thu_tu ASC, mabanner DESC');
+    res.json({ banners: banners.map(mapBanner) });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post('/admin/banners', auth, role('admin'), async (req, res) => {
+  try {
+    await ensureBannerTable();
+    const { title = '', description = '', image, link = '', order = 1, active = true } = req.body;
+    const storedImage = await saveDataUrlImage(image, 'banners', 'banner');
+    if (!storedImage) return res.status(400).json({ message: 'Vui long chon anh banner.' });
+
+    const [result] = await db.query(
+      `INSERT INTO banner (tieu_de, mo_ta, hinh_anh, lien_ket, thu_tu, trang_thai, ngay_tao)
+       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+      [title || null, description || null, storedImage, link || null, Number(order) || 1, active ? 1 : 0]
+    );
+    res.status(201).json({ message: 'Tao banner thanh cong.', id: result.insertId });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.put('/admin/banners/:id', auth, role('admin'), async (req, res) => {
+  try {
+    await ensureBannerTable();
+    const { title = '', description = '', image, link = '', order = 1, active = true } = req.body;
+    const storedImage = await saveDataUrlImage(image, 'banners', 'banner');
+    if (!storedImage) return res.status(400).json({ message: 'Vui long chon anh banner.' });
+
+    await db.query(
+      `UPDATE banner
+       SET tieu_de=?, mo_ta=?, hinh_anh=?, lien_ket=?, thu_tu=?, trang_thai=?
+       WHERE mabanner=?`,
+      [title || null, description || null, storedImage, link || null, Number(order) || 1, active ? 1 : 0, req.params.id]
+    );
+    res.json({ message: 'Cap nhat banner thanh cong.' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.patch('/admin/banners/:id/toggle', auth, role('admin'), async (req, res) => {
+  try {
+    await ensureBannerTable();
+    await db.query('UPDATE banner SET trang_thai = NOT trang_thai WHERE mabanner=?', [req.params.id]);
+    res.json({ message: 'Cap nhat banner thanh cong.' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.delete('/admin/banners/:id', auth, role('admin'), async (req, res) => {
+  try {
+    await ensureBannerTable();
+    await db.query('DELETE FROM banner WHERE mabanner=?', [req.params.id]);
+    res.json({ message: 'Xoa banner thanh cong.' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 });
 
 router.get('/admin/categories/:id/products', auth, role('admin'), async (req, res) => {

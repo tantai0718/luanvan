@@ -63,6 +63,15 @@ export const categoryAPI = {
   getAll: () => api.get('/categories'),
 };
 
+export const bannerAPI = {
+  getAll: () => api.get('/banners'),
+  adminAll: () => api.get('/admin/banners'),
+  create: body => api.post('/admin/banners', body),
+  update: (id, body) => api.put(`/admin/banners/${id}`, body),
+  delete: id => api.delete(`/admin/banners/${id}`),
+  toggle: id => api.patch(`/admin/banners/${id}/toggle`),
+};
+
 export const cartAPI = {
   get: () => api.get('/cart'),
   add: body => api.post('/cart', body),

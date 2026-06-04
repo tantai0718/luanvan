@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { categoryAPI, productAPI } from '../services/api';
+import { bannerAPI, categoryAPI, productAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { pickCategoryImage, pickProductImage } from '../utils/marketImages';
 
 const formatCurrency = value => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
 
-const heroSlides = [
+const fallbackHeroSlides = [
   { src: '/images/raucu.webp', alt: 'Rau củ sạch nhiều màu sắc' },
   { src: '/images/trai_cay.webp', alt: 'Trái cây tươi ngon' },
   { src: '/images/ngucoc.jpg', alt: 'Ngũ cốc và các loại hạt' },
@@ -56,11 +56,25 @@ export default function Home() {
   const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
+  const [heroSlides, setHeroSlides] = useState(fallbackHeroSlides);
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     categoryAPI.getAll().then(data => setCategories(data.categories || [])).catch(() => setCategories([]));
+    bannerAPI
+      .getAll()
+      .then(data => {
+        const slides = (data.banners || [])
+          .filter(item => item.image)
+          .map(item => ({
+            src: item.image,
+            alt: item.title || 'Banner chợ nông sản',
+          }));
+        setHeroSlides(slides.length ? slides : fallbackHeroSlides);
+        setActiveHeroSlide(0);
+      })
+      .catch(() => setHeroSlides(fallbackHeroSlides));
     productAPI
       .getAll('?limit=4&sort=moi_nhat')
       .then(data => setProducts(data.products || []))
@@ -73,7 +87,7 @@ export default function Home() {
       setActiveHeroSlide(current => (current + 1) % heroSlides.length);
     }, 4200);
     return () => clearInterval(timer);
-  }, []);
+  }, [heroSlides.length]);
 
   const featuredCategories = categories.slice(0, 4);
 
