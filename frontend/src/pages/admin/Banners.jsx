@@ -95,7 +95,7 @@ export default function AdminBanners() {
     setSaving(true);
     setError('');
     try {
-      const startOrder = banners.length + 1;
+      const startOrder = Math.max(0, ...banners.map(item => Number(item.order) || 0)) + 1;
       const images = await Promise.all(files.map(readFileAsDataUrl));
       for (const [index, image] of images.entries()) {
         await bannerAPI.create({

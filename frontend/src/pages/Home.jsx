@@ -68,6 +68,7 @@ export default function Home() {
         const slides = (data.banners || [])
           .filter(item => item.image)
           .map(item => ({
+            id: item.id,
             src: item.image,
             alt: item.title || 'Banner chợ nông sản',
           }));
@@ -96,7 +97,7 @@ export default function Home() {
       <section className="relative flex min-h-[520px] items-end overflow-hidden md:min-h-[600px] md:items-center">
         {heroSlides.map((slide, index) => (
           <img
-            key={slide.src}
+            key={slide.id || slide.src}
             src={slide.src}
             alt={slide.alt}
             className={`absolute inset-0 h-full w-full object-cover transition-all duration-1000 ease-out ${index === activeHeroSlide ? 'scale-100 opacity-100' : 'scale-105 opacity-0'}`}
@@ -113,14 +114,18 @@ export default function Home() {
             <button onClick={() => navigate('/products')} className="rounded-xl bg-[#0f5238] px-7 py-4 text-sm font-semibold text-white shadow-lg">Mua sắm ngay</button>
             <button onClick={() => navigate('/about')} className="rounded-xl border border-white/40 bg-white/15 px-7 py-4 text-sm font-semibold text-white backdrop-blur">Tìm hiểu thêm</button>
           </div>
-          <div className="mt-8 flex gap-2" aria-label="Ảnh banner">
+          <div className="mt-8 flex max-w-full gap-3 overflow-x-auto pb-2" aria-label="Ảnh banner">
             {heroSlides.map((slide, index) => (
               <button
-                key={slide.src}
+                key={slide.id || slide.src}
                 onClick={() => setActiveHeroSlide(index)}
                 aria-label={`Chuyển đến ảnh banner ${index + 1}`}
-                className={`h-2.5 rounded-full transition-all ${index === activeHeroSlide ? 'w-9 bg-white' : 'w-2.5 bg-white/45 hover:bg-white/75'}`}
-              />
+                className={`h-16 w-24 shrink-0 overflow-hidden rounded-xl border-2 bg-white/20 transition-all md:h-20 md:w-32 ${
+                  index === activeHeroSlide ? 'border-white opacity-100 shadow-lg' : 'border-white/30 opacity-70 hover:opacity-100'
+                }`}
+              >
+                <img src={slide.src} alt="" className="h-full w-full object-cover" />
+              </button>
             ))}
           </div>
         </div>
