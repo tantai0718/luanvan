@@ -1,132 +1,76 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { categoryAPI, productAPI } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { pickCategoryImage, pickProductImage } from '../utils/marketImages';
 
-const formatCurrency = value => `${Number(value || 0).toLocaleString('vi-VN')}₫`;
-const PLACEHOLDER = 'https://placehold.co/300x220/e8f5e9/2e7d32?text=N%C3%B4ng+s%E1%BA%A3n';
+const formatCurrency = value => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
 
-function ProductCard({ product }) {
-  const { addToCart } = useCart();
+function ProductTile({ product }) {
   const { user } = useAuth();
+  const { addToCart } = useCart();
   const [added, setAdded] = useState(false);
-  const image = product.images?.[0] || PLACEHOLDER;
+  const stock = Number(product.ton_kho || 0);
 
   const handleAdd = async event => {
     event.preventDefault();
     event.stopPropagation();
-
-    try {
-      await addToCart(product.ma_san_pham, 1);
-      setAdded(true);
-      setTimeout(() => setAdded(false), 1800);
-    } catch {}
+    if (!user || user.role !== 'buyer' || stock <= 0) return;
+    await addToCart(product.ma_san_pham, 1);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1200);
   };
 
   return (
-    <Link
-      to={`/products/${product.ma_san_pham}`}
-      className="group flex h-full flex-col overflow-hidden rounded-3xl border border-stone-200 bg-white transition-all hover:-translate-y-1 hover:shadow-lg"
-    >
-      <div className="relative h-48 overflow-hidden">
-        <img src={image} alt={product.ten_san_pham} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-        {Number(product.ton_kho) <= 0 && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-            <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-stone-700">Hết hàng</span>
-          </div>
-        )}
-        {Number(product.ton_kho) > 0 && Number(product.ton_kho) <= Number(product.ton_kho_toi_thieu || 0) && (
-          <span className="absolute left-3 top-3 rounded-full bg-orange-500 px-2.5 py-1 text-xs font-medium text-white">Sắp hết</span>
+    <Link to={`/products/${product.ma_san_pham}`} className="group overflow-hidden rounded-2xl border border-[#d7ddd8] bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+      <div className="relative aspect-[4/5] overflow-hidden bg-[#efeded]">
+        <img src={pickProductImage(product)} alt={product.ten_san_pham} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+        {stock > 0 ? (
+          <span className="absolute left-4 top-4 rounded-full bg-[#2d6a4f] px-3 py-1 text-xs font-bold text-[#d8ffeb]">Còn hàng</span>
+        ) : (
+          <span className="absolute left-4 top-4 rounded-full bg-[#404943] px-3 py-1 text-xs font-bold text-white">Tạm hết</span>
         )}
       </div>
-
-      <div className="flex flex-1 flex-col p-4">
-        <p className="mb-1 text-xs font-medium text-emerald-700 line-clamp-1">
-          {product.ten_nong_trai || 'Nông trại'} {product.tinh_thanh ? `· ${product.tinh_thanh}` : ''}
-        </p>
-        <h3 className="line-clamp-2 min-h-[2.75rem] text-sm font-semibold text-stone-800">{product.ten_san_pham}</h3>
-
-        {Number(product.diem_danh_gia) > 0 && (
-          <div className="mt-2 flex items-center gap-2 text-xs text-stone-400">
-            <span className="text-yellow-500">{'★'.repeat(Math.round(product.diem_danh_gia || 0))}</span>
-            <span>({product.tong_danh_gia || 0} đánh giá)</span>
-          </div>
-        )}
-
-        <div className="mt-4 flex items-end justify-between border-t border-stone-100 pt-4">
-          <div>
-            <p className="text-base font-bold text-emerald-700">{formatCurrency(product.gia_ban)}</p>
-            <p className="text-xs text-stone-400">/{product.don_vi}</p>
-          </div>
-
-          {user?.role === 'buyer' && Number(product.ton_kho) > 0 && (
-            <button
-              onClick={handleAdd}
-              className={`rounded-xl px-3 py-1.5 text-xs font-medium transition-colors ${
-                added ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-700 text-white hover:bg-emerald-800'
-              }`}
-            >
-              {added ? 'Đã thêm' : '+ Giỏ hàng'}
-            </button>
-          )}
+      <div className="p-5">
+        <p className="text-xs font-semibold uppercase tracking-wide text-[#707973]">{product.ten_danh_muc || 'Nông sản'}</p>
+        <h2 className="mt-2 line-clamp-2 min-h-[48px] text-base font-semibold leading-6">{product.ten_san_pham}</h2>
+        <p className="mt-2 text-sm text-[#404943]">{product.ten_nong_trai || product.tinh_thanh || 'Farm2Table'} · {product.don_vi}</p>
+        <div className="mt-4 flex items-end justify-between gap-3">
+          <p className="text-2xl font-bold text-[#0f5238]">{formatCurrency(product.gia_ban)}</p>
+          <button onClick={handleAdd} disabled={stock <= 0} className={`flex h-10 w-10 items-center justify-center rounded-full ${stock <= 0 ? 'bg-[#efeded] text-[#707973]' : added ? 'bg-[#0f5238] text-white' : 'bg-[#b1f0ce] text-[#0f5238] hover:bg-[#0f5238] hover:text-white'}`}>
+            <span className="material-symbols-outlined">add</span>
+          </button>
         </div>
       </div>
     </Link>
   );
 }
 
-function FilterBlock({ title, children }) {
-  return (
-    <div className="rounded-3xl border border-stone-200 bg-white p-4">
-      <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-stone-500">{title}</p>
-      {children}
-    </div>
-  );
-}
-
 export default function Products() {
-  const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [products, setProducts] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
-
   const q = searchParams.get('q') || '';
   const category = searchParams.get('category') || '';
   const sort = searchParams.get('sort') || 'moi_nhat';
-  const province = searchParams.get('province') || '';
-  const minPrice = searchParams.get('min_price') || '';
-  const maxPrice = searchParams.get('max_price') || '';
   const inStock = searchParams.get('in_stock') || '';
-  const page = parseInt(searchParams.get('page') || '1', 10);
+  const page = Number(searchParams.get('page') || 1);
   const limit = 12;
 
   useEffect(() => {
-    categoryAPI
-      .getAll()
-      .then(data => setCategories(data.categories || []))
-      .catch(() => setCategories([]));
+    categoryAPI.getAll().then(data => setCategories(data.categories || [])).catch(() => setCategories([]));
   }, []);
 
   useEffect(() => {
     setLoading(true);
-
-    const params = new URLSearchParams({
-      limit: String(limit),
-      page: String(page),
-      sort,
-    });
-
+    const params = new URLSearchParams({ limit: String(limit), page: String(page), sort });
     if (q) params.set('q', q);
     if (category) params.set('category', category);
-    if (province) params.set('province', province);
-    if (minPrice) params.set('min_price', minPrice);
-    if (maxPrice) params.set('max_price', maxPrice);
     if (inStock) params.set('in_stock', inStock);
-
-    productAPI
-      .getAll(`?${params.toString()}`)
+    productAPI.getAll(`?${params.toString()}`)
       .then(data => {
         setProducts(data.products || []);
         setTotal(data.total || 0);
@@ -136,213 +80,99 @@ export default function Products() {
         setTotal(0);
       })
       .finally(() => setLoading(false));
-  }, [q, category, sort, province, minPrice, maxPrice, inStock, page]);
+  }, [category, inStock, page, q, sort]);
 
   const setParam = (key, value) => {
-    const params = new URLSearchParams(searchParams);
-
-    if (value) params.set(key, value);
-    else params.delete(key);
-
-    if (key !== 'page') params.delete('page');
-    setSearchParams(params);
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set(key, value);
+    else next.delete(key);
+    if (key !== 'page') next.delete('page');
+    setSearchParams(next);
   };
 
-  const clearFilters = () => {
-    const params = new URLSearchParams(searchParams);
-    ['category', 'province', 'min_price', 'max_price', 'in_stock'].forEach(key => params.delete(key));
-    params.delete('page');
-    setSearchParams(params);
-  };
-
-  const totalPages = Math.ceil(total / limit);
-  const provinces = useMemo(
-    () => [...new Set(products.map(product => product.tinh_thanh).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi')),
-    [products]
-  );
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const activeCategory = categories.find(item => String(item.id) === String(category));
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      <div className="border-b border-stone-200 bg-white px-4 py-6">
-        <div className="mx-auto max-w-7xl">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-stone-800">
-                {q ? `Kết quả cho: "${q}"` : 'Tất cả sản phẩm'}
-              </h1>
-              <p className="mt-2 text-sm text-stone-500">
-                {total > 0 ? `${total} sản phẩm đang hiển thị` : 'Chọn sản phẩm phù hợp từ các nông trại trên hệ thống'}
-              </p>
-            </div>
-
-            <form
-              onSubmit={event => {
-                event.preventDefault();
-                setParam('q', event.target.q.value.trim());
-              }}
-              className="flex w-full max-w-md gap-2"
-            >
-              <input
-                name="q"
-                defaultValue={q}
-                placeholder="Tìm sản phẩm, mô tả..."
-                className="flex-1 rounded-2xl border border-stone-200 px-4 py-2.5 text-sm focus:border-emerald-500 focus:outline-none"
-              />
-              <button type="submit" className="rounded-2xl bg-emerald-700 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-800">
-                Tìm
+    <div className="market-shell">
+      <div className="market-page grid gap-8 py-8 lg:grid-cols-[260px_1fr] lg:py-12">
+        <aside className="space-y-8 lg:sticky lg:top-28 lg:self-start">
+          <section>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-[#b1f0ce]">Loại sản phẩm</h2>
+            <div className="mt-5 grid gap-3">
+              <button onClick={() => setParam('category', '')} className="flex items-center gap-3 text-left text-sm">
+                <span className={`h-5 w-5 rounded border ${!category ? 'border-[#0f5238] bg-[#0f5238]' : 'border-[#707973] bg-white'}`} />
+                <span className="text-white/85">Tất cả</span>
               </button>
-            </form>
-          </div>
-        </div>
-      </div>
-
-      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 lg:flex-row">
-        <aside className="w-full shrink-0 space-y-4 lg:sticky lg:top-20 lg:w-72 lg:self-start">
-          <FilterBlock title="Danh mục">
-            <div className="space-y-1">
-              {[{ id: '', name: 'Tất cả' }, ...categories].map(item => {
-                const active = (category || '') === String(item.id || '');
-                return (
-                  <button
-                    key={String(item.id || 'all')}
-                    onClick={() => setParam('category', item.id || '')}
-                    className={`w-full rounded-xl px-3 py-2 text-left text-sm transition-colors ${
-                      active ? 'bg-emerald-700 text-white' : 'text-stone-600 hover:bg-stone-50'
-                    }`}
-                  >
-                    {item.icon ? `${item.icon} ` : ''}
-                    {item.name}
-                  </button>
-                );
-              })}
-            </div>
-          </FilterBlock>
-
-          <FilterBlock title="Lọc nhanh">
-            <div className="space-y-3">
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-stone-600">Tỉnh thành</label>
-                <input
-                  value={province}
-                  onChange={event => setParam('province', event.target.value)}
-                  list="province-options"
-                  placeholder="Ví dụ: Đồng Tháp"
-                  className="w-full rounded-2xl border border-stone-200 px-4 py-2.5 text-sm focus:border-emerald-500 focus:outline-none"
-                />
-                <datalist id="province-options">
-                  {provinces.map(item => (
-                    <option key={item} value={item} />
-                  ))}
-                </datalist>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-stone-600">Giá từ</label>
-                  <input
-                    value={minPrice}
-                    onChange={event => setParam('min_price', event.target.value.replace(/\D/g, ''))}
-                    placeholder="0"
-                    className="w-full rounded-2xl border border-stone-200 px-4 py-2.5 text-sm focus:border-emerald-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-stone-600">Đến</label>
-                  <input
-                    value={maxPrice}
-                    onChange={event => setParam('max_price', event.target.value.replace(/\D/g, ''))}
-                    placeholder="500000"
-                    className="w-full rounded-2xl border border-stone-200 px-4 py-2.5 text-sm focus:border-emerald-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <label className="flex items-center gap-2 rounded-2xl bg-stone-50 px-3 py-2 text-sm text-stone-600">
-                <input
-                  type="checkbox"
-                  checked={inStock === '1'}
-                  onChange={event => setParam('in_stock', event.target.checked ? '1' : '')}
-                  className="h-4 w-4 rounded border-stone-300 text-emerald-700 focus:ring-emerald-500"
-                />
-                Chỉ hiện sản phẩm còn hàng
-              </label>
-
-              <button onClick={clearFilters} className="w-full rounded-2xl border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-50">
-                Xóa bộ lọc
-              </button>
-            </div>
-          </FilterBlock>
-
-          <FilterBlock title="Sắp xếp">
-            <div className="space-y-1">
-              {[
-                ['moi_nhat', 'Mới nhất'],
-                ['gia_tang', 'Giá tăng dần'],
-                ['gia_giam', 'Giá giảm dần'],
-                ['ban_chay', 'Bán chạy'],
-                ['danh_gia', 'Đánh giá cao'],
-              ].map(([value, label]) => (
-                <button
-                  key={value}
-                  onClick={() => setParam('sort', value)}
-                  className={`w-full rounded-xl px-3 py-2 text-left text-sm transition-colors ${
-                    sort === value ? 'bg-emerald-700 text-white' : 'text-stone-600 hover:bg-stone-50'
-                  }`}
-                >
-                  {label}
+              {categories.map(item => (
+                <button key={item.id} onClick={() => setParam('category', String(item.id))} className="flex items-center gap-3 text-left text-sm">
+                  <span className={`h-5 w-5 rounded border ${category === String(item.id) ? 'border-[#0f5238] bg-[#0f5238]' : 'border-[#707973] bg-white'}`} />
+                  <span className="text-white/85">{item.name}</span>
                 </button>
               ))}
             </div>
-          </FilterBlock>
+          </section>
+
+          <section>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-[#b1f0ce]">Tình trạng</h2>
+            <button onClick={() => setParam('in_stock', inStock === '1' ? '' : '1')} className={`mt-4 rounded-full border px-4 py-2 text-sm ${inStock === '1' ? 'border-[#b1f0ce] bg-[#b1f0ce] text-[#063d2b]' : 'border-[#2d6a4f] bg-white/10 text-white'}`}>
+              Chỉ hiện còn hàng
+            </button>
+          </section>
+
+          <section className="relative hidden aspect-[3/4] overflow-hidden rounded-2xl lg:block">
+            <img src={activeCategory ? pickCategoryImage(activeCategory) : '/images/raucu.webp'} alt="Ưu đãi nông sản" className="h-full w-full object-cover transition duration-700 hover:scale-105" />
+            <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/80 via-black/15 to-transparent p-6 text-white">
+              <p className="text-xs">Ưu đãi tuần này</p>
+              <h3 className="mt-2 text-2xl font-bold">Giảm 20% nông sản theo mùa</h3>
+              <button onClick={() => setParam('in_stock', '1')} className="mt-4 w-fit rounded-lg bg-[#a33d23] px-4 py-2 text-sm font-semibold">Xem ngay</button>
+            </div>
+          </section>
         </aside>
 
-        <div className="flex-1">
+        <section className="min-w-0">
+          <div className="market-panel flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-sm">Hiển thị <strong className="text-[#0f5238]">{total}</strong> sản phẩm</p>
+              <h1 className="mt-2 text-3xl font-bold">{q ? `Kết quả cho "${q}"` : activeCategory?.name || 'Sản phẩm Farm2Table'}</h1>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-[minmax(220px,1fr)_180px]">
+              <input value={q} onChange={event => setParam('q', event.target.value)} placeholder="Tìm nông sản..." className="market-field px-4 py-3 text-sm" />
+              <select value={sort} onChange={event => setParam('sort', event.target.value)} className="market-field px-4 py-3 text-sm">
+                <option value="moi_nhat">Mới nhất</option>
+                <option value="gia_tang">Giá tăng dần</option>
+                <option value="gia_giam">Giá giảm dần</option>
+                <option value="ban_chay">Bán chạy</option>
+                <option value="danh_gia">Đánh giá cao</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="mt-5 flex gap-2 overflow-x-auto pb-2 lg:hidden">
+            <button onClick={() => setParam('category', '')} className={`whitespace-nowrap rounded-full px-4 py-2 text-sm ${!category ? 'bg-[#b1f0ce] text-[#063d2b]' : 'bg-white/10 text-white'}`}>Tất cả</button>
+            {categories.map(item => <button key={item.id} onClick={() => setParam('category', String(item.id))} className={`whitespace-nowrap rounded-full px-4 py-2 text-sm ${category === String(item.id) ? 'bg-[#b1f0ce] text-[#063d2b]' : 'bg-white/10 text-white'}`}>{item.name}</button>)}
+            <button onClick={() => setParam('in_stock', inStock === '1' ? '' : '1')} className={`whitespace-nowrap rounded-full px-4 py-2 text-sm ${inStock === '1' ? 'bg-[#ffdad2] text-[#83260e]' : 'bg-white/10 text-white'}`}>Còn hàng</button>
+          </div>
+
           {loading ? (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {Array.from({ length: 9 }).map((_, index) => (
-                <div key={index} className="h-72 animate-pulse rounded-3xl border border-stone-200 bg-white" />
-              ))}
-            </div>
-          ) : products.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-stone-300 bg-white py-20 text-center text-stone-400">
-              <div className="mb-3 text-5xl">🔍</div>
-              <p className="font-medium">Không tìm thấy sản phẩm phù hợp</p>
-              <p className="mt-2 text-sm">Bạn thử đổi từ khóa hoặc nới lỏng bộ lọc nhé.</p>
-            </div>
-          ) : (
+            <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 6 }).map((_, index) => <div key={index} className="h-[480px] animate-pulse rounded-2xl bg-white" />)}</div>
+          ) : products.length ? (
             <>
-              <div className="mb-4 flex flex-wrap items-center gap-3 text-sm text-stone-500">
-                <span className="rounded-full bg-white px-3 py-1.5">{total} sản phẩm</span>
-                {province && <span className="rounded-full bg-white px-3 py-1.5">Khu vực: {province}</span>}
-                {inStock === '1' && <span className="rounded-full bg-white px-3 py-1.5">Còn hàng</span>}
+              <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                {products.map(product => <ProductTile key={product.ma_san_pham} product={product} />)}
               </div>
-
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {products.map(product => (
-                  <ProductCard key={product.ma_san_pham} product={product} />
-                ))}
-              </div>
-
-              {totalPages > 1 && (
-                <div className="mt-8 flex flex-wrap justify-center gap-2">
+              {totalPages > 1 ? (
+                <div className="mt-10 flex justify-center gap-2">
                   {Array.from({ length: totalPages }).map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setParam('page', String(index + 1))}
-                      className={`h-9 w-9 rounded-xl text-sm font-medium transition-colors ${
-                        page === index + 1
-                          ? 'bg-emerald-700 text-white'
-                          : 'border border-stone-200 bg-white text-stone-600 hover:border-emerald-400'
-                      }`}
-                    >
-                      {index + 1}
-                    </button>
+                    <button key={index} onClick={() => setParam('page', String(index + 1))} className={`h-11 min-w-11 rounded-lg border px-3 text-sm font-semibold ${page === index + 1 ? 'border-[#0f5238] bg-[#0f5238] text-white' : 'border-[#d7ddd8] bg-white'}`}>{index + 1}</button>
                   ))}
                 </div>
-              )}
+              ) : null}
             </>
+          ) : (
+            <div className="mt-6 rounded-2xl border border-dashed border-[#d7ddd8] bg-white py-20 text-center text-[#404943]">Không tìm thấy sản phẩm phù hợp.</div>
           )}
-        </div>
+        </section>
       </div>
     </div>
   );

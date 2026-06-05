@@ -1,8 +1,175 @@
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Be Vietnam Pro', sans-serif; background: #f9fafb; }
-.scrollbar-hide::-webkit-scrollbar { display: none; }
-.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  color-scheme: light;
+  --market-green: #e7f2ee;
+  --market-green-dark: #063d2b;
+  --market-green-deep: #042f22;
+  --market-green-light: #b1f0ce;
+  --market-green-mid: #2d6a4f;
+  --market-orange: #a33d23;
+  --market-cream: #063d2b;
+  --market-ink: #1b1c1c;
+  --market-on-dark: #f7fff9;
+  --market-muted: #404943;
+  --market-border: #2d6a4f;
+  --market-surface-low: #0f5238;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Be Vietnam Pro', sans-serif;
+  background: var(--market-cream);
+  color: var(--market-on-dark);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: 'Be Vietnam Pro', sans-serif;
+}
+
+a,
+button,
+input,
+textarea,
+select {
+  transition: all 0.2s ease;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+::selection {
+  background: rgba(26, 122, 74, 0.16);
+  color: #0f3f26;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.market-shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(177, 240, 206, 0.12), transparent 34%),
+    linear-gradient(180deg, var(--market-green-dark), var(--market-green-deep));
+  color: var(--market-on-dark);
+}
+
+.market-page {
+  width: min(1280px, calc(100% - 32px));
+  margin: 0 auto;
+}
+
+.market-panel {
+  border: 1px solid var(--market-border);
+  background: #fff;
+  color: var(--market-ink);
+  border-radius: 16px;
+  box-shadow: 0 18px 38px rgba(0, 24, 16, 0.22);
+}
+
+.market-shell .bg-white {
+  color: var(--market-ink);
+}
+
+.market-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.market-section-title h2 {
+  font-size: 1.45rem;
+  line-height: 1.2;
+  color: var(--market-ink);
+}
+
+.market-pill {
+  border-radius: 999px;
+  background: var(--market-green-light);
+  color: var(--market-green);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: 'FILL' 0, 'wght' 450, 'GRAD' 0, 'opsz' 24;
+}
+
+.market-field {
+  width: 100%;
+  border: 1px solid #707973;
+  border-radius: 8px;
+  background: #fbf9f8;
+  color: var(--market-ink);
+  outline: none;
+}
+
+.market-field:focus {
+  border-color: var(--market-green);
+  box-shadow: 0 0 0 2px rgba(15, 82, 56, 0.12);
+}
+
+.stitch-kicker {
+  color: var(--market-green-light);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stitch-link {
+  color: var(--market-green-light);
+  font-weight: 600;
+}
+
+@media (min-width: 1024px) {
+  .market-page {
+    width: min(1280px, calc(100% - 80px));
+  }
+}

@@ -57,12 +57,19 @@ export const productAPI = {
   update: (id, body) => api.put(`/products/${id}`, body),
   delete: id => api.delete(`/products/${id}`),
   toggle: id => api.patch(`/products/${id}/toggle`),
-  myProducts: () => api.get('/farmer/products'),
-  lowStock: () => api.get('/farmer/products/low-stock'),
 };
 
 export const categoryAPI = {
   getAll: () => api.get('/categories'),
+};
+
+export const bannerAPI = {
+  getAll: () => api.get('/banners'),
+  adminAll: () => api.get('/admin/banners'),
+  create: body => api.post('/admin/banners', body),
+  update: (id, body) => api.put(`/admin/banners/${id}`, body),
+  delete: id => api.delete(`/admin/banners/${id}`),
+  toggle: id => api.patch(`/admin/banners/${id}/toggle`),
 };
 
 export const cartAPI = {
@@ -75,36 +82,24 @@ export const cartAPI = {
 
 export const orderAPI = {
   create: body => api.post('/orders', body),
+  createPreorder: body => api.post('/orders/preorder', body),
   getAll: () => api.get('/orders'),
   getById: id => api.get(`/orders/${id}`),
+  createVnpayPayment: id => api.post(`/orders/${id}/vnpay-payment`),
   cancel: (id, body) => api.patch(`/orders/${id}/cancel`, body),
-  farmerOrders: () => api.get('/farmer/orders'),
   updateStatus: (id, body) => api.patch(`/orders/${id}/status`, body),
 };
 
-export const warehouseAPI = {
-  getAll: () => api.get('/warehouses'),
-  getLocations: warehouseId => api.get(`/warehouses/${warehouseId}/locations`),
-  getStock: warehouseId => api.get(`/warehouses/${warehouseId}/stock`),
-  updateStockMeta: (warehouseId, productId, body) => api.patch(`/warehouses/${warehouseId}/stock/${productId}`, body),
-  getInvoices: () => api.get('/invoices'),
-  getInvoiceById: id => api.get(`/invoices/${id}`),
-  createInvoice: body => api.post('/invoices', body),
-  confirmInvoice: id => api.patch(`/invoices/${id}/confirm`),
-  cancelInvoice: id => api.patch(`/invoices/${id}/cancel`),
-  getLogs: () => api.get('/inventory-logs'),
-  getAlerts: () => api.get('/stock-alerts'),
-  resolveAlert: id => api.patch(`/stock-alerts/${id}/resolve`),
+export const subscriptionAPI = {
+  create: body => api.post('/subscriptions', body),
+  getAll: () => api.get('/subscriptions'),
+  cancel: id => api.patch(`/subscriptions/${id}/cancel`),
+  adminAll: () => api.get('/admin/subscriptions'),
+  adminDeliver: id => api.patch(`/admin/subscriptions/${id}/deliver`),
 };
 
 export const dashboardAPI = {
   admin: () => api.get('/admin/dashboard'),
-  farmer: () => api.get('/farmer/dashboard'),
-};
-
-export const farmerAPI = {
-  getProfile: () => api.get('/farmer/profile'),
-  updateProfile: body => api.put('/farmer/profile', body),
 };
 
 export const notificationAPI = {
