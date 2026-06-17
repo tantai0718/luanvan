@@ -35,11 +35,21 @@ function Guest({ children }) {
   return user ? <Navigate to="/"/> : children;
 }
 
-function PL({ children }) { return <><Navbar/><main>{children}</main><MarketFooter/></>; }
+function PL({ children }) {
+  return (
+    <>
+      <Navbar />
+      <main>{children}</main>
+      <MarketFooter />
+
+    </>
+  );
+}
 
 function AP({ children }) {
   return <Private roles={['admin']}><AdminLayout>{children}</AdminLayout></Private>;
 }
+
 
 function AppRoutes() {
   return (
@@ -60,6 +70,7 @@ function AppRoutes() {
       <Route path="/admin/products"   element={<AP><AdminProducts/></AP>}/>
       <Route path="/admin/banners"    element={<AP><AdminBanners/></AP>}/>
       <Route path="/admin/orders"     element={<AP><AdminOrders/></AP>}/>
+
       <Route path="*" element={<Navigate to="/"/>}/>
     </Routes>
   );

@@ -24,3 +24,7 @@ yarn-error.log*
 Thumbs.db
 
 *.log
+node-start.err
+node-start.out
+
+.vscode/

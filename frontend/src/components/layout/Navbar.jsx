@@ -7,7 +7,6 @@ const links = [
   { to: '/', label: 'Trang chủ' },
   { to: '/products', label: 'Sản phẩm' },
   { to: '/about', label: 'Về chúng tôi' },
-  { to: '/about#news', label: 'Tin tức' },
 ];
 
 export default function Navbar() {
@@ -39,7 +38,7 @@ export default function Navbar() {
     <header className="sticky top-0 z-40 border-b border-[#2d6a4f] bg-[#063d2b]/95 shadow-sm backdrop-blur">
       <div className="market-page flex min-h-20 items-center justify-between gap-4">
         <div className="flex items-center gap-8">
-          <Link to="/" className="whitespace-nowrap text-xl font-bold text-[#0f5238] md:text-2xl">Farm2Table</Link>
+          <Link to="/" className="whitespace-nowrap text-xl font-bold text-[#0f5238] md:text-2xl">Nông Sản Xanh</Link>
           <nav className="hidden items-center gap-6 md:flex">
             {links.map(item => (
               <NavLink

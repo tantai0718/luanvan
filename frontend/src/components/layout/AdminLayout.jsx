@@ -4,11 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 
 const menuItems = [
   { path: '/admin', icon: 'dashboard', label: 'Tổng quan' },
-  { path: '/admin/accounts', icon: 'group', label: 'Tài khoản' },
-  { path: '/admin/categories', icon: 'category', label: 'Danh mục' },
-  { path: '/admin/products', icon: 'inventory_2', label: 'Sản phẩm' },
   { path: '/admin/banners', icon: 'imagesmode', label: 'Banner' },
-  { path: '/admin/orders', icon: 'receipt_long', label: 'Đơn hàng' },
 ];
 
 export default function AdminLayout({ children }) {
