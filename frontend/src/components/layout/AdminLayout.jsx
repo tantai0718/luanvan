@@ -46,6 +46,13 @@ export default function AdminLayout({ children }) {
             <div className="hidden rounded-2xl bg-white/10 px-4 py-2 text-sm md:block">
               {user?.name} · ID {user?.id}
             </div>
+            <Link
+              to="/"
+              className="hidden items-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm font-semibold text-[#1a7a4a] hover:bg-[#e8f5ee] md:inline-flex"
+            >
+              <span className="material-symbols-outlined text-[18px]">home</span>
+              <span>Trang chủ</span>
+            </Link>
             <button
               onClick={() => setMobileOpen(prev => !prev)}
               className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 md:hidden"
@@ -90,6 +97,14 @@ export default function AdminLayout({ children }) {
             </nav>
 
             <div className="border-t border-[#dce7df] p-3">
+              <Link
+                to="/"
+                onClick={() => setMobileOpen(false)}
+                className="mb-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#e8f5ee] px-4 py-3 text-sm font-semibold text-[#1a7a4a] hover:bg-[#dff0e7]"
+              >
+                <span className="material-symbols-outlined text-[18px]">home</span>
+                <span>Về trang chủ</span>
+              </Link>
               <button
                 onClick={handleLogout}
                 className="w-full rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-100"
