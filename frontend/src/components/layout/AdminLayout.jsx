@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 
 const menuItems = [
   { path: '/admin', icon: 'dashboard', label: 'Tổng quan' },
+  { path: '/admin/accounts', icon: 'group', label: 'Tài khoản' },
   { path: '/admin/banners', icon: 'imagesmode', label: 'Banner' },
 ];
 

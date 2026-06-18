@@ -24,10 +24,10 @@ async function findById(id) {
   return rows[0] || null;
 }
 
-async function createUser({ ho_ten, email, mat_khau, sdt, dia_chi, mavt = 2 }) {
+async function createUser({ ho_ten, email, mat_khau, sdt, mavt = 2 }) {
   const [result] = await db.query(
-    "INSERT INTO nguoi_dung (mavt, ho_ten, email, mat_khau, sdt, dia_chi, trang_thai) VALUES (?, ?, ?, ?, ?, ?, ?)",
-    [mavt, ho_ten, email, mat_khau, sdt || null, dia_chi || null, 1],
+    "INSERT INTO nguoi_dung (mavt, ho_ten, email, mat_khau, sdt, trang_thai) VALUES (?, ?, ?, ?, ?, ?)",
+    [mavt, ho_ten, email, mat_khau, sdt || null, 1],
   );
   return { mand: result.insertId, ho_ten, email, mavt };
 }

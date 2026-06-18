@@ -26,7 +26,6 @@ const fmtUser = (user) => {
     email: user.email,
     phone: user.sdt || "",
     avatar: "",
-    address: user.dia_chi || "",
     vai_tro,
     role: mapRole(vai_tro),
   };
@@ -131,11 +130,13 @@ exports.me = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
   try {
-    const { ho_ten, so_dien_thoai, dia_chi } = req.body;
-    await db.query(
-      "UPDATE nguoi_dung SET ho_ten = ?, sdt = ?, dia_chi = ? WHERE mand = ?",
-      [ho_ten, so_dien_thoai, dia_chi, req.user.id],
-    );
+    const { ho_ten, so_dien_thoai } = req.body;
+
+    await db.query("UPDATE nguoi_dung SET ho_ten = ?, sdt = ? WHERE mand = ?", [
+      ho_ten,
+      so_dien_thoai,
+      req.user.id,
+    ]);
     return res.json({ message: "Cap nhat thong tin thanh cong." });
   } catch (error) {
     return res.status(500).json({ message: `Loi server: ${error.message}` });
