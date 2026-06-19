@@ -20,6 +20,15 @@ exports.list = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+exports.listAll = async (req, res) => {
+  try {
+    await bannerModel.ensureBannerTable();
+    const banners = await bannerModel.getAllBanners();
+    res.json({ banners: banners.map(mapBanner) });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 exports.create = async (req, res) => {
   try {

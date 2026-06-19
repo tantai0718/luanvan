@@ -24,6 +24,12 @@ async function getActiveBanners() {
   );
   return rows;
 }
+async function getAllBanners() {
+  const [rows] = await db.query(
+    `SELECT * FROM banner ORDER BY thu_tu_hien_thi ASC, mabn DESC`,
+  );
+  return rows;
+}
 
 async function createBanner({
   mand,
@@ -80,6 +86,7 @@ async function deleteBanner(id) {
 module.exports = {
   ensureBannerTable,
   getActiveBanners,
+  getAllBanners,
   createBanner,
   updateBanner,
   toggleBanner,

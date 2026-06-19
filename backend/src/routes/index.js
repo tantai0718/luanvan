@@ -19,7 +19,7 @@ router.use("/banners", bannerRoutes);
 router.use("/", productRoutes);
 router.use("/", accountRoutes);
 
-router.get("/admin/banners", auth, role("admin"), bannerController.list);
+router.get("/admin/banners", auth, role("admin"), bannerController.listAll);
 router.post("/admin/banners", auth, role("admin"), bannerController.create);
 router.put("/admin/banners/:id", auth, role("admin"), bannerController.update);
 router.patch("/admin/banners/:id/toggle", auth, role("admin"), bannerController.toggle);
