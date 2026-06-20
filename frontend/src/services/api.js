@@ -64,7 +64,7 @@ export const categoryAPI = {
 };
 
 export const bannerAPI = {
-  getAll: () => api.get('/banners'),
+  getAll: () => api.get('/admin'),
   adminAll: () => api.get('/admin/banners'),
   create: body => api.post('/admin/banners', body),
   update: (id, body) => api.put(`/admin/banners/${id}`, body),
