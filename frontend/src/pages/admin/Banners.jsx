@@ -10,6 +10,16 @@ const readFileAsDataUrl = file =>
     reader.readAsDataURL(file);
   });
 
+function formatDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  return date.toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
+
 function UploadButton({ multiple = false, label, disabled, onFiles }) {
   return (
     <label className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[#1a7a4a] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#14633b] ${disabled ? 'pointer-events-none opacity-60' : ''}`}>
@@ -40,7 +50,10 @@ function BannerCard({ banner, busy, onReplace, onToggle, onDelete }) {
         </div>
       </div>
       <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm font-semibold text-slate-900">Banner #{banner.order}</p>
+        <div>
+          <p className="text-sm font-semibold text-slate-900">Banner #{banner.order}</p>
+          <p className="text-xs text-slate-400">Ngày tạo: {formatDate(banner.created_at)}</p>
+        </div>
         <div className="flex flex-wrap gap-2">
           <label className={`inline-flex cursor-pointer items-center justify-center rounded-2xl border border-[#dce7df] bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-[#f3f7f4] ${busy ? 'pointer-events-none opacity-60' : ''}`}>
             Đổi ảnh

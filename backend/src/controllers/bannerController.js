@@ -3,8 +3,6 @@ const { saveDataUrlImage } = require("../utils/imageHelpers");
 
 const mapBanner = (banner) => ({
   id: banner.mabn,
-  title: banner.tieu_de,
-  description: banner.mo_ta,
   image: banner.hinh_anh,
   order: banner.thu_tu_hien_thi,
   active: Boolean(banner.trang_thai),
@@ -20,6 +18,7 @@ exports.list = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 exports.listAll = async (req, res) => {
   try {
     await bannerModel.ensureBannerTable();
@@ -33,21 +32,13 @@ exports.listAll = async (req, res) => {
 exports.create = async (req, res) => {
   try {
     await bannerModel.ensureBannerTable();
-    const {
-      title = "",
-      description = "",
-      image,
-      order = 1,
-      active = true,
-    } = req.body;
+    const { image, order = 1, active = true } = req.body;
     const storedImage = await saveDataUrlImage(image, "banners", "banner");
     if (!storedImage)
       return res.status(400).json({ message: "Vui long chon anh banner." });
     const id = await bannerModel.createBanner({
       mand: req.user.id,
-      tieu_de: title,
       hinh_anh: storedImage,
-      mo_ta: description,
       thu_tu: order,
       trang_thai: active ? 1 : 0,
     });
@@ -60,20 +51,12 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     await bannerModel.ensureBannerTable();
-    const {
-      title = "",
-      description = "",
-      image,
-      order = 1,
-      active = true,
-    } = req.body;
+    const { image, order = 1, active = true } = req.body;
     const storedImage = await saveDataUrlImage(image, "banners", "banner");
     if (!storedImage)
       return res.status(400).json({ message: "Vui long chon anh banner." });
     await bannerModel.updateBanner(req.params.id, {
-      tieu_de: title,
       hinh_anh: storedImage,
-      mo_ta: description,
       thu_tu: order,
       trang_thai: active ? 1 : 0,
     });
