@@ -6,6 +6,10 @@ const menuItems = [
   { path: '/admin', icon: 'dashboard', label: 'Tổng quan' },
   { path: '/admin/accounts', icon: 'group', label: 'Tài khoản' },
   { path: '/admin/banners', icon: 'imagesmode', label: 'Banner' },
+  { path: '/admin/products', icon: 'inventory', label: 'Sản phẩm' },
+  { path: '/admin/orders', icon: 'shopping_cart', label: 'Đơn hàng' },
+  { path: '/admin/categories', icon: 'imagesmode', label: 'Danh mục' }
+  
 ];
 
 export default function AdminLayout({ children }) {

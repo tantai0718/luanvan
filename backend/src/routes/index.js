@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const authRoutes = require("./auth");
 const bannerRoutes = require("./banner");
-const productRoutes = require("./product");
 const accountRoutes = require("./account");
 
 const auth = require("../middlewares/auth").auth;
@@ -15,8 +14,7 @@ router.get("/", (req, res) =>
 );
 
 router.use("/auth", authRoutes);
-router.use("/admin", bannerRoutes);
-router.use("/", productRoutes);
+router.use("/admin", bannerRoutes);;
 router.use("/", accountRoutes);
 
 
