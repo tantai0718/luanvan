@@ -4,7 +4,6 @@ import { Badge, Btn, Input, Loading, Modal, PageHero, Table } from '../../compon
 
 const emptyForm = {
   ten_danh_muc: '',
-  duong_dan: '',
   bieu_tuong: '🥬',
   thu_tu: 0,
   con_hoat_dong: 1,
@@ -26,7 +25,13 @@ function CategoryProductsModal({ category, products, loading, onClose, onToggle,
               <td className="px-4 py-3">
                 <div className="flex items-center gap-3">
                   <img
-                    src={product.images?.[0] || 'https://placehold.co/48x48/e8f5ee/1a7a4a?text=NS'}
+                    src={
+                      product.images?.[0]
+                        ? (product.images[0].startsWith('/upload/')
+                          ? `http://localhost:5000${product.images[0]}`
+                          : product.images[0])
+                        : 'https://placehold.co/48x48/e8f5ee/1a7a4a?text=NS'
+                    }
                     alt={product.ten_san_pham}
                     className="h-12 w-12 rounded-xl object-cover"
                   />
@@ -224,22 +229,11 @@ export default function AdminCategories() {
       {modal ? (
         <Modal title={modal === 'add' ? 'Thêm danh mục' : 'Sửa danh mục'} onClose={() => setModal(null)}>
           <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <Input label="Tên danh mục" value={form.ten_danh_muc} onChange={event => setForm({ ...form, ten_danh_muc: event.target.value })} />
-              <Input label="Biểu tượng" value={form.bieu_tuong} onChange={event => setForm({ ...form, bieu_tuong: event.target.value })} />
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <Input label="Đường dẫn" value={form.duong_dan} onChange={event => setForm({ ...form, duong_dan: event.target.value })} />
-              <Input label="Thứ tự" type="number" value={form.thu_tu} onChange={event => setForm({ ...form, thu_tu: Number(event.target.value) })} />
-            </div>
-            <label className="flex items-center gap-3 rounded-2xl bg-[#f3f7f4] px-4 py-3 text-sm text-slate-700">
-              <input
-                type="checkbox"
-                checked={!!form.con_hoat_dong}
-                onChange={event => setForm({ ...form, con_hoat_dong: event.target.checked ? 1 : 0 })}
-              />
-              Hiển thị danh mục này
-            </label>
+            <Input
+              label="Tên danh mục"
+              value={form.ten_danh_muc}
+              onChange={event => setForm({ ...form, ten_danh_muc: event.target.value })}
+            />
             <div className="flex gap-3">
               <Btn className="flex-1 justify-center" onClick={handleSave} disabled={saving}>
                 {saving ? 'Đang lưu...' : 'Lưu danh mục'}
