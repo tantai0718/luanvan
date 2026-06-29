@@ -170,6 +170,7 @@ export default function Cart() {
                       <div className="min-w-0 flex-1">
                         <p className="line-clamp-2 text-sm font-semibold">{item.product?.name}</p>
                         <p className="mt-1 text-xs text-[#404943]">{item.quantity} {item.product?.unit}</p>
+                        <p className="mt-0.5 text-xs text-slate-400">Đơn giá: {formatCurrency(item.product?.price || 0)}/{item.product?.unit}</p>
                         <p className="mt-2 text-sm font-semibold text-[#0f5238]">{formatCurrency(item.quantity * Number(item.product?.price || 0))}</p>
                       </div>
                       <div className="grid content-start gap-1">

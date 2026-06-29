@@ -60,8 +60,16 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: err.message || "Lỗi server" });
 });
 
+
+
+
+
+
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`\n🚀 Backend: http://localhost:${PORT}`);
   console.log(`📡 API:     http://localhost:${PORT}/api\n`);
 });
+
+

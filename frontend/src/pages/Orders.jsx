@@ -254,7 +254,8 @@ export function OrderDetail() {
     return <div className="flex min-h-screen items-center justify-center text-slate-400">Không tìm thấy đơn hàng.</div>;
   }
 
-  const { order, items } = data;
+  const { order } = data;
+  const items = order.items || [];
   const status = orderStatusMap[order.trang_thai] || orderStatusMap.da_huy;
   const orderType = orderTypeMap[order.loai_don || 'thuong'] || orderTypeMap.thuong;
   const subtotal = items.reduce((sum, item) => sum + Number(item.thanh_tien || 0), 0);
