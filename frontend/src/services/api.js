@@ -55,7 +55,7 @@ export const productAPI = {
   createReview: body => api.post('/reviews', body),
   create: body => api.post('/products', body),
   update: (id, body) => api.put(`/products/${id}`, body),
-  delete: id => api.delete(`/products/${id}`),
+  delete: id => api.delete(`/admin/products/${id}`),
   toggle: id => api.patch(`/products/${id}/toggle`),
 };
 
