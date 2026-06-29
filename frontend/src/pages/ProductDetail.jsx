@@ -71,7 +71,12 @@ export default function ProductDetail() {
         const next = productData.product;
         setProduct(next);
         setReviews(reviewData.reviews || []);
-        setActiveImage(pickProductImage(next));
+        const BACKEND = 'http://localhost:5000';
+        const firstImage = next?.images?.[0];
+        const initialImage = firstImage
+          ? (firstImage.startsWith('/upload/') ? `${BACKEND}${firstImage}` : firstImage)
+          : pickProductImage(next);
+        setActiveImage(initialImage);
       })
       .catch(err => setError(err.message || 'Không tải được thông tin sản phẩm.'))
       .finally(() => setLoading(false));
@@ -92,8 +97,12 @@ export default function ProductDetail() {
 
   const images = useMemo(() => {
     if (!product) return [];
+    const BACKEND = 'http://localhost:5000';
+    // Chuyển tất cả URL trong product.images thành URL đầy đủ
+    const list = (product.images || []).map(img =>
+      img.startsWith('/upload/') ? `${BACKEND}${img}` : img
+    );
     const primary = pickProductImage(product);
-    const list = product.images?.length ? product.images : [primary];
     return Array.from(new Set([primary, ...list].filter(Boolean)));
   }, [product]);
 
@@ -128,7 +137,7 @@ export default function ProductDetail() {
       await addToCart(product.ma_san_pham, quantity);
       setAdded(true);
       setTimeout(() => setAdded(false), 1400);
-    } catch {}
+    } catch { }
   };
 
   const handleBuyNow = async () => {
@@ -137,7 +146,7 @@ export default function ProductDetail() {
     try {
       await addToCart(product.ma_san_pham, quantity);
       navigate('/cart');
-    } catch {}
+    } catch { }
   };
 
   const handleReviewSubmit = async event => {
@@ -224,6 +233,8 @@ export default function ProductDetail() {
           <div className="lg:col-span-7">
             <div className="sticky top-28 space-y-4">
               <div className="overflow-hidden rounded-2xl bg-[#efeded] shadow-sm">
+                {console.log('activeImage:', activeImage)}
+                {console.log('product.images:', product.images)}
                 <img src={activeImage || pickProductImage(product)} alt={product.ten_san_pham} className="aspect-square w-full object-cover" />
               </div>
               <div className="grid grid-cols-4 gap-3 md:grid-cols-5">
@@ -259,7 +270,12 @@ export default function ProductDetail() {
               </div>
               <p className="mt-2 text-xs italic text-[#707973]">Giá đã bao gồm VAT nếu có.</p>
             </div>
-
+            {product.mo_ta ? (
+              <div className="mt-6 rounded-2xl bg-white/10 px-5 py-4 text-sm leading-7 text-white/90">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-white/50">Mô tả sản phẩm</p>
+                <p>{product.mo_ta}</p>
+              </div>
+            ) : null}
             <div className="mt-6 space-y-4 border-y border-[#2d6a4f] py-5 text-sm text-white/75">
               <div className="flex justify-between gap-3"><span>Nguồn hàng</span><strong className="text-white">{product.ten_nong_trai || 'Farm2Table'}</strong></div>
               <div className="flex justify-between gap-3"><span>Khu vực</span><strong className="text-white">{product.tinh_thanh || 'Toàn quốc'}</strong></div>

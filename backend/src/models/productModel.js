@@ -15,8 +15,8 @@ const mapProduct = (row) => ({
     ten_nong_trai: '',
     diem_danh_gia: Number(row.diem_danh_gia || 0),
     tong_danh_gia: Number(row.tong_danh_gia || 0),
-    hinh_chinh: row.hinh_chinh || null,
-    images: row.images || [],
+    hinh_chinh: row.hinh_chinh ? `/upload/${row.hinh_chinh}` : null,
+    images: row.hinh_chinh ? [`/upload/${row.hinh_chinh}`] : [],
 });
 
 async function listProducts({ q = '', category = '', sort = 'moi_nhat', inStock = '', page = 1, limit = 12 } = {}) {
@@ -92,7 +92,8 @@ async function getProductById(id) {
         [id]
     );
 
-    return { ...mapProduct(rows[0]), images: media };
+    const imageUrls = media.map(m => `/upload/${m.duong_dan}`);
+    return { ...mapProduct(rows[0]), images: imageUrls, con_hoat_dong: rows[0].trang_thai === 1 };
 }
 
 async function getReviews(masp) {
@@ -149,8 +150,41 @@ async function updateProduct(masp, fields) {
 async function toggleProduct(masp) {
     await db.query('UPDATE san_pham SET trang_thai = 1 - trang_thai WHERE masp = ?', [masp]);
 }
+// Dành riêng cho admin — lấy TẤT CẢ sản phẩm kể cả đang ẩn
+async function listAllProducts({ q = '', category = '' } = {}) {
+    const conditions = ['1=1'];  // không filter trang_thai
+    const params = [];
+    if (q) { conditions.push('sp.ten_san_pham LIKE ?'); params.push(`%${q}%`); }
+    if (category) { conditions.push('sp.madm = ?'); params.push(Number(category)); }
 
+    const where = `WHERE ${conditions.join(' AND ')}`;
+    const [rows] = await db.query(
+        `SELECT
+       sp.*,
+       dm.ten_danh_muc,
+       COALESCE(avg_r.diem,    0) AS diem_danh_gia,
+       COALESCE(avg_r.so_luot, 0) AS tong_danh_gia,
+       hav.duong_dan              AS hinh_chinh
+     FROM san_pham sp
+     LEFT JOIN danh_muc dm ON dm.madm = sp.madm
+     LEFT JOIN (
+       SELECT masp, AVG(so_sao) AS diem, COUNT(*) AS so_luot
+       FROM danh_gia GROUP BY masp
+     ) avg_r ON avg_r.masp = sp.masp
+     LEFT JOIN hinh_anh_video hav
+       ON hav.masp = sp.masp AND hav.la_chinh = 1 AND hav.loai = 'hinh_anh'
+     ${where}
+     ORDER BY sp.masp DESC`,
+        params
+    );
+    return {
+        products: rows.map(r => ({
+            ...mapProduct(r),
+            con_hoat_dong: r.trang_thai === 1,  // chuyển trang_thai → con_hoat_dong cho frontend
+        })),
+    };
+}
 module.exports = {
-    listProducts, getProductById, getReviews, createReview,
+    listProducts, listAllProducts, getProductById, getReviews, createReview,
     listCategories, createProduct, updateProduct, toggleProduct,
 };

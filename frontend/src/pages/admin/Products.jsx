@@ -149,7 +149,13 @@ function ProductFormModal({ categories, initialData, onClose, onDone }) {
 function ProductCard({ product, onEdit, onToggle, onDelete }) {
   return (
     <div className="market-panel overflow-hidden">
-      <img src={product.images?.[0] || placeholderImage} alt={product.ten_san_pham} className="h-48 w-full object-cover" />
+      <img src={
+        product.images?.[0]
+          ? (product.images[0].startsWith('/upload/')
+            ? `http://localhost:5000${product.images[0]}`
+            : product.images[0])
+          : 'https://placehold.co/48x48/e8f5ee/1a7a4a?text=NS'
+      } />
       <div className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div>

@@ -11,6 +11,7 @@ const cartRouter = require("./cart");
 const orderRouter = require("./orders");
 
 const productCtrl = require("../controllers/productController");
+const adminRoutes = require("./admin");
 
 console.log("productCtrl.getCategories =", productCtrl.getCategories);
 console.log("productCtrl =", Object.keys(productCtrl));
@@ -22,6 +23,7 @@ router.get("/", (req, res) =>
 
 router.use("/auth", authRoutes);
 router.use("/admin", bannerRoutes);
+router.use("/admin", adminRoutes);
 router.use("/", accountRoutes);
 
 // Route mới thêm vào

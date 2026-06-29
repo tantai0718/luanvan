@@ -22,6 +22,15 @@ io.on("connection", (socket) => {
     if (vaiTro === "nong_dan" && maNongDan) socket.join(`farmer_${maNongDan}`);
   });
 });
+app.use('/upload', (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  next();
+});
+app.use('/upload', (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(path.join(__dirname, '..', 'upload')));
 
 app.use(
   cors({
