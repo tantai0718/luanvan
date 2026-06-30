@@ -89,16 +89,26 @@ async function createProduct(req, res) {
         if (hinh_anh.length > 0) {
             for (let i = 0; i < hinh_anh.length; i++) {
                 const base64 = hinh_anh[i];
-                const ext = base64.startsWith('data:image/png') ? '.png' : '.jpg';
+                const isVideo = base64.startsWith('data:video/');
+                const loai = isVideo ? 'video' : 'hinh_anh';
+
+                let ext = '.jpg';
+                if (isVideo) {
+                    ext = base64.includes('webm') ? '.webm' : '.mp4';
+                } else if (base64.startsWith('data:image/png')) {
+                    ext = '.png';
+                }
+
                 const safeName = `${Date.now()}_${i}${ext}`;
                 const uploadDir = path.join(__dirname, '..', '..', 'upload', 'products');
                 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-                const data = base64.replace(/^data:image\/\w+;base64,/, '');
+                const data = base64.replace(/^data:(image|video)\/\w+;base64,/, '');
                 fs.writeFileSync(path.join(uploadDir, safeName), Buffer.from(data, 'base64'));
+
                 await db.query(
                     `INSERT INTO hinh_anh_video (masp, duong_dan, loai, la_chinh, thu_tu, ngay_tao)
-           VALUES (?, ?, 'hinh_anh', ?, ?, NOW())`,
-                    [id, `products/${safeName}`, i === 0 ? 1 : 0, i]
+       VALUES (?, ?, ?, ?, ?, NOW())`,
+                    [id, `products/${safeName}`, loai, !isVideo && i === 0 ? 1 : 0, i]
                 );
             }
         }

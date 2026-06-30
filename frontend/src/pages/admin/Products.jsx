@@ -10,6 +10,7 @@ const emptyForm = {
   ton_kho: 0,
   ma_danh_muc: '',
   hinh_anh: [],
+  video: [],
 };
 
 const placeholderImage = 'https://placehold.co/400x300/e8f5ee/1a7a4a?text=San+Pham';
@@ -26,7 +27,8 @@ function ProductFormModal({ categories, initialData, onClose, onDone }) {
   const [form, setForm] = useState({
     ...emptyForm,
     ...initialData,
-    hinh_anh: initialData?.images || [],
+    hinh_anh: (initialData?.images || []).filter(img => !img.includes('.mp4') && !img.includes('.webm')),
+    video: (initialData?.images || []).filter(img => img.includes('.mp4') || img.includes('.webm')),
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -47,7 +49,21 @@ function ProductFormModal({ categories, initialData, onClose, onDone }) {
       event.target.value = '';
     }
   };
-
+  const handleVideoFiles = async event => {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+    setUploading(true);
+    setError('');
+    try {
+      const videos = await Promise.all(files.map(readFileAsDataUrl));
+      setForm(prev => ({ ...prev, video: [...prev.video, ...videos] }));
+    } catch (err) {
+      setError(err.message || 'Không tải được video.');
+    } finally {
+      setUploading(false);
+      event.target.value = '';
+    }
+  };
   const handleSave = async event => {
     event.preventDefault();
     setSaving(true);
@@ -55,6 +71,7 @@ function ProductFormModal({ categories, initialData, onClose, onDone }) {
     try {
       const payload = {
         ...form,
+        hinh_anh: [...form.hinh_anh, ...form.video],
         gia_ban: Number(form.gia_ban),
         ton_kho: Number(form.ton_kho),
         ma_danh_muc: Number(form.ma_danh_muc),
@@ -117,7 +134,11 @@ function ProductFormModal({ categories, initialData, onClose, onDone }) {
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               {form.hinh_anh.map((image, index) => (
                 <div key={`${index}-${image.slice(0, 16)}`} className="relative overflow-hidden rounded-2xl border border-[#dce7df]">
-                  <img src={image} alt={`Ảnh ${index + 1}`} className="h-28 w-full object-cover" />
+                  <img
+                    src={image.startsWith('/upload/') ? `http://localhost:5000${image}` : image}
+                    alt={`Ảnh ${index + 1}`}
+                    className="h-28 w-full object-cover"
+                  />
                   <button
                     type="button"
                     onClick={() => setForm(prev => ({ ...prev, hinh_anh: prev.hinh_anh.filter((_, itemIndex) => itemIndex !== index) }))}
@@ -130,7 +151,35 @@ function ProductFormModal({ categories, initialData, onClose, onDone }) {
             </div>
           )}
         </div>
-
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <label className="text-sm font-medium text-slate-700">Video sản phẩm</label>
+            <label className="cursor-pointer rounded-full bg-[#e8f5ee] px-4 py-2 text-sm font-semibold text-[#1a7a4a] hover:bg-[#dff0e7]">
+              {uploading ? 'Đang tải...' : 'Chọn video từ máy'}
+              <input type="file" accept="video/*" multiple className="hidden" onChange={handleVideoFiles} />
+            </label>
+          </div>
+          {!form.video.length ? (
+            <div className="rounded-2xl border border-dashed border-[#dce7df] py-8 text-center text-sm text-slate-400">
+              Chưa có video nào được chọn.
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+              {form.video.map((video, index) => (
+                <div key={`v-${index}-${video.slice(0, 16)}`} className="relative overflow-hidden rounded-2xl border border-[#dce7df]">
+                  <video src={video} className="h-28 w-full object-cover" controls />
+                  <button
+                    type="button"
+                    onClick={() => setForm(prev => ({ ...prev, video: prev.video.filter((_, i) => i !== index) }))}
+                    className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white text-sm font-bold text-red-600"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         {error ? <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
 
         <div className="flex gap-3">

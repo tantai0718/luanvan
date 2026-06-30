@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { pickProductImage } from '../utils/marketImages';
 
+const isVideoUrl = url => /\.(mp4|webm|mov)$/i.test(url || '');
 const formatCurrency = value => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
 
 function ReviewItem({ review }) {
@@ -98,12 +99,10 @@ export default function ProductDetail() {
   const images = useMemo(() => {
     if (!product) return [];
     const BACKEND = 'http://localhost:5000';
-    // Chuyển tất cả URL trong product.images thành URL đầy đủ
     const list = (product.images || []).map(img =>
       img.startsWith('/upload/') ? `${BACKEND}${img}` : img
     );
-    const primary = pickProductImage(product);
-    return Array.from(new Set([primary, ...list].filter(Boolean)));
+    return list.length ? list : [pickProductImage(product)];
   }, [product]);
 
   if (loading) {
@@ -233,9 +232,14 @@ export default function ProductDetail() {
           <div className="lg:col-span-7">
             <div className="sticky top-28 space-y-4">
               <div className="overflow-hidden rounded-2xl bg-[#efeded] shadow-sm">
-                {console.log('activeImage:', activeImage)}
-                {console.log('product.images:', product.images)}
-                <img src={activeImage || pickProductImage(product)} alt={product.ten_san_pham} className="aspect-square w-full object-cover" />
+
+                {isVideoUrl(activeImage) ? (
+                  <video src={activeImage} controls className="aspect-square w-full object-cover" />
+                ) :
+                  (
+
+                    <img src={activeImage || pickProductImage(product)} alt={product.ten_san_pham} className="aspect-square w-full object-cover" />
+                  )}
               </div>
               <div className="grid grid-cols-4 gap-3 md:grid-cols-5">
                 {images.map((image, index) => (
@@ -244,10 +248,18 @@ export default function ProductDetail() {
                     onClick={() => setActiveImage(image)}
                     className={`aspect-square overflow-hidden rounded-xl border-2 bg-white ${activeImage === image ? 'border-[#0f5238]' : 'border-transparent hover:border-[#bfc9c1]'}`}
                   >
-                    <img src={image} alt={`Ảnh ${index + 1}`} className="h-full w-full object-cover" />
+                    {isVideoUrl(image) ? (
+                      <div className="relative h-full w-full bg-black">
+                        <video src={image} className="h-full w-full object-cover opacity-70" />
+                        <span className="absolute inset-0 flex items-center justify-center text-2xl text-white">▶</span>
+                      </div>
+                    ) : (
+                      <img src={image} alt={`Ảnh ${index + 1}`} className="h-full w-full object-cover" />
+                    )}
                   </button>
                 ))}
               </div>
+
             </div>
           </div>
 
