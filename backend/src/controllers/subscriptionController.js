@@ -186,7 +186,7 @@ exports.adminGetAll = async (req, res) => {
   }
 };
 
-// PATCH /api/admin/subscriptions/:id/deliver - Ghi nhận đã giao 1 kỳ (admin)
+// PATCH /api/admin/subscriptions/:id/deliver 
 exports.adminDeliver = async (req, res) => {
   try {
     await subscriptionModel.ensureSubscriptionTable();

@@ -1,6 +1,5 @@
 const db = require("../config/db");
 
-// Đảm bảo bảng tồn tại (khớp với schema chính thức)
 async function ensureSubscriptionTable() {
   await db.query(`
     CREATE TABLE IF NOT EXISTS dang_ky_san_pham (
@@ -26,7 +25,6 @@ async function ensureSubscriptionTable() {
   `);
 }
 
-// Lấy giá sản phẩm hiện tại (dùng khi tạo đăng ký)
 async function getProductInfo(masp) {
   const [rows] = await db.query(
     `SELECT masp, gia_ban, don_vi, ten_san_pham, trang_thai
@@ -36,7 +34,6 @@ async function getProductInfo(masp) {
   return rows[0] || null;
 }
 
-// Kiểm tra product có tồn tại và đang hoạt động
 async function productExists(masp) {
   const [rows] = await db.query(
     `SELECT masp FROM san_pham WHERE masp = ? AND trang_thai = 1 LIMIT 1`,
@@ -45,7 +42,6 @@ async function productExists(masp) {
   return rows.length > 0;
 }
 
-// Kiểm tra user đã có đăng ký đang hoạt động cho sản phẩm này chưa
 async function subscriptionExists(mand, masp) {
   const [rows] = await db.query(
     `SELECT madk FROM dang_ky_san_pham
@@ -57,7 +53,6 @@ async function subscriptionExists(mand, masp) {
   return rows.length > 0;
 }
 
-// Tính ngày giao tiếp theo dựa trên chu kỳ
 function calcNextDeliveryDate(fromDate, chuKy) {
   const date = new Date(fromDate);
   if (chuKy === "hang_tuan") {
@@ -65,13 +60,11 @@ function calcNextDeliveryDate(fromDate, chuKy) {
   } else if (chuKy === "hai_tuan") {
     date.setDate(date.getDate() + 14);
   } else {
-    // hang_thang (mặc định)
     date.setMonth(date.getMonth() + 1);
   }
   return date;
 }
 
-// Tạo subscription mới
 async function createSubscription({
   mand,
   masp,
@@ -131,7 +124,6 @@ const JOINS = `
     ON hav.masp = sp.masp AND hav.la_chinh = 1 AND hav.loai = 'hinh_anh'
 `;
 
-// Lấy tất cả subscription của 1 user
 async function getUserSubscriptions(mand) {
   const [rows] = await db.query(
     `SELECT ${SELECT_FIELDS} ${JOINS}
@@ -142,7 +134,6 @@ async function getUserSubscriptions(mand) {
   return rows;
 }
 
-// Lấy tất cả subscription (admin)
 async function getAllSubscriptions() {
   const [rows] = await db.query(
     `SELECT ${SELECT_FIELDS} ${JOINS}
@@ -152,7 +143,6 @@ async function getAllSubscriptions() {
   return rows;
 }
 
-// Lấy subscription theo ID
 async function getSubscriptionById(madk) {
   const [rows] = await db.query(
     `SELECT ${SELECT_FIELDS} ${JOINS}
@@ -162,7 +152,6 @@ async function getSubscriptionById(madk) {
   return rows[0] || null;
 }
 
-// Hủy subscription
 async function cancelSubscription(madk, mand) {
   const [result] = await db.query(
     `UPDATE dang_ky_san_pham
@@ -173,8 +162,6 @@ async function cancelSubscription(madk, mand) {
   return result.affectedRows > 0;
 }
 
-// Đánh dấu đã giao 1 kỳ (admin) — tăng so_lan_da_giao, tính ngày giao kế tiếp,
-// tự chuyển trạng thái 'hoan_thanh' nếu đã giao đủ số lần
 async function deliverSubscription(madk) {
   const current = await getSubscriptionById(madk);
   if (!current) return null;

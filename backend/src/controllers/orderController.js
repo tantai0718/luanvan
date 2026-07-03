@@ -18,12 +18,10 @@ async function createOrder(req, res) {
       ghi_chu: ghi_chu || "",
       nguoi_dung,
     });
-    res
-      .status(201)
-      .json({
-        message: "Đặt hàng thành công",
-        order: { id: madh, ma_don_hang: madh, tong_tien },
-      });
+    res.status(201).json({
+      message: "Đặt hàng thành công",
+      order: { id: madh, ma_don_hang: madh, tong_tien },
+    });
   } catch (err) {
     console.error("[createOrder]", err);
     res.status(400).json({ message: err.message });
@@ -69,12 +67,10 @@ async function createPreorder(req, res) {
       nguoi_dung,
     });
 
-    res
-      .status(201)
-      .json({
-        message: "Đặt trước thành công",
-        order: { id: madh, ma_don_hang: madh, tong_tien },
-      });
+    res.status(201).json({
+      message: "Đặt trước thành công",
+      order: { id: madh, ma_don_hang: madh, tong_tien },
+    });
   } catch (err) {
     console.error("[createPreorder]", err);
     res.status(400).json({ message: err.message });
@@ -111,12 +107,7 @@ async function cancelOrder(req, res) {
 
 async function adminGetOrders(req, res) {
   try {
-    const {
-      page,
-      limit,
-      trang_thai,
-      loai_don,
-    } = req.query;
+    const { page, limit, trang_thai, loai_don } = req.query;
 
     const data = await orderModel.getAllOrders({
       page,
