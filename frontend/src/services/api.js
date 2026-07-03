@@ -87,7 +87,9 @@ export const orderAPI = {
   getById: id => api.get(`/orders/${id}`),
   createVnpayPayment: id => api.post(`/orders/${id}/vnpay-payment`),
   cancel: (id, body) => api.patch(`/orders/${id}/cancel`, body),
-  updateStatus: (id, body) => api.patch(`/orders/${id}/status`, body),
+
+  adminGetById: id => api.get(`/orders/admin/${id}`),
+  adminUpdateStatus: (id, body) => api.patch(`/orders/admin/${id}/status`, body),
 };
 
 export const subscriptionAPI = {

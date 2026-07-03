@@ -331,8 +331,16 @@ export default function ProductDetail() {
             <form onSubmit={handlePreorder} className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <input type="number" min="1" value={preorderForm.quantity} onChange={event => setPreorderForm({ ...preorderForm, quantity: Number(event.target.value) || 1 })} className="market-field px-4 py-3 text-sm" placeholder="Số lượng" />
-                <input type="date" value={preorderForm.ngay_giao_du_kien} onChange={event => setPreorderForm({ ...preorderForm, ngay_giao_du_kien: event.target.value })} className="market-field px-4 py-3 text-sm" />
+                <input
+                  type="date"
+                  value={preorderForm.ngay_giao_du_kien}
+                  onChange={event => setPreorderForm({ ...preorderForm, ngay_giao_du_kien: event.target.value })}
+                  min={new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0]}
+                  max={new Date(Date.now() + 60 * 86400000).toISOString().split('T')[0]}
+                  className="market-field px-4 py-3 text-sm"
+                />
               </div>
+              <p className="text-xs text-[#707973]">Chọn trong khoảng 3–60 ngày tới. Nếu không chọn, hệ thống sẽ tự đặt ngày giao dự kiến sau 7 ngày.</p>
               <textarea rows={3} value={preorderForm.dia_chi_giao} onChange={event => setPreorderForm({ ...preorderForm, dia_chi_giao: event.target.value })} placeholder="Địa chỉ giao hàng" className="market-field w-full resize-none px-4 py-3 text-sm" />
               <input value={preorderForm.ghi_chu} onChange={event => setPreorderForm({ ...preorderForm, ghi_chu: event.target.value })} placeholder="Ghi chú thêm" className="market-field px-4 py-3 text-sm" />
               {preorderMessage ? <p className="text-sm text-[#a33d23]">{preorderMessage}</p> : null}

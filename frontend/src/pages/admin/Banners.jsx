@@ -40,7 +40,7 @@ function UploadButton({ multiple = false, label, disabled, onFiles }) {
   );
 }
 
-function BannerCard({ banner, busy, onReplace, onToggle, onDelete }) {
+function BannerCard({ banner, busy, isFirst, isLast, onReplace, onToggle, onDelete, onMoveUp, onMoveDown }) {
   return (
     <div className="market-panel overflow-hidden">
       <div className="relative">
@@ -55,6 +55,16 @@ function BannerCard({ banner, busy, onReplace, onToggle, onDelete }) {
           <p className="text-xs text-slate-400">Ngày tạo: {formatDate(banner.created_at)}</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {!isFirst && (
+            <Btn size="sm" variant="ghost" disabled={busy} onClick={() => onMoveUp(banner)}>
+              <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+            </Btn>
+          )}
+          {!isLast && (
+            <Btn size="sm" variant="ghost" disabled={busy} onClick={() => onMoveDown(banner)}>
+              <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+            </Btn>
+          )}
           <label className={`inline-flex cursor-pointer items-center justify-center rounded-2xl border border-[#dce7df] bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-[#f3f7f4] ${busy ? 'pointer-events-none opacity-60' : ''}`}>
             Đổi ảnh
             <input
@@ -144,6 +154,40 @@ export default function AdminBanners() {
     }
   };
 
+  const swapOrder = async (banner1, banner2) => {
+    setSaving(true);
+    setError('');
+    try {
+      await Promise.all([
+        bannerAPI.update(banner1.id, {
+          image: banner1.image,
+          order: banner2.order,
+          active: banner1.active,
+        }),
+        bannerAPI.update(banner2.id, {
+          image: banner2.image,
+          order: banner1.order,
+          active: banner2.active,
+        }),
+      ]);
+      await fetchBanners();
+    } catch (err) {
+      setError(err.message || 'Không đổi được vị trí.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const moveUp = (banner) => {
+    const index = banners.findIndex(b => b.id === banner.id);
+    if (index > 0) swapOrder(banner, banners[index - 1]);
+  };
+
+  const moveDown = (banner) => {
+    const index = banners.findIndex(b => b.id === banner.id);
+    if (index < banners.length - 1) swapOrder(banner, banners[index + 1]);
+  };
+
   const toggleBanner = async id => {
     setSaving(true);
     setError('');
@@ -192,14 +236,18 @@ export default function AdminBanners() {
         <Loading />
       ) : banners.length ? (
         <div className="grid gap-4 xl:grid-cols-2">
-          {banners.map(banner => (
+          {banners.map((banner, index) => (
             <BannerCard
               key={banner.id}
               banner={banner}
               busy={saving}
+              isFirst={index === 0}
+              isLast={index === banners.length - 1}
               onReplace={replaceBanner}
               onToggle={toggleBanner}
               onDelete={deleteBanner}
+              onMoveUp={moveUp}
+              onMoveDown={moveDown}
             />
           ))}
         </div>

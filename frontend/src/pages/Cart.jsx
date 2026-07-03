@@ -128,6 +128,9 @@ export default function Cart() {
                   />
                 </label>
               </div>
+              <p className="mt-4 rounded-lg bg-[#f3f7f4] px-4 py-3 text-xs leading-5 text-[#404943]">
+                Đơn hàng dự kiến giao trong vòng 2 ngày kể từ khi đặt hàng thành công.
+              </p>
             </section>
 
             <section className="market-panel p-6 md:p-8">
