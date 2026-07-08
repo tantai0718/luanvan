@@ -106,7 +106,7 @@ exports.create = async (req, res) => {
       gia_du_kien: giaDuKien,
       chu_ky: chuKy,
       dia_chi_giao,
-      phuong_thuc_tt: phuong_thuc_tt === "vnpay" ? "vnpay" : "tien_mat",
+      phuong_thuc_tt: "tien_mat",
       ngay_bat_dau: ngay_bat_dau || new Date(),
       so_lan_giao: soLanGiao,
       ghi_chu: ghi_chu || null,

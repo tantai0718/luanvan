@@ -14,8 +14,7 @@ function ProductTile({ product }) {
   const stock = Number(product.ton_kho || 0);
 
   const handleAdd = async event => {
-    event.preventDefault();
-    event.stopPropagation();
+    event.preventDefault(); event.stopPropagation();
     if (!user || user.role !== 'buyer' || stock <= 0) return;
     await addToCart(product.ma_san_pham, 1);
     setAdded(true);
@@ -23,26 +22,37 @@ function ProductTile({ product }) {
   };
 
   return (
-    <Link to={`/products/${product.ma_san_pham}`} className="group overflow-hidden rounded-2xl border border-[#d7ddd8] bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md">
-      <div className="relative aspect-[4/5] overflow-hidden bg-[#efeded]">
-        <img src={pickProductImage(product)} alt={product.ten_san_pham} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-        {stock > 0 ? (
-          <span className="absolute left-4 top-4 rounded-full bg-[#2d6a4f] px-3 py-1 text-xs font-bold text-[#d8ffeb]">Còn hàng</span>
-        ) : (
-          <span className="absolute left-4 top-4 rounded-full bg-[#404943] px-3 py-1 text-xs font-bold text-white">Tạm hết</span>
+    <Link to={`/products/${product.ma_san_pham}`} className="bg-surface rounded-3xl p-4 border border-outline-variant organic-shadow flex flex-col group h-full transition-all hover:-translate-y-1">
+      <div className="relative aspect-square rounded-2xl overflow-hidden mb-4 bg-surface-container-high">
+        <img src={pickProductImage(product)} alt={product.ten_san_pham} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        {stock <= 0 && (
+          <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+            <span className="bg-surface text-on-surface px-4 py-1.5 rounded-full font-label-sm text-label-sm">Tạm hết</span>
+          </div>
         )}
       </div>
-      <div className="p-5">
-        <p className="text-xs font-semibold uppercase tracking-wide text-[#707973]">{product.ten_danh_muc || 'Nông sản'}</p>
-        <h2 className="mt-2 line-clamp-2 min-h-[48px] text-base font-semibold leading-6">{product.ten_san_pham}</h2>
-        <p className="mt-2 text-sm text-[#404943]">{product.ten_nong_trai || product.tinh_thanh || 'Farm2Table'} · {product.don_vi}</p>
-        <div className="mt-4 flex items-end justify-between gap-3">
-          <p className="text-2xl font-bold text-[#0f5238]">{formatCurrency(product.gia_ban)}</p>
-          <button onClick={handleAdd} disabled={stock <= 0} className={`flex h-10 w-10 items-center justify-center rounded-full ${stock <= 0 ? 'bg-[#efeded] text-[#707973]' : added ? 'bg-[#0f5238] text-white' : 'bg-[#b1f0ce] text-[#0f5238] hover:bg-[#0f5238] hover:text-white'}`}>
-            <span className="material-symbols-outlined">add</span>
-          </button>
+      <div className="flex-grow">
+        <span className="text-primary font-label-sm text-label-sm uppercase tracking-wider">{product.ten_danh_muc || 'Nông sản'}</span>
+        <h3 className="text-title-md font-title-md mt-1 mb-2 line-clamp-2">{product.ten_san_pham}</h3>
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-secondary font-bold text-headline-lg">{formatCurrency(product.gia_ban)}</span>
+          <span className="text-on-surface-variant/50 text-sm">/{product.don_vi}</span>
         </div>
       </div>
+      <button
+        onClick={handleAdd}
+        disabled={stock <= 0}
+        className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-95 ${
+          stock <= 0
+            ? 'bg-surface-container-high text-on-surface-variant cursor-not-allowed'
+            : added
+              ? 'bg-primary-container text-on-primary-container font-bold'
+              : 'bg-primary text-on-primary hover:bg-on-primary-fixed-variant'
+        }`}
+      >
+        <span className="material-symbols-outlined text-sm">{stock <= 0 ? 'block' : added ? 'check' : 'shopping_cart'}</span>
+        {stock <= 0 ? 'Hết hàng' : added ? 'Đã thêm' : 'Thêm vào giỏ'}
+      </button>
     </Link>
   );
 }
@@ -71,14 +81,8 @@ export default function Products() {
     if (category) params.set('category', category);
     if (inStock) params.set('in_stock', inStock);
     productAPI.getAll(`?${params.toString()}`)
-      .then(data => {
-        setProducts(data.products || []);
-        setTotal(data.total || 0);
-      })
-      .catch(() => {
-        setProducts([]);
-        setTotal(0);
-      })
+      .then(data => { setProducts(data.products || []); setTotal(data.total || 0); })
+      .catch(() => { setProducts([]); setTotal(0); })
       .finally(() => setLoading(false));
   }, [category, inStock, page, q, sort]);
 
@@ -94,51 +98,53 @@ export default function Products() {
   const activeCategory = categories.find(item => String(item.id) === String(category));
 
   return (
-    <div className="market-shell">
-      <div className="market-page grid gap-8 py-8 lg:grid-cols-[260px_1fr] lg:py-12">
-        <aside className="space-y-8 lg:sticky lg:top-28 lg:self-start">
-          <section>
-            <h2 className="text-sm font-bold uppercase tracking-wide text-[#b1f0ce]">Loại sản phẩm</h2>
-            <div className="mt-5 grid gap-3">
-              <button onClick={() => setParam('category', '')} className="flex items-center gap-3 text-left text-sm">
-                <span className={`h-5 w-5 rounded border ${!category ? 'border-[#0f5238] bg-[#0f5238]' : 'border-[#707973] bg-white'}`} />
-                <span className="text-white/85">Tất cả</span>
-              </button>
-              {categories.map(item => (
-                <button key={item.id} onClick={() => setParam('category', String(item.id))} className="flex items-center gap-3 text-left text-sm">
-                  <span className={`h-5 w-5 rounded border ${category === String(item.id) ? 'border-[#0f5238] bg-[#0f5238]' : 'border-[#707973] bg-white'}`} />
-                  <span className="text-white/85">{item.name}</span>
+    <div className="bg-background min-h-screen py-xl">
+      <div className="max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop grid gap-xl lg:grid-cols-[280px_1fr]">
+        {/* Sidebar Filters */}
+        <aside className="space-y-lg lg:sticky lg:top-28 lg:self-start">
+          <div className="bg-surface rounded-3xl p-lg border border-outline-variant organic-shadow">
+            <h2 className="font-title-md text-title-md text-on-surface mb-6">Danh mục</h2>
+            <div className="space-y-3">
+              {[{ id: '', name: 'Tất cả sản phẩm' }, ...categories].map(item => (
+                <button key={item.id} onClick={() => setParam('category', String(item.id))} className={`w-full text-left px-4 py-2.5 rounded-xl transition-all text-body-md font-body-md ${
+                  category === String(item.id) ? 'bg-primary-container text-on-primary-container font-bold' : 'text-on-surface-variant hover:bg-surface-container-high'
+                }`}>
+                  {item.name}
                 </button>
               ))}
             </div>
-          </section>
-
-          <section>
-            <h2 className="text-sm font-bold uppercase tracking-wide text-[#b1f0ce]">Tình trạng</h2>
-            <button onClick={() => setParam('in_stock', inStock === '1' ? '' : '1')} className={`mt-4 rounded-full border px-4 py-2 text-sm ${inStock === '1' ? 'border-[#b1f0ce] bg-[#b1f0ce] text-[#063d2b]' : 'border-[#2d6a4f] bg-white/10 text-white'}`}>
+          </div>
+          <div className="bg-surface rounded-3xl p-lg border border-outline-variant organic-shadow">
+            <h2 className="font-title-md text-title-md text-on-surface mb-4">Tình trạng</h2>
+            <button
+              onClick={() => setParam('in_stock', inStock === '1' ? '' : '1')}
+              className={`w-full rounded-xl border px-4 py-2.5 text-body-md font-body-md transition-all ${
+                inStock === '1' ? 'bg-primary-fixed border-primary text-primary' : 'border-outline-variant text-on-surface-variant hover:bg-surface-container-high'
+              }`}
+            >
               Chỉ hiện còn hàng
             </button>
-          </section>
-
-          <section className="relative hidden aspect-[3/4] overflow-hidden rounded-2xl lg:block">
-            <img src={activeCategory ? pickCategoryImage(activeCategory) : '/images/raucu.webp'} alt="Ưu đãi nông sản" className="h-full w-full object-cover transition duration-700 hover:scale-105" />
-            <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/80 via-black/15 to-transparent p-6 text-white">
-              <p className="text-xs">Ưu đãi tuần này</p>
-              <h3 className="mt-2 text-2xl font-bold">Giảm 20% nông sản theo mùa</h3>
-              <button onClick={() => setParam('in_stock', '1')} className="mt-4 w-fit rounded-lg bg-[#a33d23] px-4 py-2 text-sm font-semibold">Xem ngay</button>
+          </div>
+          <div className="relative aspect-[3/4] rounded-3xl overflow-hidden organic-shadow hidden lg:block">
+            <img src={activeCategory ? pickCategoryImage(activeCategory) : '/images/raucu.webp'} alt="Ưu đãi" className="w-full h-full object-cover transition-transform hover:scale-105 duration-700" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent flex flex-col justify-end p-lg">
+              <p className="text-white/80 text-label-sm">Ưu đãi tuần này</p>
+              <h3 className="text-headline-lg font-headline-lg text-white mt-1">Giảm 20% nông sản theo mùa</h3>
+              <button onClick={() => setParam('in_stock', '1')} className="mt-4 w-fit bg-secondary text-on-secondary px-4 py-2 rounded-xl font-bold transition-all active:scale-95">Xem ngay</button>
             </div>
-          </section>
+          </div>
         </aside>
 
+        {/* Products Section */}
         <section className="min-w-0">
-          <div className="market-panel flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-lg">
             <div>
-              <p className="text-sm">Hiển thị <strong className="text-[#0f5238]">{total}</strong> sản phẩm</p>
-              <h1 className="mt-2 text-3xl font-bold">{q ? `Kết quả cho "${q}"` : activeCategory?.name || 'Sản phẩm Farm2Table'}</h1>
+              <h1 className="text-headline-lg font-headline-lg text-on-surface">{q ? `Kết quả cho "${q}"` : activeCategory?.name || 'Sản phẩm'}</h1>
+              <p className="text-on-surface-variant text-body-md font-body-md">Hiển thị <strong className="text-primary">{total}</strong> sản phẩm</p>
             </div>
-            <div className="grid gap-3 sm:grid-cols-[minmax(220px,1fr)_180px]">
-              <input value={q} onChange={event => setParam('q', event.target.value)} placeholder="Tìm nông sản..." className="market-field px-4 py-3 text-sm" />
-              <select value={sort} onChange={event => setParam('sort', event.target.value)} className="market-field px-4 py-3 text-sm">
+            <div className="flex gap-3">
+              <input value={q} onChange={e => setParam('q', e.target.value)} placeholder="Tìm nông sản..." className="bg-surface border border-outline-variant rounded-xl px-4 py-2.5 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none w-48" />
+              <select value={sort} onChange={e => setParam('sort', e.target.value)} className="bg-surface border border-outline-variant rounded-xl px-4 py-2.5 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none">
                 <option value="moi_nhat">Mới nhất</option>
                 <option value="gia_tang">Giá tăng dần</option>
                 <option value="gia_giam">Giá giảm dần</option>
@@ -148,29 +154,46 @@ export default function Products() {
             </div>
           </div>
 
-          <div className="mt-5 flex gap-2 overflow-x-auto pb-2 lg:hidden">
-            <button onClick={() => setParam('category', '')} className={`whitespace-nowrap rounded-full px-4 py-2 text-sm ${!category ? 'bg-[#b1f0ce] text-[#063d2b]' : 'bg-white/10 text-white'}`}>Tất cả</button>
-            {categories.map(item => <button key={item.id} onClick={() => setParam('category', String(item.id))} className={`whitespace-nowrap rounded-full px-4 py-2 text-sm ${category === String(item.id) ? 'bg-[#b1f0ce] text-[#063d2b]' : 'bg-white/10 text-white'}`}>{item.name}</button>)}
-            <button onClick={() => setParam('in_stock', inStock === '1' ? '' : '1')} className={`whitespace-nowrap rounded-full px-4 py-2 text-sm ${inStock === '1' ? 'bg-[#ffdad2] text-[#83260e]' : 'bg-white/10 text-white'}`}>Còn hàng</button>
+          {/* Mobile category chips */}
+          <div className="flex gap-2 overflow-x-auto pb-2 mb-lg lg:hidden">
+            <button onClick={() => setParam('category', '')} className={`whitespace-nowrap rounded-full px-4 py-2 text-label-sm font-label-sm transition-all ${!category ? 'bg-primary text-on-primary' : 'bg-surface-container-high text-on-surface-variant'}`}>Tất cả</button>
+            {categories.map(item => (
+              <button key={item.id} onClick={() => setParam('category', String(item.id))} className={`whitespace-nowrap rounded-full px-4 py-2 text-label-sm font-label-sm transition-all ${category === String(item.id) ? 'bg-primary text-on-primary' : 'bg-surface-container-high text-on-surface-variant'}`}>{item.name}</button>
+            ))}
+            <button onClick={() => setParam('in_stock', inStock === '1' ? '' : '1')} className={`whitespace-nowrap rounded-full px-4 py-2 text-label-sm font-label-sm transition-all ${inStock === '1' ? 'bg-secondary-container text-on-secondary-container' : 'bg-surface-container-high text-on-surface-variant'}`}>Còn hàng</button>
           </div>
 
           {loading ? (
-            <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 6 }).map((_, index) => <div key={index} className="h-[480px] animate-pulse rounded-2xl bg-white" />)}</div>
+            <div className="grid gap-gutter sm:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="bg-surface rounded-3xl p-4 border border-outline-variant animate-pulse">
+                  <div className="aspect-square rounded-2xl bg-surface-container-high mb-4" />
+                  <div className="h-4 bg-surface-container-high rounded w-1/3 mb-2" />
+                  <div className="h-5 bg-surface-container-high rounded w-2/3 mb-2" />
+                  <div className="h-4 bg-surface-container-high rounded w-1/2" />
+                </div>
+              ))}
+            </div>
           ) : products.length ? (
             <>
-              <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-gutter sm:grid-cols-2 xl:grid-cols-3">
                 {products.map(product => <ProductTile key={product.ma_san_pham} product={product} />)}
               </div>
-              {totalPages > 1 ? (
-                <div className="mt-10 flex justify-center gap-2">
-                  {Array.from({ length: totalPages }).map((_, index) => (
-                    <button key={index} onClick={() => setParam('page', String(index + 1))} className={`h-11 min-w-11 rounded-lg border px-3 text-sm font-semibold ${page === index + 1 ? 'border-[#0f5238] bg-[#0f5238] text-white' : 'border-[#d7ddd8] bg-white'}`}>{index + 1}</button>
+              {totalPages > 1 && (
+                <div className="mt-xl flex justify-center gap-2">
+                  {Array.from({ length: totalPages }).map((_, i) => (
+                    <button key={i} onClick={() => setParam('page', String(i + 1))} className={`h-11 min-w-[44px] rounded-xl border text-body-md font-bold transition-all ${
+                      page === i + 1 ? 'bg-primary text-on-primary border-primary organic-shadow' : 'bg-surface border-outline-variant text-on-surface-variant hover:bg-surface-container-high'
+                    }`}>{i + 1}</button>
                   ))}
                 </div>
-              ) : null}
+              )}
             </>
           ) : (
-            <div className="mt-6 rounded-2xl border border-dashed border-[#d7ddd8] bg-white py-20 text-center text-[#404943]">Không tìm thấy sản phẩm phù hợp.</div>
+            <div className="rounded-3xl border border-dashed border-outline-variant bg-surface py-xl text-center">
+              <span className="material-symbols-outlined text-5xl text-on-surface-variant/40">search_off</span>
+              <p className="mt-3 text-on-surface-variant font-body-lg text-body-lg">Không tìm thấy sản phẩm phù hợp.</p>
+            </div>
           )}
         </section>
       </div>

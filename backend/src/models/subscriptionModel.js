@@ -11,7 +11,7 @@ async function ensureSubscriptionTable() {
       gia_du_kien     DECIMAL(12,2),
       chu_ky          ENUM('hang_tuan','hai_tuan','hang_thang'),
       dia_chi_giao    TEXT,
-      phuong_thuc_tt  ENUM('tien_mat','vnpay') NOT NULL DEFAULT 'tien_mat',
+      phuong_thuc_tt  ENUM('tien_mat') NOT NULL DEFAULT 'tien_mat',
       ngay_bat_dau    DATETIME,
       ngay_giao_tiep_theo DATETIME,
       ngay_ket_thuc   DATETIME,

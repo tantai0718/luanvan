@@ -85,7 +85,6 @@ export const orderAPI = {
   createPreorder: body => api.post('/orders/preorder', body),
   getAll: () => api.get('/orders'),
   getById: id => api.get(`/orders/${id}`),
-  createVnpayPayment: id => api.post(`/orders/${id}/vnpay-payment`),
   cancel: (id, body) => api.patch(`/orders/${id}/cancel`, body),
 
   adminGetById: id => api.get(`/orders/admin/${id}`),

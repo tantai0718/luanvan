@@ -23,6 +23,12 @@ async function applyPromoCode(maCode, tongTien) {
   return { makm: km.makm, tien_giam };
 }
 
+const PAYMENT_METHOD_MAP = { tien_mat: 'tien_mat', banking: 'banking', vnpay: 'vnpay' };
+
+function mapPaymentMethod(method) {
+  return PAYMENT_METHOD_MAP[method] || 'tien_mat';
+}
+
 async function createOrder({
   mand,
   dia_chi_giao,
@@ -30,6 +36,8 @@ async function createOrder({
   ma_code = "",
   ghi_chu = "",
   nguoi_dung,
+  ten_nguoi_nhan = '',
+  sdt_nguoi_nhan = '',
 }) {
   const [[gh]] = await db.query("SELECT magh FROM gio_hang WHERE mand = ?", [
     mand,
@@ -93,9 +101,9 @@ async function createOrder({
       mand,
       makm,
       tien_giam,
-      nguoi_dung?.ho_ten || "",
+      ten_nguoi_nhan || nguoi_dung?.ho_ten || "",
       nguoi_dung?.email || "",
-      nguoi_dung?.sdt || "",
+      sdt_nguoi_nhan || nguoi_dung?.sdt || "",
       tong_tien,
       dia_chi_giao,
       ghi_chu || null,
@@ -116,7 +124,7 @@ async function createOrder({
   await db.query(
     `INSERT INTO thanh_toan (madh, so_tien, phuong_thuc, trang_thai, ngay_thanh_toan)
      VALUES (?, ?, ?, 'cho_thanh_toan', NOW())`,
-    [madh, tong_tien, phuong_thuc],
+    [madh, tong_tien, mapPaymentMethod(phuong_thuc)],
   );
   for (const item of items) {
     await db.query(
@@ -145,6 +153,8 @@ async function createPreorder({
   phuong_thuc = "tien_mat",
   ghi_chu = "",
   nguoi_dung,
+  ten_nguoi_nhan = '',
+  sdt_nguoi_nhan = '',
 }) {
   const [[sp]] = await db.query(
     "SELECT ten_san_pham FROM san_pham WHERE masp = ? AND trang_thai = 1",
@@ -176,9 +186,9 @@ async function createPreorder({
     [
       mand,
       tien_giam,
-      nguoi_dung?.ho_ten || "",
+      ten_nguoi_nhan || nguoi_dung?.ho_ten || "",
       nguoi_dung?.email || "",
-      nguoi_dung?.sdt || "",
+      sdt_nguoi_nhan || nguoi_dung?.sdt || "",
       tong_tien,
       dia_chi_giao,
       ghi_chu || null,
@@ -198,7 +208,7 @@ async function createPreorder({
   await db.query(
     `INSERT INTO thanh_toan (madh, so_tien, phuong_thuc, trang_thai, ngay_thanh_toan)
      VALUES (?, ?, ?, 'cho_thanh_toan', NOW())`,
-    [madh, tong_tien, phuong_thuc],
+    [madh, tong_tien, mapPaymentMethod(phuong_thuc)],
   );
 
   return { madh, tong_tien };
@@ -218,7 +228,7 @@ async function getOrderById(madh, mand = null) {
   const cond = mand ? "AND dh.mand = ?" : "";
   const params = mand ? [madh, mand] : [madh];
   const [[dh]] = await db.query(
-    `SELECT dh.*, tt.phuong_thuc, tt.trang_thai AS trang_thai_tt, tt.ngay_thanh_toan
+    `SELECT dh.*, tt.phuong_thuc, tt.trang_thai AS trang_thai_tt, tt.ngay_thanh_toan, tt.hinh_anh_chuyen_khoan, tt.ma_giao_dich
      FROM don_hang dh
      LEFT JOIN thanh_toan tt ON tt.madh = dh.madh
      WHERE dh.madh = ? ${cond}`,
@@ -226,7 +236,7 @@ async function getOrderById(madh, mand = null) {
   );
   if (!dh) return null;
   const [items] = await db.query(
-    `SELECT ct.*, sp.ten_san_pham, hav.duong_dan AS hinh_chinh
+    `SELECT ct.mactdh AS ma_chi_tiet, ct.madh, ct.masp, ct.so_luong, ct.don_gia, ct.thanh_tien, sp.ten_san_pham, hav.duong_dan AS hinh_san_pham
      FROM chi_tiet_don_hang ct
      JOIN san_pham sp ON sp.masp = ct.masp
      LEFT JOIN hinh_anh_video hav
@@ -330,8 +340,8 @@ async function getAllOrders({
       dh.ghi_chu,
       dh.ten_nguoi_nhan,
       dh.sdt_nguoi_nhan,
-      tt.phuong_thuc
-   FROM don_hang dh
+       tt.phuong_thuc, tt.hinh_anh_chuyen_khoan, tt.ma_giao_dich
+    FROM don_hang dh
    LEFT JOIN thanh_toan tt ON tt.madh = dh.madh
    ${cond}
    ORDER BY dh.ngay_dat DESC
@@ -360,7 +370,42 @@ function mapOrder(row) {
     ten_nguoi_nhan: row.ten_nguoi_nhan,
     sdt_nguoi_nhan: row.sdt_nguoi_nhan,
     phuong_thuc_tt: row.phuong_thuc,
+    hinh_anh_chuyen_khoan: row.hinh_anh_chuyen_khoan || '',
+    ma_giao_dich: row.ma_giao_dich || '',
   };
+}
+
+async function updatePaymentSuccess(madh, { ma_giao_dich = '', du_lieu_cong = '' }) {
+  await db.query(
+    `UPDATE don_hang SET trang_thai_thanh_toan = 'da_thanh_toan',
+     tong_da_thanh_toan = tong_tien WHERE madh = ?`,
+    [madh],
+  );
+  await db.query(
+    `UPDATE thanh_toan SET trang_thai = 'thanh_cong', ma_giao_dich = ?,
+     du_lieu_cong = ?, ngay_thanh_toan = NOW() WHERE madh = ?`,
+    [ma_giao_dich, du_lieu_cong, madh],
+  );
+}
+
+async function updateBankingPayment(madh, hinh_anh = '') {
+  await db.query(
+    `UPDATE thanh_toan SET hinh_anh_chuyen_khoan = ? WHERE madh = ?`,
+    [hinh_anh, madh],
+  );
+}
+
+async function confirmBankingPayment(madh) {
+  await db.query(
+    `UPDATE don_hang SET trang_thai_thanh_toan = 'da_thanh_toan',
+     tong_da_thanh_toan = tong_tien WHERE madh = ?`,
+    [madh],
+  );
+  await db.query(
+    `UPDATE thanh_toan SET trang_thai = 'thanh_cong',
+     ngay_thanh_toan = NOW() WHERE madh = ?`,
+    [madh],
+  );
 }
 
 module.exports = {
@@ -372,4 +417,7 @@ module.exports = {
   updateOrderStatus,
   getAllOrders,
   mapOrder,
+  updatePaymentSuccess,
+  updateBankingPayment,
+  confirmBankingPayment,
 };

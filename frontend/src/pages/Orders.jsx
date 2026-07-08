@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { orderAPI, subscriptionAPI } from "../services/api";
+import { orderAPI, subscriptionAPI, api } from "../services/api";
 
 const orderStatusMap = {
   cho_xac_nhan: { label: "Chờ xác nhận", color: "bg-amber-50 text-amber-700" },
@@ -321,11 +321,7 @@ export function OrderDetail() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [canceling, setCanceling] = useState(false);
-  const [paying, setPaying] = useState(false);
-  const [paymentError, setPaymentError] = useState("");
   const success = searchParams.get("success");
-  const vnpayResult = searchParams.get("vnpay");
-  const vnpayCode = searchParams.get("code");
 
   useEffect(() => {
     setLoading(true);
@@ -348,18 +344,6 @@ export function OrderDetail() {
       }));
     } finally {
       setCanceling(false);
-    }
-  };
-
-  const handleVnpayPayment = async () => {
-    setPaying(true);
-    setPaymentError("");
-    try {
-      const payment = await orderAPI.createVnpayPayment(id);
-      window.location.assign(payment.payment_url);
-    } catch (err) {
-      setPaymentError(err.message || "Không thể tạo phiên thanh toán VNPAY.");
-      setPaying(false);
     }
   };
 
@@ -399,27 +383,6 @@ export function OrderDetail() {
             </h2>
             <p className="mt-1 text-sm text-[#1a7a4a]">
               Đơn hàng #{order.ma_don_hang} đã được ghi nhận.
-            </p>
-          </div>
-        ) : null}
-        {vnpayResult === "success" ? (
-          <div className="market-panel border border-[#b8e0c6] bg-[#e8f5ee] p-5 text-center">
-            <h2 className="text-lg font-semibold text-[#1a7a4a]">
-              Thanh toán VNPAY thành công
-            </h2>
-            <p className="mt-1 text-sm text-[#1a7a4a]">
-              Đơn hàng #{order.ma_don_hang} đã được ghi nhận đã thanh toán.
-            </p>
-          </div>
-        ) : null}
-        {vnpayResult === "failed" ? (
-          <div className="market-panel border border-amber-200 bg-amber-50 p-5 text-center">
-            <h2 className="text-lg font-semibold text-amber-800">
-              Thanh toán VNPAY chưa hoàn tất
-            </h2>
-            <p className="mt-1 text-sm text-amber-700">
-              Đơn hàng vẫn còn. Bạn có thể thanh toán lại
-              {vnpayCode ? ` (mã VNPAY ${vnpayCode})` : ""}.
             </p>
           </div>
         ) : null}
@@ -491,8 +454,11 @@ export function OrderDetail() {
               >
                 <img
                   src={
-                    item.hinh_san_pham ||
-                    "https://placehold.co/84x84/e8f5ee/1a7a4a?text=NS"
+                    item.hinh_san_pham
+                      ? item.hinh_san_pham.startsWith("/upload/")
+                        ? `http://localhost:5000${item.hinh_san_pham}`
+                        : `http://localhost:5000/upload/${item.hinh_san_pham}`
+                      : "https://placehold.co/84x84/e8f5ee/1a7a4a?text=NS"
                   }
                   alt={item.ten_san_pham}
                   className="h-20 w-20 rounded-[16px] object-cover"
@@ -519,6 +485,8 @@ export function OrderDetail() {
                 Giao hàng
               </p>
               <p className="mt-2 text-sm leading-7 text-slate-700">
+                {order.ten_nguoi_nhan && <><b>{order.ten_nguoi_nhan}</b><br /></>}
+                {order.sdt_nguoi_nhan && <>{order.sdt_nguoi_nhan}<br /></>}
                 {order.dia_chi_giao || "Chưa có địa chỉ giao hàng."}
               </p>
             </div>
@@ -529,7 +497,9 @@ export function OrderDetail() {
               <p className="mt-2 text-sm text-slate-700">
                 {order.phuong_thuc_tt === "tien_mat"
                   ? "Tiền mặt khi nhận hàng"
-                  : "VNPay"}
+                  : order.phuong_thuc_tt === "banking"
+                    ? "Chuyển khoản ngân hàng"
+                  : order.phuong_thuc_tt}
               </p>
               <p
                 className={`mt-2 text-sm font-semibold ${order.trang_thai_tt === "da_tt" ? "text-[#1a7a4a]" : "text-amber-700"}`}
@@ -594,20 +564,28 @@ export function OrderDetail() {
               </Link>
             )}
           </div>
-          {order.phuong_thuc_tt === "vnpay" &&
+          {order.phuong_thuc_tt === "banking" &&
             order.trang_thai_tt !== "da_tt" &&
             order.trang_thai !== "da_huy" ? (
-            <div className="mt-3">
-              <button
-                onClick={handleVnpayPayment}
-                disabled={paying}
-                className="w-full rounded-full bg-sky-600 py-3 text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-60"
-              >
-                {paying ? "Đang chuyển sang VNPAY..." : "Thanh toán VNPAY"}
-              </button>
-              {paymentError ? (
-                <p className="mt-2 text-sm text-red-600">{paymentError}</p>
-              ) : null}
+            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <p className="text-sm font-semibold text-amber-800">Chuyển khoản ngân hàng</p>
+              <div className="mt-3 flex flex-col items-center gap-3 sm:flex-row sm:items-start">
+                {order.banking_info?.qr_url && (
+                  <img
+                    src={order.banking_info.qr_url}
+                    alt="VietQR"
+                    className="h-48 w-48 rounded-lg border border-amber-300 bg-white"
+                  />
+                )}
+                <div className="space-y-1 text-xs text-amber-700">
+                  <p>Ngân hàng: <b>{order.banking_info?.bank_name}</b></p>
+                  <p>Số tài khoản: <b>{order.banking_info?.account_number}</b></p>
+                  <p>Chủ tài khoản: <b>{order.banking_info?.account_holder}</b></p>
+                  <p className="pt-1">Nội dung chuyển khoản:</p>
+                  <p className="rounded bg-amber-100 px-2 py-1 font-mono text-sm font-bold">{order.banking_info?.noi_dung_chuyen_khoan}</p>
+                  <p className="pt-1">Số tiền: <b>{formatCurrency(order.tong_thanh_toan)}</b></p>
+                </div>
+              </div>
             </div>
           ) : null}
         </section>

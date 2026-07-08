@@ -19,108 +19,152 @@ export default function Navbar() {
 
   const initials = useMemo(() => {
     if (!user?.name) return 'FT';
-    return user.name.split(' ').slice(0, 2).map(part => part.charAt(0).toUpperCase()).join('');
+    return user.name.split(' ').slice(0, 2).map(p => p.charAt(0).toUpperCase()).join('');
   }, [user?.name]);
 
-  const handleSearch = event => {
-    event.preventDefault();
+  const handleSearch = e => {
+    e.preventDefault();
     navigate(search.trim() ? `/products?q=${encodeURIComponent(search.trim())}` : '/products');
     setMobileOpen(false);
   };
 
-  const handleLogout = () => {
-    logout();
-    setMenuOpen(false);
-    navigate('/');
-  };
+  const handleLogout = () => { logout(); setMenuOpen(false); navigate('/'); };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[#2d6a4f] bg-[#063d2b]/95 shadow-sm backdrop-blur">
-      <div className="market-page flex min-h-20 items-center justify-between gap-4">
+    <header className="bg-surface shadow-sm sticky top-0 z-50 transition-all duration-300">
+      <div className="flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop py-4 max-w-7xl mx-auto">
         <div className="flex items-center gap-8">
-          <Link to="/" className="whitespace-nowrap text-xl font-bold text-[#0f5238] md:text-2xl">Nông Sản Xanh</Link>
-          <nav className="hidden items-center gap-6 md:flex">
+          <Link to="/" className="text-title-md font-title-md font-black text-primary">
+            Chợ Nông Sản
+          </Link>
+          <nav className="hidden md:flex items-center gap-6">
             {links.map(item => (
               <NavLink
                 key={item.to}
                 to={item.to}
+                end={item.to === '/'}
                 className={({ isActive }) =>
-                  `rounded-lg border-b-2 px-1 py-2 text-sm transition ${
-                    isActive ? 'border-[#b1f0ce] font-bold text-[#b1f0ce]' : 'border-transparent text-white/80 hover:bg-white/10 hover:text-white'
-                  }`
+                  isActive
+                    ? 'text-primary font-bold border-b-2 border-primary pb-1 font-body-md text-body-md'
+                    : 'text-on-surface-variant hover:text-primary transition-colors font-body-md text-body-md'
                 }
               >
                 {item.label}
               </NavLink>
             ))}
-            {user?.role === 'buyer' ? <NavLink to="/orders" className="rounded-lg px-1 py-2 text-sm text-white/80 hover:text-white">Đơn hàng</NavLink> : null}
-            {user?.role === 'admin' ? <NavLink to="/admin" className="rounded-lg px-1 py-2 text-sm text-white/80 hover:text-white">Quản trị</NavLink> : null}
+            {user?.role === 'buyer' && (
+              <NavLink to="/orders" className={({ isActive }) =>
+                isActive ? 'text-primary font-bold border-b-2 border-primary pb-1 font-body-md text-body-md' : 'text-on-surface-variant hover:text-primary transition-colors font-body-md text-body-md'
+              }>Đơn hàng</NavLink>
+            )}
+            {user?.role === 'admin' && (
+              <NavLink to="/admin" className={({ isActive }) =>
+                isActive ? 'text-primary font-bold border-b-2 border-primary pb-1 font-body-md text-body-md' : 'text-on-surface-variant hover:text-primary transition-colors font-body-md text-body-md'
+              }>Quản trị</NavLink>
+            )}
           </nav>
         </div>
 
-        <div className="flex items-center gap-2">
-          <form onSubmit={handleSearch} className="hidden items-center rounded-xl bg-white/10 px-3 lg:flex">
-            <span className="material-symbols-outlined text-[20px] text-white/75">search</span>
+        <div className="flex items-center gap-4">
+          <div className="hidden lg:flex items-center bg-surface-container-low px-4 py-2 rounded-full border border-outline-variant">
+            <span className="material-symbols-outlined text-on-surface-variant mr-2">search</span>
             <input
               value={search}
-              onChange={event => setSearch(event.target.value)}
+              onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSearch(e)}
+              className="bg-transparent border-none focus:ring-0 text-body-md placeholder:text-on-surface-variant/60 w-64 outline-none"
               placeholder="Tìm kiếm nông sản..."
-              className="w-52 bg-transparent px-2 py-3 text-sm text-white outline-none placeholder:text-white/60"
             />
-          </form>
+          </div>
 
-          {user?.role === 'buyer' ? (
-            <Link to="/cart" aria-label="Giỏ hàng" className="relative rounded-lg p-2 text-[#b1f0ce] hover:bg-white/10">
-              <span className="material-symbols-outlined">shopping_cart</span>
-              {totalItems ? (
-                <span className="absolute right-0 top-0 min-w-[17px] rounded-full bg-[#a33d23] px-1 text-center text-[10px] font-bold text-white">
-                  {totalItems}
-                </span>
-              ) : null}
-            </Link>
-          ) : null}
+          <div className="flex items-center gap-3">
+            {user?.role === 'buyer' && (
+              <Link to="/cart" className="hover:bg-surface-container-low p-2 rounded-full transition-all active:scale-95 relative">
+                <span className="material-symbols-outlined text-on-surface-variant">shopping_cart</span>
+                {totalItems > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-secondary text-white text-[10px] font-bold flex items-center justify-center px-1">
+                    {totalItems}
+                  </span>
+                )}
+              </Link>
+            )}
 
-          {user ? (
-            <div className="relative">
-              <button onClick={() => setMenuOpen(prev => !prev)} className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#b1f0ce]/40 bg-white/10 text-xs font-bold text-white">
-                {initials}
-              </button>
-              {menuOpen ? (
-                <div className="absolute right-0 top-12 w-64 rounded-xl border border-[#d7ddd8] bg-white p-3 text-[#1b1c1c] shadow-xl">
-                  <div className="rounded-lg bg-[#f5f3f3] p-3">
-                    <p className="font-semibold text-[#0f3f26]">{user.name}</p>
-                    <p className="mt-1 text-xs text-[#404943]">{user.role === 'admin' ? 'Quản trị viên' : 'Người mua'}</p>
+            {user ? (
+              <div className="relative">
+                <button
+                  onClick={() => setMenuOpen(p => !p)}
+                  className="w-10 h-10 rounded-full border-2 border-primary overflow-hidden hover:ring-2 hover:ring-primary/30 transition-all"
+                >
+                  <div className="w-full h-full bg-primary text-on-primary text-sm font-bold flex items-center justify-center">
+                    {initials}
                   </div>
-                  <Link to="/profile" onClick={() => setMenuOpen(false)} className="mt-2 block rounded-lg px-3 py-2 text-sm hover:bg-[#f5f3f3]">Hồ sơ cá nhân</Link>
-                  {user.role === 'buyer' ? <Link to="/orders" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-2 text-sm hover:bg-[#f5f3f3]">Đơn hàng của tôi</Link> : null}
-                  <button onClick={handleLogout} className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-red-700 hover:bg-red-50">Đăng xuất</button>
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <Link to="/login" aria-label="Đăng nhập" className="rounded-lg p-2 text-[#b1f0ce] hover:bg-white/10">
-              <span className="material-symbols-outlined">person</span>
-            </Link>
-          )}
+                </button>
+                {menuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                    <div className="absolute right-0 top-11 z-20 w-60 rounded-xl border border-outline-variant bg-surface-container-lowest shadow-lg overflow-hidden">
+                      <div className="px-4 py-3 bg-surface-container-low border-b border-outline-variant">
+                        <p className="font-semibold text-on-surface text-body-md">{user.name}</p>
+                        <p className="text-label-sm text-on-surface-variant mt-0.5">
+                          {user.role === 'admin' ? 'Quản trị viên' : 'Người mua'}
+                        </p>
+                      </div>
+                      <div className="p-1">
+                        <Link to="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg text-body-md text-on-surface hover:bg-surface-container transition-colors">
+                          <span className="material-symbols-outlined text-[18px] text-on-surface-variant">person</span>
+                          Hồ sơ cá nhân
+                        </Link>
+                        {user.role === 'buyer' && (
+                          <Link to="/orders" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg text-body-md text-on-surface hover:bg-surface-container transition-colors">
+                            <span className="material-symbols-outlined text-[18px] text-on-surface-variant">receipt_long</span>
+                            Đơn hàng của tôi
+                          </Link>
+                        )}
+                        <button onClick={handleLogout} className="flex w-full items-center gap-2 px-3 py-2 rounded-lg text-body-md text-error hover:bg-error-container/20 transition-colors">
+                          <span className="material-symbols-outlined text-[18px]">logout</span>
+                          Đăng xuất
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <Link to="/login" className="px-4 py-2 bg-primary text-on-primary rounded-xl font-title-md text-title-md hover:bg-on-primary-fixed-variant transition-all active:scale-95">
+                Đăng nhập
+              </Link>
+            )}
 
-          <button onClick={() => setMobileOpen(prev => !prev)} className="rounded-lg p-2 text-[#b1f0ce] hover:bg-white/10 md:hidden" aria-label="Mở menu">
-            <span className="material-symbols-outlined">menu</span>
-          </button>
+            <button onClick={() => setMobileOpen(p => !p)} className="md:hidden p-2 rounded-full text-on-surface-variant hover:bg-surface-container-low transition-all">
+              <span className="material-symbols-outlined">{mobileOpen ? 'close' : 'menu'}</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {mobileOpen ? (
-        <div className="market-page border-t border-[#2d6a4f] py-4 md:hidden">
-          <form onSubmit={handleSearch} className="mb-3 flex rounded-lg bg-white/10 px-3">
-            <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Tìm kiếm nông sản..." className="min-w-0 flex-1 bg-transparent py-3 text-sm text-white outline-none placeholder:text-white/60" />
-            <button className="material-symbols-outlined text-[#b1f0ce]">search</button>
+      {mobileOpen && (
+        <div className="md:hidden border-t border-outline-variant bg-surface px-margin-mobile py-3">
+          <form onSubmit={handleSearch} className="flex items-center bg-surface-container-low px-4 py-2 rounded-full border border-outline-variant mb-3">
+            <span className="material-symbols-outlined text-on-surface-variant mr-2">search</span>
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Tìm kiếm..."
+              className="flex-1 bg-transparent text-body-md outline-none placeholder:text-on-surface-variant/60"
+            />
           </form>
           <nav className="grid gap-1">
-            {links.map(item => <Link key={item.to} to={item.to} onClick={() => setMobileOpen(false)} className="rounded-lg px-3 py-2 text-sm text-white/85 hover:bg-white/10">{item.label}</Link>)}
-            {user?.role === 'buyer' ? <Link to="/orders" onClick={() => setMobileOpen(false)} className="rounded-lg px-3 py-2 text-sm text-white/85 hover:bg-white/10">Đơn hàng</Link> : null}
+            {links.map(item => (
+              <Link key={item.to} to={item.to} onClick={() => setMobileOpen(false)} className="px-3 py-2 rounded-lg text-body-md text-on-surface hover:bg-surface-container-low transition-colors">
+                {item.label}
+              </Link>
+            ))}
+            {user?.role === 'buyer' && (
+              <Link to="/orders" onClick={() => setMobileOpen(false)} className="px-3 py-2 rounded-lg text-body-md text-on-surface hover:bg-surface-container-low transition-colors">Đơn hàng</Link>
+            )}
           </nav>
         </div>
-      ) : null}
+      )}
     </header>
   );
 }
