@@ -62,8 +62,14 @@ async function createOrder({
     (s, i) => s + Number(i.gia_ban) * i.so_luong,
     0,
   );
-  const phi_ship = tongHang >= 500000 ? 0 : 30000;
-  const { makm, tien_giam } = await applyPromoCode(ma_code, tongHang);
+  const totalQty = items.reduce((s, i) => s + i.so_luong, 0);
+  let bulkDiscount = 0;
+  if (totalQty >= 10) {
+    bulkDiscount = Math.round(tongHang * 0.05);
+  }
+  const { makm, tien_giam: promoDiscount } = await applyPromoCode(ma_code, tongHang);
+  const tien_giam = bulkDiscount + promoDiscount;
+  const phi_ship = (tongHang - tien_giam) >= 500000 ? 0 : 30000;
   const tong_tien = tongHang - tien_giam + phi_ship;
   const [dhResult] = await db.query(
     `INSERT INTO don_hang

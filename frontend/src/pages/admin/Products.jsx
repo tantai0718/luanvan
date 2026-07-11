@@ -133,25 +133,27 @@ function ProductCard({ product, onEdit, onToggle, onDelete }) {
   return (
     <div className="bg-surface rounded-3xl border border-outline-variant organic-shadow overflow-hidden">
       <img src={product.images?.[0] ? (product.images[0].startsWith('/upload/') ? `http://localhost:5000${product.images[0]}` : product.images[0]) : 'https://placehold.co/400x300/b1f0ce/0f5238?text=NS'} className="w-full aspect-[4/3] object-cover" alt={product.ten_san_pham} />
-      <div className="p-lg">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-label-sm font-label-sm uppercase tracking-[0.12em] text-on-surface-variant">{product.ten_danh_muc}</p>
-            <h3 className="mt-2 text-title-md font-title-md text-on-surface">{product.ten_san_pham}</h3>
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0"> {/* Thêm chống tràn chữ */}
+            <p className="text-label-xs uppercase tracking-[0.12em] text-on-surface-variant truncate">{product.ten_danh_muc}</p>
+            <h3 className="mt-1 text-body-md font-bold text-on-surface truncate">{product.ten_san_pham}</h3>
           </div>
           <Badge text={product.con_hoat_dong ? 'Đang bán' : 'Đã ẩn'} color={product.con_hoat_dong ? 'green' : 'gray'} />
         </div>
-        <p className="mt-3 line-clamp-2 text-body-md text-on-surface-variant leading-relaxed">{product.mo_ta || 'Chưa có mô tả.'}</p>
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="rounded-2xl bg-surface-container-low p-3">
-            <p className="text-label-sm text-on-surface-variant">Giá bán</p>
-            <p className="text-title-md font-title-md text-primary">{Number(product.gia_ban || 0).toLocaleString('vi-VN')}₫ / {product.don_vi}</p>
+        <p className="mt-2 line-clamp-1 text-label-sm text-on-surface-variant">{product.mo_ta || 'Chưa có mô tả.'}</p>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="rounded-xl bg-surface-container-low p-2">
+            <p className="text-label-xs text-on-surface-variant">Giá bán</p>
+            <p className="text-label-md font-bold text-primary truncate">{Number(product.gia_ban || 0).toLocaleString('vi-VN')}₫/{product.don_vi}</p>
           </div>
-          <div className="rounded-2xl bg-surface-container-low p-3">
-            <p className="text-label-sm text-on-surface-variant">Tồn kho</p>
-            <p className="text-title-md font-title-md text-on-surface">{product.ton_kho}</p>
+          <div className="rounded-xl bg-surface-container-low p-2">
+            <p className="text-label-xs text-on-surface-variant">Tồn kho</p>
+            <p className="text-label-md font-bold text-on-surface">{product.ton_kho}</p>
           </div>
         </div>
+
+
         <div className="mt-4 flex gap-2">
           <Btn size="sm" variant="outline" className="flex-1 justify-center" onClick={() => onEdit(product)}>Sửa</Btn>
           <Btn size="sm" variant={product.con_hoat_dong ? 'ghost' : 'primary'} className="flex-1 justify-center" onClick={() => onToggle(product.ma_san_pham)}>{product.con_hoat_dong ? 'Ẩn' : 'Hiện'}</Btn>
@@ -215,7 +217,7 @@ export default function AdminProducts() {
         <StatCard icon={<span className="material-symbols-outlined">error_outline</span>} label="Hết hàng" value={summary.outOfStock} color="orange" />
       </div>
       {loading ? <Loading /> : products.length ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
           {products.map(product => <ProductCard key={product.ma_san_pham} product={product} onEdit={setEditingProduct} onToggle={toggleProduct} onDelete={deleteProduct} />)}
         </div>
       ) : (

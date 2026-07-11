@@ -1,101 +1,134 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 const menuItems = [
-  { path: '/admin', icon: 'dashboard', label: 'Dashboard' },
-  { path: '/admin/products', icon: 'inventory_2', label: 'Sản phẩm' },
-  { path: '/admin/categories', icon: 'category', label: 'Danh mục' },
-  { path: '/admin/orders', icon: 'receipt_long', label: 'Đơn hàng' },
+  { path: '/admin', icon: 'dashboard', label: 'Tổng quan' },
   { path: '/admin/accounts', icon: 'group', label: 'Tài khoản' },
   { path: '/admin/banners', icon: 'ad_units', label: 'Banner' },
+  { path: '/admin/products', icon: 'inventory_2', label: 'Sản phẩm' },
+  { path: '/admin/categories', icon: 'category', label: 'Danh mục' },
+  { path: '/admin/seasons', icon: 'eco', label: 'Mùa vụ' },
+  { path: '/admin/orders', icon: 'receipt_long', label: 'Đơn hàng' },
 ];
 
 export default function AdminLayout({ children }) {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const currentTitle = useMemo(() => {
-    const matched = menuItems.find(item =>
+  const currentItem = useMemo(() => {
+    return menuItems.find(item =>
       location.pathname === item.path || (item.path !== '/admin' && location.pathname.startsWith(item.path))
     );
-    return matched?.label || 'Admin Console';
   }, [location.pathname]);
 
   const handleLogout = () => { logout(); navigate('/'); };
 
+  const initials = (user?.name || 'Admin')
+    .split(' ')
+    .filter(Boolean)
+    .slice(-2)
+    .map(w => w[0])
+    .join('')
+    .toUpperCase();
+
   return (
-    <div className="min-h-screen flex bg-background">
-      <aside className="h-full w-64 fixed left-0 top-0 bg-surface-container-low border-r border-outline-variant flex flex-col py-md z-50">
-        <div className="px-6 mb-8">
-          <Link to="/" className="text-title-md font-title-md text-primary font-bold block">Admin Panel</Link>
-          <p className="font-label-sm text-label-sm text-on-surface-variant">Quản lý chợ nông sản</p>
+    <div className="min-h-screen bg-[#F4F6F5]">
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <aside
+        className={`fixed left-0 top-0 z-50 flex h-full w-64 flex-col border-r border-[#E4E9E6] bg-white transition-transform duration-200 lg:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex items-center gap-3 px-6 py-6">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1a7a4a] text-lg font-bold text-white">
+            C
+          </div>
+          <div>
+            <p className="text-base font-bold leading-tight text-[#153226]">Trang quản lý</p>
+            <p className="text-xs text-[#8A968E]">Chợ Nông Sản</p>
+          </div>
         </div>
-        <nav className="flex-1 space-y-1 overflow-y-auto custom-scrollbar">
+
+        <nav className="flex-1 space-y-1 overflow-y-auto px-3 pb-4">
           {menuItems.map(item => {
             const active = location.pathname === item.path || (item.path !== '/admin' && location.pathname.startsWith(item.path));
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                className={`mx-2 my-1 px-4 py-3 flex items-center gap-3 rounded-xl transition-all active:scale-95 ${
+                onClick={() => setSidebarOpen(false)}
+                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
                   active
-                    ? 'bg-primary-container text-on-primary-container font-bold'
-                    : 'text-on-surface-variant hover:bg-surface-container-high'
+                    ? 'bg-[#E8F5EE] text-[#1a7a4a] font-semibold'
+                    : 'text-[#5B675F] hover:bg-[#F4F6F5] hover:text-[#153226]'
                 }`}
               >
-                <span className="material-symbols-outlined">{item.icon}</span>
-                <span className="font-label-sm text-label-sm">{item.label}</span>
+                <span className={`material-symbols-outlined text-[20px] ${active ? 'text-[#1a7a4a]' : 'text-[#9AA59D]'}`}>
+                  {item.icon}
+                </span>
+                {item.label}
+                {active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#1a7a4a]" />}
               </Link>
             );
           })}
         </nav>
-        <div className="px-4 mt-auto">
-          <div className="bg-surface-container-highest rounded-2xl p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold">
-              {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
+
+        <div className="border-t border-[#E4E9E6] p-4">
+          <div className="flex items-center gap-3 rounded-xl bg-[#F4F6F5] p-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1a7a4a] text-sm font-bold text-white">
+              {initials || 'A'}
             </div>
-            <div className="overflow-hidden">
-              <p className="font-label-sm text-on-surface font-bold truncate">{user?.name || 'Admin'}</p>
-              <p className="text-label-xs text-on-surface-variant truncate">{user?.email || 'admin@chonongsan.vn'}</p>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-[#153226]">{user?.name || 'Admin'}</p>
+              <p className="truncate text-xs text-[#8A968E]">{user?.email || 'admin@chonongsan.vn'}</p>
             </div>
           </div>
+          <button
+            onClick={handleLogout}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
+          >
+            <span className="material-symbols-outlined text-[18px]">logout</span>
+            Đăng xuất
+          </button>
         </div>
       </aside>
 
-      <main className="flex-1 ml-64 min-h-screen flex flex-col">
-        <header className="flex justify-between items-center px-lg py-sm bg-surface-bright border-b border-outline-variant sticky top-0 z-40">
-          <div className="flex items-center gap-4">
-            <h2 className="font-title-md text-title-md text-primary">{currentTitle}</h2>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link to="/" className="p-2 rounded-full hover:bg-surface-container-highest transition-all">
-              <span className="material-symbols-outlined text-on-surface-variant">home</span>
-            </Link>
-            <button onClick={handleLogout} className="px-4 py-2 text-error font-bold hover:bg-error-container/20 rounded-xl transition-all text-label-sm">
-              Đăng xuất
+      <div className="flex min-h-screen flex-col lg:pl-64">
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[#E4E9E6] bg-white/90 px-4 py-4 backdrop-blur-sm lg:px-8">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="rounded-lg p-2 text-[#5B675F] hover:bg-[#F4F6F5] lg:hidden"
+            >
+              <span className="material-symbols-outlined">menu</span>
             </button>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#9AA59D]">Bảng điều khiển</p>
+              <h1 className="text-xl font-bold text-[#153226]">{currentItem?.label || 'Admin'}</h1>
+            </div>
           </div>
+          <Link
+            to="/"
+            className="flex items-center gap-2 rounded-xl border border-[#E4E9E6] px-4 py-2 text-sm font-semibold text-[#5B675F] transition hover:bg-[#F4F6F5]"
+          >
+            <span className="material-symbols-outlined text-[18px]">storefront</span>
+            <span className="hidden sm:inline">Xem trang chính</span>
+          </Link>
         </header>
 
-        <div className="p-lg flex-1">
+        <main className="flex-1 px-4 py-6 lg:px-8 lg:py-8">
           {children}
-        </div>
-
-        <footer          className="w-full px-margin-mobile md:px-margin-desktop py-xl bg-surface-container-highest border-t border-outline-variant">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div>
-              <h3 className="text-headline-lg font-headline-lg text-primary">Chợ Nông Sản</h3>
-              <p className="font-body-md text-body-md text-on-surface-variant mt-2">© 2024 Chợ Nông Sản. Kết nối giá trị nông sản Việt.</p>
-            </div>
-            <div className="flex gap-8">
-              <Link className="text-on-surface-variant hover:text-secondary transition-colors font-label-sm text-label-sm" to="/">Trang chủ</Link>
-              <Link className="text-on-surface-variant hover:text-secondary transition-colors font-label-sm text-label-sm" to="/products">Sản phẩm</Link>
-            </div>
-          </div>
-        </footer>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }

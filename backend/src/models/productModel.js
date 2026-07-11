@@ -1,5 +1,13 @@
 const db = require('../config/db');
 
+function removeDiacritics(str = '') {
+    return str
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd');
+}
+
 const mapProduct = (row) => ({
     ma_san_pham: row.masp,
     ten_san_pham: row.ten_san_pham,
@@ -150,9 +158,9 @@ async function updateProduct(masp, fields) {
 async function toggleProduct(masp) {
     await db.query('UPDATE san_pham SET trang_thai = 1 - trang_thai WHERE masp = ?', [masp]);
 }
-// Dành riêng cho admin — lấy TẤT CẢ sản phẩm kể cả đang ẩn
+
 async function listAllProducts({ q = '', category = '' } = {}) {
-    const conditions = ['1=1'];  // không filter trang_thai
+    const conditions = ['1=1']; 
     const params = [];
     if (q) { conditions.push('sp.ten_san_pham LIKE ?'); params.push(`%${q}%`); }
     if (category) { conditions.push('sp.madm = ?'); params.push(Number(category)); }
@@ -180,11 +188,87 @@ async function listAllProducts({ q = '', category = '' } = {}) {
     return {
         products: rows.map(r => ({
             ...mapProduct(r),
-            con_hoat_dong: r.trang_thai === 1,  // chuyển trang_thai → con_hoat_dong cho frontend
+            con_hoat_dong: r.trang_thai === 1, 
         })),
     };
+    
 }
+
+async function getActiveSeasons() {
+    const [rows] = await db.query(
+        `SELECT mamv, ten_mua FROM mua_vu WHERE trang_thai = 1`
+    );
+    return rows;
+}
+ 
+async function getActiveSeasons() {
+    const [rows] = await db.query(
+        `SELECT mamv, ten_mua FROM mua_vu WHERE trang_thai = 1`
+    );
+    return rows;
+}
+ 
+
+async function findProductsForChat({ keywords = [], seasonIds = [], currentMonthFallback = false } = {}, limit = 8) {
+    if (!keywords.length && !seasonIds.length && currentMonthFallback) {
+        const month = new Date().getMonth() + 1;
+        const [rows] = await db.query(
+            `SELECT DISTINCT sp.masp, sp.ten_san_pham, sp.gia_ban, sp.don_vi,
+                    spmv.gia_du_kien,
+                    hav.duong_dan AS hinh_anh
+             FROM san_pham_mua_vu spmv
+             JOIN mua_vu mv ON mv.mamv = spmv.mamv AND mv.trang_thai = 1
+             JOIN san_pham sp ON sp.masp = spmv.masp AND sp.trang_thai = 1
+             LEFT JOIN hinh_anh_video hav ON hav.masp = sp.masp AND hav.la_chinh = 1
+             WHERE (mv.qua_nam = 0 AND ? BETWEEN mv.thang_bat_dau AND mv.thang_ket_thuc)
+                OR (mv.qua_nam = 1 AND (? >= mv.thang_bat_dau OR ? <= mv.thang_ket_thuc))
+             LIMIT ?`,
+            [month, month, month, limit]
+        );
+        return rows;
+    }
+
+    if (!keywords.length && !seasonIds.length) return [];
+
+    const [rows] = await db.query(
+        `SELECT DISTINCT sp.masp, sp.ten_san_pham, sp.gia_ban, sp.don_vi,
+                spmv.mamv, spmv.gia_du_kien,
+                hav.duong_dan AS hinh_anh
+         FROM san_pham sp
+         LEFT JOIN san_pham_mua_vu spmv ON spmv.masp = sp.masp
+         LEFT JOIN hinh_anh_video hav ON hav.masp = sp.masp AND hav.la_chinh = 1
+         WHERE sp.trang_thai = 1`
+    );
+
+    const normalizedKeywords = keywords.map(removeDiacritics).filter(Boolean);
+    const seasonIdSet = new Set(seasonIds);
+
+    const matched = new Map();
+    for (const row of rows) {
+        const nameNormalized = removeDiacritics(row.ten_san_pham || '');
+        const paddedName = ` ${nameNormalized} `;
+
+        const matchesKeyword = normalizedKeywords.some((kw) => paddedName.includes(` ${kw} `));
+        const matchesSeason = row.mamv != null && seasonIdSet.has(row.mamv);
+
+        if (!matchesKeyword && !matchesSeason) continue;
+
+        const existing = matched.get(row.masp);
+        if (!existing || (matchesSeason && existing.gia_du_kien == null)) {
+            matched.set(row.masp, row);
+        }
+        if (matched.size >= limit && !matched.has(row.masp)) break;
+    }
+
+    return Array.from(matched.values());
+}
+async function searchProductsForChat(keyword, limit = 6) {
+    if (!keyword) return [];
+    return findProductsForChat({ keywords: [keyword] }, limit);
+}
+ 
 module.exports = {
     listProducts, listAllProducts, getProductById, getReviews, createReview,
     listCategories, createProduct, updateProduct, toggleProduct,
+    searchProductsForChat, getActiveSeasons, findProductsForChat,
 };

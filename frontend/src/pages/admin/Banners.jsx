@@ -32,9 +32,9 @@ function BannerCard({ banner, busy, isFirst, isLast, onReplace, onToggle, onDele
         <img src={banner.image} alt={`Banner ${banner.order}`} className="aspect-[16/7] w-full object-cover" />
         <div className="absolute left-4 top-4"><Badge text={banner.active ? 'Đang chạy' : 'Đã tắt'} color={banner.active ? 'green' : 'gray'} /></div>
       </div>
-      <div className="flex flex-col gap-3 p-lg sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-title-md font-title-md text-on-surface">Banner #{banner.order}</p>
+          <p className="text-body-lg font-bold text-on-surface">Banner #{banner.order}</p>
           <p className="text-label-sm text-on-surface-variant">Ngày tạo: {formatDate(banner.created_at)}</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -136,7 +136,7 @@ export default function AdminBanners() {
       {error && <div className="rounded-2xl border border-error-container bg-error-container/20 px-4 py-3 text-body-md text-on-error-container">{error}</div>}
 
       {loading ? <Loading /> : banners.length ? (
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {banners.map((banner, index) => (
             <BannerCard key={banner.id} banner={banner} busy={saving} isFirst={index === 0} isLast={index === banners.length - 1}
               onReplace={replaceBanner} onToggle={toggleBanner} onDelete={deleteBanner} onMoveUp={moveUp} onMoveDown={moveDown} />

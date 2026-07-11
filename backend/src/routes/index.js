@@ -13,6 +13,8 @@ const subscriptionRoutes = require("./subscriptions");
 const productCtrl = require("../controllers/productController");
 const adminRoutes = require("./admin");
 
+const chatRoutes = require('./chat');
+
 router.get("/", (req, res) =>
   res.json({ message: "Cho Nong San API dang chay", version: "2.0.0" }),
 );
@@ -27,6 +29,7 @@ router.use("/products", productRouter);
 router.use("/reviews", reviewRouter);
 router.use("/cart", cartRouter);
 router.use("/orders", orderRouter);
+router.use("/chat", chatRoutes);
 router.use("/", subscriptionRoutes);
 
 module.exports = router;

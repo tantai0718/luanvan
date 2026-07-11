@@ -106,3 +106,25 @@ export const dashboardAPI = {
 export const notificationAPI = {
   getAll: () => api.get('/notifications'),
 };
+
+export const chatAPI = {
+  getMessages: () => api.get('/chat'),
+  sendMessage: (body) => api.post('/chat', body),
+
+
+  getSessions: () => api.get('/chat/admin'),
+  getSessionMessages: (id) => api.get(`/chat/admin/${id}`),
+  adminSendMessage: (id, body) => api.post(`/chat/admin/${id}`, body),
+  closeSession: (id) => api.patch(`/chat/admin/${id}/close`),
+};
+
+export const seasonAPI = {
+  getAll: () => api.get('/admin/seasons'),
+  create: body => api.post('/admin/seasons', body),
+  update: (id, body) => api.put(`/admin/seasons/${id}`, body),
+  toggle: id => api.patch(`/admin/seasons/${id}/toggle`),
+  remove: id => api.delete(`/admin/seasons/${id}`),
+  getProducts: id => api.get(`/admin/seasons/${id}/products`),
+  addProduct: (id, body) => api.post(`/admin/seasons/${id}/products`, body),
+  removeProduct: (id, masp) => api.delete(`/admin/seasons/${id}/products/${masp}`),
+};

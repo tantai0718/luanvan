@@ -46,16 +46,6 @@ app.use((req, res, next) => {
   next();
 });
 
-let chatRoute;
-try {
-  chatRoute = require("./routes/chatAI.route");
-} catch (err) {
-  chatRoute = express.Router();
-  chatRoute.get("/", (req, res) =>
-    res.status(404).json({ message: "Chat route not available" }),
-  );
-}
-app.use("/api/chat", chatRoute);
 
 app.use("/api", routes);
 app.get("/", (req, res) =>

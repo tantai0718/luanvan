@@ -72,16 +72,16 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    categoryAPI.getAll().then(d => setCategories(d.categories || [])).catch(() => {});
+    categoryAPI.getAll().then(d => setCategories(d.categories || [])).catch(() => { });
     bannerAPI.getAll()
       .then(d => {
         const slides = (d.banners || []).filter(b => b.image).map(b => ({ src: b.image, alt: b.title || 'Banner' }));
         setHeroSlides(slides.length ? slides : fallbackHeroSlides);
       })
-      .catch(() => {});
+      .catch(() => { });
     productAPI.getAll('?limit=4&sort=moi_nhat')
       .then(d => setProducts(d.products || []))
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, []);
 
@@ -93,57 +93,66 @@ export default function Home() {
   return (
     <div className="bg-background min-h-screen">
       {/* Hero Section */}
-      <section className="relative w-full flex items-center overflow-hidden md:h-[500px]">
+      <section className="relative w-full overflow-hidden md:h-[560px]">
         <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent z-10"></div>
           {heroSlides.map((slide, i) => (
             <img
               key={slide.src}
               src={slide.src}
               alt={slide.alt}
-              className={`absolute inset-0 w-full h-full object-cover object-right transition-all duration-1000 ${i === activeSlide ? 'opacity-100' : 'opacity-0'}`}
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${i === activeSlide ? 'opacity-100' : 'opacity-0'}`}
             />
           ))}
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                'linear-gradient(100deg, rgba(10,20,14,0.88) 0%, rgba(10,20,14,0.72) 30%, rgba(10,20,14,0.25) 55%, rgba(10,20,14,0) 72%)',
+            }}
+          />
         </div>
-        <div className="relative z-20 max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop w-full">
-          <div className="max-w-2xl">
-            <span className="inline-block px-4 py-1.5 rounded-full bg-primary-fixed text-on-primary-fixed-variant font-label-sm text-label-sm mb-6">
-              Trực tiếp từ nhà vườn tới bàn ăn
-            </span>
-            <h1 className="font-display-lg text-display-lg text-on-surface mb-6">
-              Kết nối <span className="text-primary italic">Tinh hoa</span> Nông sản Việt
-            </h1>
-            <p className="text-body-lg font-body-lg text-on-surface-variant mb-10 max-w-lg">
-              Trải nghiệm sự tươi ngon thuần khiết với các sản phẩm được chọn lọc kỹ lưỡng, đảm bảo tiêu chuẩn VietGAP và an toàn thực phẩm tuyệt đối.
-            </p>
-            <div className="flex flex-wrap gap-4">
-              <button
-                onClick={() => navigate('/products')}
-                className="px-8 py-4 bg-primary text-on-primary rounded-xl font-title-md text-title-md hover:bg-on-primary-fixed-variant transition-all organic-shadow active:scale-95"
-              >
-                Mua sắm ngay
-              </button>
-              <button
-                onClick={() => navigate('/about')}
-                className="px-8 py-4 bg-surface border border-outline text-primary rounded-xl font-title-md text-title-md hover:bg-surface-container-low transition-all active:scale-95"
-              >
-                Tìm hiểu thêm
-              </button>
+
+        <div className="relative z-20 flex h-full min-h-[480px] items-center">
+          <div className="max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop w-full py-16 md:py-0">
+            <div className="max-w-xl">
+              <span className="inline-block px-4 py-1.5 rounded-full bg-white/15 backdrop-blur-sm ring-1 ring-white/25 text-white font-label-sm text-label-sm mb-6">
+                Trực tiếp từ nhà vườn tới bàn ăn
+              </span>
+              <h1 className="font-display-lg text-display-lg text-white mb-6 drop-shadow-sm">
+                Kết nối <span className="text-[#8FD9A8] italic">Tinh hoa</span> Nông sản Việt
+              </h1>
+              <p className="text-body-lg font-body-lg text-white/85 mb-10 max-w-lg">
+                Trải nghiệm sự tươi ngon thuần khiết với các sản phẩm được chọn lọc kỹ lưỡng, đảm bảo tiêu chuẩn VietGAP và an toàn thực phẩm tuyệt đối.
+              </p>
+              <div className="flex flex-wrap gap-4">
+                <button
+                  onClick={() => navigate('/products')}
+                  className="px-8 py-4 bg-primary text-on-primary rounded-xl font-title-md text-title-md hover:bg-on-primary-fixed-variant transition-all shadow-lg active:scale-95"
+                >
+                  Mua sắm ngay
+                </button>
+                <button
+                  onClick={() => navigate('/about')}
+                  className="px-8 py-4 bg-white/10 backdrop-blur-sm ring-1 ring-white/40 text-white rounded-xl font-title-md text-title-md hover:bg-white/20 transition-all active:scale-95"
+                >
+                  Tìm hiểu thêm
+                </button>
+              </div>
             </div>
           </div>
         </div>
+
         {/* Dots */}
         <div className="absolute bottom-6 right-6 flex gap-2 z-20">
           {heroSlides.map((_, i) => (
             <button
               key={i}
               onClick={() => setActiveSlide(i)}
-              className={`rounded-full transition-all ${i === activeSlide ? 'w-8 h-2 bg-primary' : 'w-2 h-2 bg-outline'}`}
+              className={`rounded-full transition-all ${i === activeSlide ? 'w-8 h-2 bg-white' : 'w-2 h-2 bg-white/50'}`}
             />
           ))}
         </div>
       </section>
-
       {/* Category Bento Grid */}
       <section className="py-xl max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop">
         <div className="flex justify-between items-end mb-10">
@@ -298,13 +307,6 @@ export default function Home() {
           ))}
         </div>
       </section>
-
-      {/* Chat widget */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4">
-        <button className="w-14 h-14 bg-primary text-on-primary rounded-full flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all">
-          <span className="material-symbols-outlined text-3xl">chat</span>
-        </button>
-      </div>
     </div>
   );
 }

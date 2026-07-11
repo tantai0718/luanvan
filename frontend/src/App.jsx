@@ -10,7 +10,7 @@ import ProductDetail from './pages/ProductDetail';
 import Profile      from './pages/Profile';
 import Cart         from './pages/Cart';
 import { Login, Register }        from './pages/Auth';
-import { OrderList, OrderDetail } from './pages/Orders';
+import { OrderList, OrderDetail, SubscriptionDetail } from './pages/Orders';
 import AdminDashboard  from './pages/admin/Dashboard';
 import AdminAccounts   from './pages/admin/Accounts';
 import AdminCategories from './pages/admin/Categories';
@@ -18,6 +18,8 @@ import AdminProducts   from './pages/admin/Products';
 import AdminBanners    from './pages/admin/Banners';
 import AdminOrders     from './pages/admin/Orders';
 import About           from './pages/About';
+import ChatBox from './pages/ChatBox';
+import AdminSeasons from './pages/admin/Seasons';
 
 function Spin() { return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin"/></div>; }
 
@@ -64,12 +66,15 @@ function AppRoutes() {
       <Route path="/cart"       element={<Private roles={['buyer']}><PL><Cart/></PL></Private>}/>
       <Route path="/orders"     element={<Private roles={['buyer']}><PL><OrderList/></PL></Private>}/>
       <Route path="/orders/:id" element={<Private roles={['buyer']}><PL><OrderDetail/></PL></Private>}/>
+      <Route path="/subscriptions/:id" element={<Private roles={['buyer']}><PL><SubscriptionDetail/></PL></Private>}/>
       <Route path="/admin"            element={<AP><AdminDashboard/></AP>}/>
       <Route path="/admin/accounts"   element={<AP><AdminAccounts/></AP>}/>
       <Route path="/admin/categories" element={<AP><AdminCategories/></AP>}/>
+      <Route path="/admin/seasons" element={<AP><AdminSeasons/></AP>}/>
       <Route path="/admin/products"   element={<AP><AdminProducts/></AP>}/>
       <Route path="/admin/banners"    element={<AP><AdminBanners/></AP>}/>
       <Route path="/admin/orders"     element={<AP><AdminOrders/></AP>}/>
+      
 
       <Route path="*" element={<Navigate to="/"/>}/>
     </Routes>
@@ -82,6 +87,7 @@ export default function App() {
       <AuthProvider>
         <CartProvider>
           <AppRoutes/>
+          <ChatBox />
         </CartProvider>
       </AuthProvider>
     </BrowserRouter>
