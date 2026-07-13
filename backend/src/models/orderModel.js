@@ -71,6 +71,7 @@ async function createOrder({
   const tien_giam = bulkDiscount + promoDiscount;
   const phi_ship = (tongHang - tien_giam) >= 500000 ? 0 : 30000;
   const tong_tien = tongHang - tien_giam + phi_ship;
+  const isBanking = phuong_thuc === "banking";
   const [dhResult] = await db.query(
     `INSERT INTO don_hang
     (
@@ -95,9 +96,9 @@ async function createOrder({
       ?, ?, ?, ?, ?, ?,
       'thuong',
       ?,
-      0,
+      ?,
       'cho_xac_nhan',
-      'chua_thanh_toan',
+      ?,
       ?,
       ?,
       NOW(),
@@ -111,6 +112,8 @@ async function createOrder({
       nguoi_dung?.email || "",
       sdt_nguoi_nhan || nguoi_dung?.sdt || "",
       tong_tien,
+      isBanking ? tong_tien : 0,
+      isBanking ? "da_thanh_toan" : "chua_thanh_toan",
       dia_chi_giao,
       ghi_chu || null,
     ],
@@ -129,8 +132,8 @@ async function createOrder({
   );
   await db.query(
     `INSERT INTO thanh_toan (madh, so_tien, phuong_thuc, trang_thai, ngay_thanh_toan)
-     VALUES (?, ?, ?, 'cho_thanh_toan', NOW())`,
-    [madh, tong_tien, mapPaymentMethod(phuong_thuc)],
+     VALUES (?, ?, ?, ?, NOW())`,
+    [madh, tong_tien, mapPaymentMethod(phuong_thuc), isBanking ? "da_thanh_toan" : "cho_thanh_toan"],
   );
   for (const item of items) {
     await db.query(
@@ -173,15 +176,16 @@ async function createPreorder({
   let tien_giam = 0;
   if (so_luong >= 10) {
     tien_giam = Math.round(tong_hang * 0.05);
-}
+  }
   const tong_tien = tong_hang - tien_giam + phi_ship;
+  const isBanking = phuong_thuc === "banking";
 
   const [dhResult] = await db.query(
     `INSERT INTO don_hang
        (mand, tien_giam, ten_nguoi_nhan, email_nguoi_nhan, sdt_nguoi_nhan,
         loai_don_hang, tong_tien, tong_da_thanh_toan, trang_thai,
         trang_thai_thanh_toan, dia_chi_giao, ghi_chu, ngay_giao_du_kien, ngay_dat)
-     VALUES (?, ?, ?, ?, ?, 'dat_truoc', ?, 0, 'cho_xac_nhan', 'chua_thanh_toan', ?, ?,
+     VALUES (?, ?, ?, ?, ?, 'dat_truoc', ?, ?, 'cho_xac_nhan', ?, ?, ?,
        CASE
          WHEN ? IS NULL THEN DATE_ADD(NOW(), INTERVAL 7 DAY)
          WHEN ? < DATE_ADD(NOW(), INTERVAL 3 DAY) THEN DATE_ADD(NOW(), INTERVAL 3 DAY)
@@ -196,6 +200,8 @@ async function createPreorder({
       nguoi_dung?.email || "",
       sdt_nguoi_nhan || nguoi_dung?.sdt || "",
       tong_tien,
+      isBanking ? tong_tien : 0,
+      isBanking ? "da_thanh_toan" : "chua_thanh_toan",
       dia_chi_giao,
       ghi_chu || null,
       ngay_giao_du_kien || null,
@@ -213,8 +219,8 @@ async function createPreorder({
 
   await db.query(
     `INSERT INTO thanh_toan (madh, so_tien, phuong_thuc, trang_thai, ngay_thanh_toan)
-     VALUES (?, ?, ?, 'cho_thanh_toan', NOW())`,
-    [madh, tong_tien, mapPaymentMethod(phuong_thuc)],
+     VALUES (?, ?, ?, ?, NOW())`,
+    [madh, tong_tien, mapPaymentMethod(phuong_thuc), isBanking ? "da_thanh_toan" : "cho_thanh_toan"],
   );
 
   return { madh, tong_tien };

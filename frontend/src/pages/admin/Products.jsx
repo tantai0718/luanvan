@@ -3,7 +3,7 @@ import { api, categoryAPI, productAPI } from '../../services/api';
 import { Badge, Btn, Input, Loading, Modal, PageHero, SearchBar, Select, StatCard } from '../../components/ui/AdminUI';
 
 const emptyForm = {
-  ten_san_pham: '', mo_ta: '', gia_ban: 0, don_vi: 'kg', ton_kho: 0, ma_danh_muc: '', hinh_anh: [], video: [],
+  ten_san_pham: '', gia_ban: 0, don_vi: 'kg', ton_kho: 0, ma_danh_muc: '', hinh_anh: [], video: [],
 };
 
 const readFileAsDataUrl = file =>
@@ -67,10 +67,6 @@ function ProductFormModal({ categories, initialData, onClose, onDone }) {
             <option value="">Chọn danh mục</option>
             {categories.map(item => <option key={item.id} value={item.id}>{item.icon} {item.name}</option>)}
           </Select>
-        </div>
-        <div>
-          <label className="mb-2 block text-body-md font-body-md text-on-surface-variant">Mô tả</label>
-          <textarea rows={4} value={form.mo_ta} onChange={e => setForm({ ...form, mo_ta: e.target.value })} className="w-full resize-none rounded-2xl border border-outline-variant bg-surface px-4 py-3 text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary-fixed" />
         </div>
         <div className="grid gap-4 md:grid-cols-3">
           <Input label="Giá bán" type="number" value={form.gia_ban} onChange={e => setForm({ ...form, gia_ban: e.target.value })} />
@@ -141,7 +137,6 @@ function ProductCard({ product, onEdit, onToggle, onDelete }) {
           </div>
           <Badge text={product.con_hoat_dong ? 'Đang bán' : 'Đã ẩn'} color={product.con_hoat_dong ? 'green' : 'gray'} />
         </div>
-        <p className="mt-2 line-clamp-1 text-label-sm text-on-surface-variant">{product.mo_ta || 'Chưa có mô tả.'}</p>
         <div className="mt-3 grid grid-cols-2 gap-2">
           <div className="rounded-xl bg-surface-container-low p-2">
             <p className="text-label-xs text-on-surface-variant">Giá bán</p>

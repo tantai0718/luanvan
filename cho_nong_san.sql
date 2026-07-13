@@ -164,6 +164,9 @@ DROP TABLE IF EXISTS `danh_muc`;
 CREATE TABLE IF NOT EXISTS `danh_muc` (
   `madm` int NOT NULL AUTO_INCREMENT,
   `ten_danh_muc` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `bieu_tuong` varchar(10) COLLATE utf8mb4_unicode_ci DEFAULT '🥬',
+  `duong_dan` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `thu_tu` int DEFAULT 0,
   `mo_ta` text COLLATE utf8mb4_unicode_ci,
   `trang_thai` tinyint(1) DEFAULT NULL,
   PRIMARY KEY (`madm`)
@@ -425,6 +428,7 @@ CREATE TABLE IF NOT EXISTS `san_pham` (
   `so_luong_ton` int DEFAULT NULL,
   `don_vi` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `khu_vuc` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `mo_ta` text COLLATE utf8mb4_unicode_ci,
   `trang_thai` tinyint(1) DEFAULT NULL,
   `ngay_tao` datetime DEFAULT NULL,
   PRIMARY KEY (`masp`),
@@ -435,13 +439,13 @@ CREATE TABLE IF NOT EXISTS `san_pham` (
 -- Dumping data for table `san_pham`
 --
 
-INSERT INTO `san_pham` (`masp`, `madm`, `ten_san_pham`, `gia_ban`, `so_luong_ton`, `don_vi`, `khu_vuc`, `trang_thai`, `ngay_tao`) VALUES
-(1, 1, 'Xoài Cát Chu Lộc Phát', 45000.00, 497, 'Kg', 'Đồng Tháp', 1, '2026-05-20 07:00:00'),
-(2, 2, 'Cà Chua Bi Hữu Cơ', 35000.00, 198, 'Kg', 'Đà Lạt', 1, '2026-05-22 08:30:00'),
-(3, 3, 'Gạo ST25 Chuẩn Sạch', 32000.00, 1000, 'Kg', 'Sóc Trăng', 1, '2026-05-25 09:00:00'),
-(5, 2, 'xà lách', 30000.00, 194, 'kg', '', 1, '2026-07-03 19:08:09'),
-(6, 1, 'xoài', 50000.00, 193, 'kg', '', 1, '2026-07-03 19:08:27'),
-(7, 3, 'cà chua', 20000.00, 173, 'kg', '', 1, '2026-07-03 19:09:56');
+INSERT INTO `san_pham` (`masp`, `madm`, `ten_san_pham`, `gia_ban`, `so_luong_ton`, `don_vi`, `khu_vuc`, `mo_ta`, `trang_thai`, `ngay_tao`) VALUES
+(1, 1, 'Xoài Cát Chu Lộc Phát', 45000.00, 497, 'Kg', 'Đồng Tháp', NULL, 1, '2026-05-20 07:00:00'),
+(2, 2, 'Cà Chua Bi Hữu Cơ', 35000.00, 198, 'Kg', 'Đà Lạt', NULL, 1, '2026-05-22 08:30:00'),
+(3, 3, 'Gạo ST25 Chuẩn Sạch', 32000.00, 1000, 'Kg', 'Sóc Trăng', NULL, 1, '2026-05-25 09:00:00'),
+(5, 2, 'xà lách', 30000.00, 194, 'kg', '', NULL, 1, '2026-07-03 19:08:09'),
+(6, 1, 'xoài', 50000.00, 193, 'kg', '', NULL, 1, '2026-07-03 19:08:27'),
+(7, 3, 'cà chua', 20000.00, 173, 'kg', '', NULL, 1, '2026-07-03 19:09:56');
 
 -- --------------------------------------------------------
 

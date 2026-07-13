@@ -135,17 +135,17 @@ async function listCategories() {
     return rows;
 }
 
-async function createProduct({ madm, ten_san_pham, gia_ban, so_luong_ton, don_vi, khu_vuc }) {
+async function createProduct({ madm, ten_san_pham, gia_ban, so_luong_ton, don_vi, khu_vuc, mo_ta = '' }) {
     const [result] = await db.query(
-        `INSERT INTO san_pham (madm, ten_san_pham, gia_ban, so_luong_ton, don_vi, khu_vuc, trang_thai, ngay_tao)
-     VALUES (?, ?, ?, ?, ?, ?, 1, NOW())`,
-        [madm, ten_san_pham, gia_ban, so_luong_ton || 0, don_vi, khu_vuc]
+        `INSERT INTO san_pham (madm, ten_san_pham, gia_ban, so_luong_ton, don_vi, khu_vuc, mo_ta, trang_thai, ngay_tao)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW())`,
+        [madm, ten_san_pham, gia_ban, so_luong_ton || 0, don_vi, khu_vuc, mo_ta]
     );
     return result.insertId;
 }
 
 async function updateProduct(masp, fields) {
-    const allowed = ['ten_san_pham', 'gia_ban', 'so_luong_ton', 'don_vi', 'khu_vuc', 'madm'];
+    const allowed = ['ten_san_pham', 'gia_ban', 'so_luong_ton', 'don_vi', 'khu_vuc', 'madm', 'mo_ta'];
     const sets = [], params = [];
     for (const key of allowed) {
         if (fields[key] !== undefined) { sets.push(`${key} = ?`); params.push(fields[key]); }

@@ -248,14 +248,6 @@ export default function ProductDetail() {
               <p className="mt-1 text-label-sm text-on-surface-variant">Giá đã bao gồm VAT nếu có.</p>
             </div>
 
-            {/* Description */}
-            {product.mo_ta && (
-              <div className="bg-surface-container-low rounded-2xl px-lg py-md mb-lg">
-                <p className="text-label-sm font-label-sm text-primary uppercase tracking-widest mb-2">Mô tả sản phẩm</p>
-                <p className="text-body-md font-body-md text-on-surface-variant leading-relaxed">{product.mo_ta}</p>
-              </div>
-            )}
-
             {/* Meta */}
             <div className="space-y-3 py-lg border-y border-outline-variant text-body-md font-body-md text-on-surface-variant mb-lg">
               <div className="flex justify-between"><span>Nguồn hàng</span><strong className="text-on-surface">{product.ten_nong_trai || 'Farm2Table'}</strong></div>
@@ -275,6 +267,14 @@ export default function ProductDetail() {
                 <span className="text-body-md text-on-surface-variant">Còn {stock} trong kho</span>
               </div>
             </div>
+
+            {/* Description */}
+            {product.mo_ta && (
+              <div className="bg-surface-container-low rounded-2xl px-lg py-md mb-lg">
+                <p className="text-label-sm font-label-sm text-primary uppercase tracking-widest mb-2">Mô tả sản phẩm</p>
+                <p className="text-body-md font-body-md text-on-surface-variant leading-relaxed">{product.mo_ta}</p>
+              </div>
+            )}
 
             {/* Actions */}
             {user?.role === 'admin' ? (
