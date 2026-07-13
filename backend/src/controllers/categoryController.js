@@ -14,9 +14,6 @@ async function list(req, res) {
             ma_danh_muc: r.madm,
             ten_danh_muc: r.ten_danh_muc,
             mo_ta: r.mo_ta || '',
-            bieu_tuong: r.bieu_tuong || '🥬',
-            duong_dan: r.duong_dan || '',
-            thu_tu: r.thu_tu || 0,
             con_hoat_dong: r.trang_thai,
             so_san_pham: Number(r.so_san_pham || 0),
         }));
@@ -55,11 +52,11 @@ async function listProducts(req, res) {
 }
 async function create(req, res) {
     try {
-        const { ten_danh_muc, mo_ta = '', bieu_tuong = '🥬', duong_dan = '', thu_tu = 0 } = req.body;
+        const { ten_danh_muc, mo_ta = '' } = req.body;
         if (!ten_danh_muc?.trim()) return res.status(400).json({ message: 'Ten danh muc khong duoc de trong.' });
         const [result] = await db.query(
-            `INSERT INTO danh_muc (ten_danh_muc, mo_ta, bieu_tuong, duong_dan, thu_tu, trang_thai) VALUES (?, ?, ?, ?, ?, 1)`,
-            [ten_danh_muc.trim(), mo_ta, bieu_tuong, duong_dan, thu_tu]
+            `INSERT INTO danh_muc (ten_danh_muc, mo_ta, trang_thai) VALUES (?, ?, 1)`,
+            [ten_danh_muc.trim(), mo_ta]
         );
         res.status(201).json({ message: 'Tao danh muc thanh cong', id: result.insertId });
     } catch (err) {
@@ -69,10 +66,10 @@ async function create(req, res) {
 
 async function update(req, res) {
     try {
-        const { ten_danh_muc, mo_ta, bieu_tuong = '🥬', duong_dan = '', thu_tu = 0 } = req.body;
+        const { ten_danh_muc, mo_ta } = req.body;
         await db.query(
-            `UPDATE danh_muc SET ten_danh_muc = ?, mo_ta = ?, bieu_tuong = ?, duong_dan = ?, thu_tu = ? WHERE madm = ?`,
-            [ten_danh_muc, mo_ta || '', bieu_tuong, duong_dan, thu_tu, req.params.id]
+            `UPDATE danh_muc SET ten_danh_muc = ?, mo_ta = ? WHERE madm = ?`,
+            [ten_danh_muc, mo_ta || '', req.params.id]
         );
         res.json({ message: 'Cap nhat danh muc thanh cong' });
     } catch (err) {

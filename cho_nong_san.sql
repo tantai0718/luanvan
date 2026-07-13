@@ -164,9 +164,6 @@ DROP TABLE IF EXISTS `danh_muc`;
 CREATE TABLE IF NOT EXISTS `danh_muc` (
   `madm` int NOT NULL AUTO_INCREMENT,
   `ten_danh_muc` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `bieu_tuong` varchar(10) COLLATE utf8mb4_unicode_ci DEFAULT '🥬',
-  `duong_dan` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `thu_tu` int DEFAULT 0,
   `mo_ta` text COLLATE utf8mb4_unicode_ci,
   `trang_thai` tinyint(1) DEFAULT NULL,
   PRIMARY KEY (`madm`)

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, productAPI } from '../../services/api';
 import { Badge, Btn, Input, Loading, Modal, PageHero, Table } from '../../components/ui/AdminUI';
 
-const emptyForm = { ten_danh_muc: '', bieu_tuong: '🥬', duong_dan: '', thu_tu: 0, con_hoat_dong: 1 };
+const emptyForm = { ten_danh_muc: '', con_hoat_dong: 1 };
 
 function CategoryProductsModal({ category, products, loading, onClose, onToggle, onDelete }) {
   return (
@@ -106,17 +106,14 @@ export default function AdminCategories() {
       <PageHero eyebrow="Danh mục" title="Quản lý nhóm sản phẩm đang dùng trên hệ thống" body="Admin có thể thêm, sửa, ẩn hoặc xóa danh mục, đồng thời xem nhanh toàn bộ sản phẩm thuộc từng danh mục." actions={<Btn onClick={openAdd}>+ Thêm danh mục</Btn>} />
       {error && <div className="bg-surface rounded-3xl p-lg border border-outline-variant text-body-md text-on-error-container bg-error-container/20">{error}</div>}
       {loading ? <Loading /> : (
-        <Table headers={['#', 'Biểu tượng', 'Tên danh mục', 'Đường dẫn', 'Thứ tự', 'Trạng thái', 'Hành động']} empty={{ icon: '🗂️', text: 'Chưa có danh mục nào.' }}>
+        <Table headers={['#', 'Tên danh mục', 'Trạng thái', 'Hành động']} empty={{ icon: '🗂️', text: 'Chưa có danh mục nào.' }}>
           {categories.map((category, index) => (
             <tr key={category.ma_danh_muc} className="hover:bg-surface-container-low">
               <td className="px-4 py-3 text-label-sm text-on-surface-variant">{index + 1}</td>
-              <td className="px-4 py-3 text-2xl">{category.bieu_tuong}</td>
               <td className="px-4 py-3">
                 <button onClick={() => openProducts(category)} className="text-left text-title-md font-title-md text-on-surface hover:text-primary">{category.ten_danh_muc}</button>
                 <p className="mt-1 text-label-sm text-on-surface-variant">Bấm để quản lý sản phẩm thuộc danh mục này</p>
               </td>
-              <td className="px-4 py-3 text-body-md text-on-surface-variant">{category.duong_dan}</td>
-              <td className="px-4 py-3 text-body-md text-on-surface-variant">{category.thu_tu}</td>
               <td className="px-4 py-3"><Badge text={category.con_hoat_dong ? 'Đang hiển thị' : 'Đã ẩn'} color={category.con_hoat_dong ? 'green' : 'gray'} /></td>
               <td className="px-4 py-3">
                 <div className="flex flex-wrap gap-2">
@@ -134,11 +131,6 @@ export default function AdminCategories() {
         <Modal title={modal === 'add' ? 'Thêm danh mục' : 'Sửa danh mục'} onClose={() => setModal(null)}>
           <div className="space-y-4">
             <Input label="Tên danh mục" value={form.ten_danh_muc} onChange={e => setForm({ ...form, ten_danh_muc: e.target.value })} />
-            <div className="grid gap-4 md:grid-cols-3">
-              <Input label="Biểu tượng" value={form.bieu_tuong} onChange={e => setForm({ ...form, bieu_tuong: e.target.value })} />
-              <Input label="Đường dẫn (slug)" value={form.duong_dan} onChange={e => setForm({ ...form, duong_dan: e.target.value })} placeholder="vi-dai" />
-              <Input label="Thứ tự" type="number" value={form.thu_tu} onChange={e => setForm({ ...form, thu_tu: Number(e.target.value) || 0 })} />
-            </div>
             <div className="flex gap-3">
               <Btn className="flex-1 justify-center" onClick={handleSave} disabled={saving}>{saving ? 'Đang lưu...' : 'Lưu danh mục'}</Btn>
               <Btn variant="outline" className="flex-1 justify-center" onClick={() => setModal(null)}>Đóng</Btn>
