@@ -485,7 +485,7 @@ export function OrderDetail() {
           </div>
         </div>
 
-        {order.phuong_thuc_tt === "banking" && order.trang_thai_tt !== "da_tt" && order.trang_thai !== "da_huy" && (
+        {order.phuong_thuc_tt === "banking" && order.trang_thai !== "da_huy" && (
           <div className="bg-amber-50/60 border border-amber-200 rounded-2xl p-6 shadow-sm">
             <h3 className="text-base font-black text-amber-900 mb-4">⚡ Quét mã VietQR chuyển khoản nhanh</h3>
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">

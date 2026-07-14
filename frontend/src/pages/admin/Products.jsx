@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, categoryAPI, productAPI } from '../../services/api';
 import { Badge, Btn, Input, Loading, Modal, PageHero, SearchBar, Select, StatCard } from '../../components/ui/AdminUI';
+import * as XLSX from 'xlsx';
 
 const emptyForm = {
   ten_san_pham: '', mo_ta: '', gia_ban: 0, don_vi: 'kg', ton_kho: 0, ma_danh_muc: '', hinh_anh: [], video: [],
@@ -204,11 +205,32 @@ export default function AdminProducts() {
     setProducts(prev => prev.filter(item => item.ma_san_pham !== id));
   };
 
+  const exportExcel = () => {
+    const data = products.map((p, i) => ({
+      'STT': i + 1,
+      'Tên sản phẩm': p.ten_san_pham,
+      'Danh mục': p.ten_danh_muc,
+      'Giá bán': Number(p.gia_ban || 0),
+      'Đơn vị': p.don_vi,
+      'Tồn kho': p.ton_kho,
+      'Trạng thái': p.con_hoat_dong ? 'Đang bán' : 'Đã ẩn',
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'San pham');
+    XLSX.writeFile(wb, 'san_pham.xlsx');
+  };
+
   return (
     <div className="space-y-6">
       <PageHero eyebrow="Sản phẩm" title="Quản lý toàn bộ sản phẩm đang bán" body="Admin trực tiếp thêm, sửa, ẩn hoặc xóa sản phẩm trong mô hình quản lý tập trung của hệ thống." actions={<Btn onClick={() => setEditingProduct({})}>+ Thêm sản phẩm</Btn>} />
       <div className="bg-surface rounded-3xl p-lg border border-outline-variant organic-shadow">
-        <SearchBar value={search} onChange={setSearch} placeholder="Tìm tên sản phẩm..." />
+        <div className="flex gap-3 items-center">
+          <div className="flex-1"><SearchBar value={search} onChange={setSearch} placeholder="Tìm tên sản phẩm..." /></div>
+          <Btn variant="outline" onClick={exportExcel} disabled={!products.length}>
+            <span className="material-symbols-outlined text-sm mr-1">download</span> Xuất Excel
+          </Btn>
+        </div>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         <StatCard icon={<span className="material-symbols-outlined">inventory_2</span>} label="Tổng sản phẩm" value={summary.total} color="green" />

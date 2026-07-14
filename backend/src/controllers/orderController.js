@@ -122,7 +122,7 @@ async function getOrderById(req, res) {
     if (!raw)
       return res.status(404).json({ message: "Không tìm thấy đơn hàng." });
     const order = { ...orderModel.mapOrder(raw), items: raw.items };
-    if (order.phuong_thuc_tt === "banking" && order.trang_thai_tt !== "da_tt") {
+    if (order.phuong_thuc_tt === "banking") {
       order.banking_info = getBankingInfo(order.tong_thanh_toan, order.id);
     }
     res.json({ order });
@@ -190,7 +190,7 @@ async function adminGetOrderById(req, res) {
       ...orderModel.mapOrder(raw),
       items: raw.items,
     };
-    if (order.phuong_thuc_tt === "banking" && order.trang_thai_tt !== "da_tt") {
+    if (order.phuong_thuc_tt === "banking") {
       order.banking_info = getBankingInfo(order.tong_thanh_toan, order.id);
     }
     res.json({ order });

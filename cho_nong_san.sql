@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Jul 10, 2026 at 04:17 AM
+-- Generation Time: Jul 14, 2026 at 08:33 AM
 -- Server version: 8.4.7
 -- PHP Version: 8.3.28
 
@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS `chi_tiet_don_hang` (
   PRIMARY KEY (`mactdh`),
   KEY `fk_ctdh_dh` (`madh`),
   KEY `fk_ctdh_sp` (`masp`)
-) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=40 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `chi_tiet_don_hang`
@@ -73,7 +73,43 @@ CREATE TABLE IF NOT EXISTS `chi_tiet_don_hang` (
 INSERT INTO `chi_tiet_don_hang` (`mactdh`, `madh`, `masp`, `so_luong`, `don_gia`, `thanh_tien`) VALUES
 (1, 1, 1, 3, 45000.00, 135000.00),
 (2, 2, 1, 3, 45000.00, 135000.00),
-(3, 3, 7, 1, 20000.00, 20000.00);
+(3, 2, 2, 2, 35000.00, 70000.00),
+(4, 3, 7, 1, 20000.00, 20000.00),
+(5, 4, 7, 1, 20000.00, 20000.00),
+(6, 5, 7, 2, 20000.00, 40000.00),
+(7, 6, 6, 2, 50000.00, 100000.00),
+(8, 7, 7, 2, 20000.00, 40000.00),
+(9, 8, 7, 1, 20000.00, 20000.00),
+(10, 9, 7, 1, 20000.00, 20000.00),
+(11, 10, 7, 1, 20000.00, 20000.00),
+(12, 11, 7, 1, 20000.00, 20000.00),
+(13, 12, 7, 1, 20000.00, 20000.00),
+(14, 13, 7, 1, 20000.00, 20000.00),
+(15, 14, 7, 1, 20000.00, 20000.00),
+(16, 15, 6, 1, 50000.00, 50000.00),
+(17, 16, 5, 1, 30000.00, 30000.00),
+(18, 17, 7, 1, 20000.00, 20000.00),
+(19, 18, 7, 1, 20000.00, 20000.00),
+(20, 19, 7, 1, 20000.00, 20000.00),
+(21, 20, 7, 3, 20000.00, 60000.00),
+(22, 21, 7, 4, 20000.00, 80000.00),
+(23, 22, 7, 1, 20000.00, 20000.00),
+(24, 23, 5, 5, 30000.00, 150000.00),
+(25, 24, 7, 2, 20000.00, 40000.00),
+(26, 24, 6, 1, 50000.00, 50000.00),
+(27, 25, 7, 1, 20000.00, 20000.00),
+(28, 25, 6, 1, 50000.00, 50000.00),
+(29, 26, 7, 1, 20000.00, 20000.00),
+(30, 27, 7, 3, 20000.00, 60000.00),
+(31, 28, 7, 1, 20000.00, 20000.00),
+(32, 28, 6, 2, 50000.00, 100000.00),
+(33, 29, 7, 10, 20000.00, 200000.00),
+(34, 30, 7, 1, 20000.00, 20000.00),
+(35, 31, 7, 1, 20000.00, 20000.00),
+(36, 32, 7, 2, 20000.00, 40000.00),
+(37, 33, 7, 2, 20000.00, 40000.00),
+(38, 34, 7, 1, 20000.00, 20000.00),
+(39, 34, 6, 1, 50000.00, 50000.00);
 
 -- --------------------------------------------------------
 
@@ -90,7 +126,7 @@ CREATE TABLE IF NOT EXISTS `chi_tiet_gio_hang` (
   PRIMARY KEY (`mactgh`),
   KEY `fk_ctgh_gh` (`magh`),
   KEY `fk_ctgh_sp` (`masp`)
-) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=40 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -167,7 +203,7 @@ CREATE TABLE IF NOT EXISTS `danh_muc` (
   `mo_ta` text COLLATE utf8mb4_unicode_ci,
   `trang_thai` tinyint(1) DEFAULT NULL,
   PRIMARY KEY (`madm`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `danh_muc`
@@ -176,7 +212,8 @@ CREATE TABLE IF NOT EXISTS `danh_muc` (
 INSERT INTO `danh_muc` (`madm`, `ten_danh_muc`, `mo_ta`, `trang_thai`) VALUES
 (1, 'Trái Cây', 'Các loại trái cây tươi ngon bốn mùa', 1),
 (2, 'Rau Củ Quả', 'Rau củ hữu cơ, VietGAP an toàn sinh học', 1),
-(3, 'Gạo & Ngũ Cốc', 'Gạo đặc sản và các loại hạt dinh dưỡng', 1);
+(3, 'Gạo & Ngũ Cốc', 'Gạo đặc sản và các loại hạt dinh dưỡng', 1),
+(4, 'demo', '', 1);
 
 -- --------------------------------------------------------
 
@@ -206,7 +243,7 @@ CREATE TABLE IF NOT EXISTS `don_hang` (
   PRIMARY KEY (`madh`),
   KEY `fk_dh_nd` (`mand`),
   KEY `fk_dh_km` (`makm`)
-) ENGINE=InnoDB AUTO_INCREMENT=29 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=35 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `don_hang`
@@ -215,7 +252,39 @@ CREATE TABLE IF NOT EXISTS `don_hang` (
 INSERT INTO `don_hang` (`madh`, `mand`, `makm`, `tien_giam`, `ten_nguoi_nhan`, `email_nguoi_nhan`, `sdt_nguoi_nhan`, `loai_don_hang`, `tong_tien`, `tong_da_thanh_toan`, `trang_thai`, `trang_thai_thanh_toan`, `dia_chi_giao`, `ghi_chu`, `ngay_dat`, `ngay_giao_du_kien`, `ngay_giao_thuc_te`) VALUES
 (1, 2, 1, 13500.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 121500.00, 121500.00, 'da_giao', 'da_thanh_toan', '123 Đường 30/4, Ninh Kiều, Cần Thơ', NULL, '2026-06-04 09:00:00', '2026-06-04 14:00:00', '2026-06-04 14:00:00'),
 (2, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 235000.00, 0.00, 'cho_xac_nhan', 'chua_thanh_toan', '180 cao lỗ ', NULL, '2026-07-06 07:52:10', '2026-07-08 07:52:10', NULL),
-(3, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 50000.00, 0.00, 'da_huy', 'chua_thanh_toan', '18 cao lỗ\n', NULL, '2026-07-06 07:52:59', '2026-07-08 07:52:59', NULL);
+(3, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 50000.00, 0.00, 'da_huy', 'chua_thanh_toan', '18 cao lỗ\n', NULL, '2026-07-06 07:52:59', '2026-07-08 07:52:59', NULL),
+(4, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 50000.00, 0.00, 'da_huy', 'chua_thanh_toan', '180 cao lỗ', NULL, '2026-07-06 07:53:24', '2026-07-08 07:53:24', NULL),
+(5, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 70000.00, 0.00, 'cho_xac_nhan', 'chua_thanh_toan', '0000', NULL, '2026-07-06 13:20:01', '2026-07-08 13:20:01', NULL),
+(6, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 130000.00, 0.00, 'cho_xac_nhan', 'chua_thanh_toan', 'qsd', NULL, '2026-07-06 15:34:49', '2026-07-08 15:34:49', NULL),
+(7, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 70000.00, 0.00, 'cho_xac_nhan', 'chua_thanh_toan', 'ádfdg', NULL, '2026-07-06 17:03:39', '2026-07-08 17:03:39', NULL),
+(8, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 50000.00, 0.00, 'cho_xac_nhan', 'chua_thanh_toan', 'adsc', NULL, '2026-07-06 17:04:24', '2026-07-08 17:04:24', NULL),
+(9, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 50000.00, 0.00, 'cho_xac_nhan', 'chua_thanh_toan', 'xsadfhj', NULL, '2026-07-06 17:21:41', '2026-07-08 17:21:41', NULL),
+(10, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 50000.00, 0.00, 'cho_xac_nhan', 'chua_thanh_toan', '2qwef', NULL, '2026-07-06 23:01:27', '2026-07-08 23:01:27', NULL),
+(11, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 50000.00, 0.00, 'cho_xac_nhan', 'chua_thanh_toan', 'dsvd ', NULL, '2026-07-06 23:01:40', '2026-07-08 23:01:40', NULL),
+(12, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 50000.00, 0.00, 'cho_xac_nhan', 'chua_thanh_toan', 'ádvasdvc', NULL, '2026-07-06 23:02:31', '2026-07-08 23:02:31', NULL),
+(13, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 50000.00, 0.00, 'cho_xac_nhan', 'chua_thanh_toan', 'ádvcdsd', NULL, '2026-07-06 23:03:01', '2026-07-08 23:03:01', NULL),
+(14, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 50000.00, 0.00, 'cho_xac_nhan', 'chua_thanh_toan', 'ádvasd', NULL, '2026-07-08 22:29:16', '2026-07-10 22:29:16', NULL),
+(15, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 80000.00, 0.00, 'da_xac_nhan', 'chua_thanh_toan', 'sadfas', NULL, '2026-07-08 22:30:09', '2026-07-10 22:30:09', NULL),
+(16, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 60000.00, 0.00, 'cho_xac_nhan', 'chua_thanh_toan', 'ư3ertui', NULL, '2026-07-08 23:10:47', '2026-07-10 23:10:47', NULL),
+(17, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 50000.00, 0.00, 'da_giao', 'da_thanh_toan', 'sđfgh', NULL, '2026-07-08 23:13:46', '2026-07-10 23:13:46', '2026-07-08 23:17:18'),
+(18, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 50000.00, 0.00, 'cho_xac_nhan', 'chua_thanh_toan', 'adsfb', NULL, '2026-07-08 23:18:27', '2026-07-10 23:18:27', NULL),
+(19, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 50000.00, 0.00, 'cho_xac_nhan', 'chua_thanh_toan', 'sadf', NULL, '2026-07-08 23:18:42', '2026-07-10 23:18:42', NULL),
+(20, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 90000.00, 0.00, 'da_huy', 'chua_thanh_toan', 'ádfghj', NULL, '2026-07-08 23:21:11', '2026-07-10 23:21:11', NULL),
+(21, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 110000.00, 0.00, 'cho_xac_nhan', 'chua_thanh_toan', 'ẻtyu', NULL, '2026-07-08 23:21:39', '2026-07-10 23:21:39', NULL),
+(22, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 50000.00, 0.00, 'cho_xac_nhan', 'chua_thanh_toan', 'sdfgh', NULL, '2026-07-08 23:22:34', '2026-07-10 23:22:34', NULL),
+(23, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 180000.00, 0.00, 'cho_xac_nhan', 'chua_thanh_toan', '180aaa', NULL, '2026-07-08 23:27:08', '2026-07-10 23:27:08', NULL),
+(24, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 120000.00, 120000.00, 'dang_giao', 'da_thanh_toan', 'sdfghjkuyrtewq', NULL, '2026-07-08 23:28:04', '2026-07-10 23:28:04', NULL),
+(25, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 100000.00, 100000.00, 'da_huy', 'da_thanh_toan', 'qưegm', NULL, '2026-07-08 23:48:32', '2026-07-10 23:48:32', NULL),
+(26, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 50000.00, 50000.00, 'da_xac_nhan', 'da_thanh_toan', 'ádv', NULL, '2026-07-08 23:54:51', '2026-07-10 23:54:51', NULL),
+(27, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 90000.00, 0.00, 'cho_xac_nhan', 'chua_thanh_toan', 'asdgfdhjhklj;', NULL, '2026-07-10 10:49:32', '2026-07-12 10:49:32', NULL),
+(28, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 150000.00, 150000.00, 'da_xac_nhan', 'da_thanh_toan', 'asdgfhjk', NULL, '2026-07-10 10:51:57', '2026-07-12 10:51:57', NULL),
+(29, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 230000.00, 0.00, 'cho_xac_nhan', 'chua_thanh_toan', 'sdafshjkl;\'lkjfdsa', NULL, '2026-07-10 15:49:16', '2026-07-12 15:49:16', NULL),
+(30, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 50000.00, 0.00, 'cho_xac_nhan', 'chua_thanh_toan', 'ádasdsfd', NULL, '2026-07-11 19:57:35', '2026-07-13 19:57:35', NULL),
+(31, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 50000.00, 50000.00, 'cho_xac_nhan', 'da_thanh_toan', 'fdsa', NULL, '2026-07-11 19:59:34', '2026-07-13 19:59:34', NULL),
+(32, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 70000.00, 70000.00, 'cho_xac_nhan', 'da_thanh_toan', 'asddhg', NULL, '2026-07-12 11:56:46', '2026-07-14 11:56:46', NULL),
+(33, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 70000.00, 0.00, 'cho_xac_nhan', 'chua_thanh_toan', 'sfgdn', NULL, '2026-07-13 07:18:32', '2026-07-15 07:18:32', NULL),
+(34, 2, NULL, 0.00, 'Trần Thị Mua', 'thimua.user@gmail.com', '0918765432', 'thuong', 100000.00, 100000.00, 'da_xac_nhan', 'da_thanh_toan', 'adsfn', NULL, '2026-07-13 08:03:15', '2026-07-15 08:03:15', NULL);
+
 -- --------------------------------------------------------
 
 --
@@ -284,7 +353,7 @@ CREATE TABLE IF NOT EXISTS `hinh_anh_video` (
   `ngay_tao` datetime DEFAULT NULL,
   PRIMARY KEY (`mahav`),
   KEY `fk_hav_sp` (`masp`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `hinh_anh_video`
@@ -296,7 +365,8 @@ INSERT INTO `hinh_anh_video` (`mahav`, `masp`, `duong_dan`, `loai`, `thumbnail`,
 (4, 5, 'products/1783080489348_0.jpg', 'hinh_anh', NULL, 0, 1, '2026-07-03 19:08:09'),
 (5, 6, 'products/1783080507776_0.jpg', 'hinh_anh', NULL, 0, 1, '2026-07-03 19:08:27'),
 (6, 7, 'products/1783080596169_0.jpg', 'hinh_anh', NULL, 0, 1, '2026-07-03 19:09:56'),
-(7, 7, 'products/1783080596176_1.mp4', 'video', NULL, 1, 0, '2026-07-03 19:09:56');
+(7, 7, 'products/1783080596176_1.mp4', 'video', NULL, 1, 0, '2026-07-03 19:09:56'),
+(12, 10, 'products/1783912736029_0.jpg', 'hinh_anh', NULL, 0, 1, '2026-07-13 10:18:56');
 
 -- --------------------------------------------------------
 
@@ -400,7 +470,7 @@ CREATE TABLE IF NOT EXISTS `phien_chat` (
   `trang_thai` enum('dang_hoat_dong','da_dong') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`mapc`),
   KEY `fk_pc_nd` (`mand`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `phien_chat`
@@ -408,7 +478,8 @@ CREATE TABLE IF NOT EXISTS `phien_chat` (
 
 INSERT INTO `phien_chat` (`mapc`, `mand`, `session_token`, `ngay_bat_dau`, `ngay_ket_thuc`, `trang_thai`) VALUES
 (1, 2, 'token_abc123xyz', '2026-06-04 15:30:00', NULL, 'dang_hoat_dong'),
-(2, 3, 'token_def456uvw', '2026-06-03 09:00:00', '2026-06-03 09:45:00', 'da_dong');
+(2, 3, 'token_def456uvw', '2026-06-03 09:00:00', '2026-06-03 09:45:00', 'da_dong'),
+(3, 1, '283558e9b4fe5e4c5b7f3190a4c04d9d', '2026-07-13 08:05:39', NULL, 'dang_hoat_dong');
 
 -- --------------------------------------------------------
 
@@ -425,12 +496,12 @@ CREATE TABLE IF NOT EXISTS `san_pham` (
   `so_luong_ton` int DEFAULT NULL,
   `don_vi` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `khu_vuc` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `mo_ta` text COLLATE utf8mb4_unicode_ci,
+  `mo_ta` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   `trang_thai` tinyint(1) DEFAULT NULL,
   `ngay_tao` datetime DEFAULT NULL,
   PRIMARY KEY (`masp`),
   KEY `fk_sp_dm` (`madm`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `san_pham`
@@ -441,8 +512,9 @@ INSERT INTO `san_pham` (`masp`, `madm`, `ten_san_pham`, `gia_ban`, `so_luong_ton
 (2, 2, 'Cà Chua Bi Hữu Cơ', 35000.00, 198, 'Kg', 'Đà Lạt', NULL, 1, '2026-05-22 08:30:00'),
 (3, 3, 'Gạo ST25 Chuẩn Sạch', 32000.00, 1000, 'Kg', 'Sóc Trăng', NULL, 1, '2026-05-25 09:00:00'),
 (5, 2, 'xà lách', 30000.00, 194, 'kg', '', NULL, 1, '2026-07-03 19:08:09'),
-(6, 1, 'xoài', 50000.00, 193, 'kg', '', NULL, 1, '2026-07-03 19:08:27'),
-(7, 3, 'cà chua', 20000.00, 173, 'kg', '', NULL, 1, '2026-07-03 19:09:56');
+(6, 1, 'xoài', 50000.00, 192, 'kg', '', NULL, 1, '2026-07-03 19:08:27'),
+(7, 3, 'cà chua', 20000.00, 156, 'kg', '', 'ngon', 1, '2026-07-03 19:09:56'),
+(10, 4, 'demo 1', 444444.00, 44, 'kg', '', 'sgdhfj', 1, '2026-07-13 10:18:56');
 
 -- --------------------------------------------------------
 
@@ -491,7 +563,7 @@ CREATE TABLE IF NOT EXISTS `thanh_toan` (
   `ngay_thanh_toan` datetime DEFAULT NULL,
   PRIMARY KEY (`matt`),
   KEY `fk_tt_dh` (`madh`)
-) ENGINE=InnoDB AUTO_INCREMENT=29 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=35 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `thanh_toan`
@@ -500,7 +572,38 @@ CREATE TABLE IF NOT EXISTS `thanh_toan` (
 INSERT INTO `thanh_toan` (`matt`, `madh`, `so_tien`, `phuong_thuc`, `trang_thai`, `ma_giao_dich`, `hinh_anh_chuyen_khoan`, `loai_thanh_toan`, `ngay_thanh_toan`) VALUES
 (1, 1, 121500.00, 'momo', 'da_thanh_toan', 'MOMO_TXN_20260604_999', NULL, 1, '2026-06-04 09:02:00'),
 (2, 2, 235000.00, '', 'cho_thanh_toan', NULL, NULL, NULL, '2026-07-06 07:52:10'),
-(3, 3, 50000.00, 'tien_mat', 'that_bai', NULL, NULL, NULL, '2026-07-06 07:52:59');
+(3, 3, 50000.00, 'tien_mat', 'that_bai', NULL, NULL, NULL, '2026-07-06 07:52:59'),
+(4, 4, 50000.00, 'banking', 'that_bai', NULL, NULL, NULL, '2026-07-06 07:53:24'),
+(5, 5, 70000.00, '', 'cho_thanh_toan', NULL, NULL, NULL, '2026-07-06 13:20:01'),
+(6, 6, 130000.00, '', 'cho_thanh_toan', NULL, NULL, NULL, '2026-07-06 15:34:49'),
+(7, 7, 70000.00, '', 'cho_thanh_toan', NULL, NULL, NULL, '2026-07-06 17:03:39'),
+(8, 8, 50000.00, '', 'cho_thanh_toan', NULL, NULL, NULL, '2026-07-06 17:04:24'),
+(9, 9, 50000.00, '', 'cho_thanh_toan', NULL, NULL, NULL, '2026-07-06 17:21:41'),
+(10, 10, 50000.00, 'tien_mat', 'cho_thanh_toan', NULL, NULL, NULL, '2026-07-06 23:01:27'),
+(11, 11, 50000.00, 'tien_mat', 'cho_thanh_toan', NULL, NULL, NULL, '2026-07-06 23:01:40'),
+(12, 12, 50000.00, 'tien_mat', 'cho_thanh_toan', NULL, NULL, NULL, '2026-07-06 23:02:31'),
+(13, 13, 50000.00, 'tien_mat', 'cho_thanh_toan', NULL, NULL, NULL, '2026-07-06 23:03:01'),
+(14, 14, 50000.00, 'banking', 'cho_thanh_toan', NULL, NULL, NULL, '2026-07-08 22:29:16'),
+(15, 15, 80000.00, 'banking', 'cho_thanh_toan', NULL, NULL, NULL, '2026-07-08 22:30:09'),
+(16, 16, 60000.00, 'banking', 'cho_thanh_toan', NULL, NULL, NULL, '2026-07-08 23:10:47'),
+(17, 17, 50000.00, 'banking', 'cho_thanh_toan', NULL, NULL, NULL, '2026-07-08 23:13:46'),
+(18, 18, 50000.00, 'tien_mat', 'cho_thanh_toan', NULL, NULL, NULL, '2026-07-08 23:18:27'),
+(19, 19, 50000.00, 'banking', 'cho_thanh_toan', NULL, NULL, NULL, '2026-07-08 23:18:42'),
+(20, 20, 90000.00, 'tien_mat', 'that_bai', NULL, NULL, NULL, '2026-07-08 23:21:11'),
+(21, 21, 110000.00, 'banking', 'cho_thanh_toan', NULL, NULL, NULL, '2026-07-08 23:21:39'),
+(22, 22, 50000.00, 'banking', 'cho_thanh_toan', NULL, NULL, NULL, '2026-07-08 23:22:34'),
+(23, 23, 180000.00, 'banking', 'cho_thanh_toan', NULL, NULL, NULL, '2026-07-08 23:27:08'),
+(24, 24, 120000.00, 'banking', '', NULL, NULL, NULL, '2026-07-08 23:39:02'),
+(25, 25, 100000.00, 'banking', '', NULL, NULL, NULL, '2026-07-08 23:49:06'),
+(26, 26, 50000.00, 'banking', '', NULL, NULL, NULL, '2026-07-08 23:55:18'),
+(27, 27, 90000.00, 'banking', 'cho_thanh_toan', NULL, NULL, NULL, '2026-07-10 10:49:32'),
+(28, 28, 150000.00, 'banking', '', NULL, NULL, NULL, '2026-07-10 10:52:27'),
+(29, 29, 230000.00, 'banking', 'cho_thanh_toan', NULL, NULL, NULL, '2026-07-10 15:49:16'),
+(30, 30, 50000.00, 'banking', 'cho_thanh_toan', NULL, NULL, NULL, '2026-07-11 19:57:35'),
+(31, 31, 50000.00, 'banking', '', NULL, NULL, NULL, '2026-07-11 20:49:53'),
+(32, 32, 70000.00, 'banking', '', NULL, NULL, NULL, '2026-07-12 11:57:54'),
+(33, 33, 70000.00, 'banking', 'cho_thanh_toan', NULL, NULL, NULL, '2026-07-13 07:18:32'),
+(34, 34, 100000.00, 'banking', 'da_thanh_toan', NULL, NULL, NULL, '2026-07-13 08:03:15');
 
 -- --------------------------------------------------------
 
@@ -546,7 +649,7 @@ CREATE TABLE IF NOT EXISTS `tin_nhan_chat` (
   `thoi_gian` datetime DEFAULT NULL,
   PRIMARY KEY (`matnc`),
   KEY `fk_tnc_pc` (`mapc`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `tin_nhan_chat`
@@ -554,7 +657,9 @@ CREATE TABLE IF NOT EXISTS `tin_nhan_chat` (
 
 INSERT INTO `tin_nhan_chat` (`matnc`, `mapc`, `vai_tro`, `noi_dung`, `loai_phien_only`, `loai_gui_y`, `thoi_gian`) VALUES
 (1, 1, 'user', 'Tôi muốn tìm mua trái cây miền Tây', '{}', 'san_pham', '2026-06-04 15:31:00'),
-(2, 1, 'bot', 'Hệ thống gợi ý cho bạn một số sản phẩm nổi bật:', '{\"suggested_ids\": [1]}', 'san_pham', '2026-06-04 15:31:05');
+(2, 1, 'bot', 'Hệ thống gợi ý cho bạn một số sản phẩm nổi bật:', '{\"suggested_ids\": [1]}', 'san_pham', '2026-06-04 15:31:05'),
+(3, 3, 'user', 'xoài', NULL, NULL, '2026-07-13 08:05:43'),
+(4, 3, 'bot', 'Dạ bên em có Xoài Cát Chu Lộc Phát giá 43.000đ/Kg và xoài tươi ngon giá 50.000đ/kg cực kỳ ngọt thơm, mời bạn lựa chọn nhé! 🥭', '{\"is_season\": false, \"suggested_ids\": [1, 6]}', 'san_pham', '2026-07-13 08:06:00');
 
 -- --------------------------------------------------------
 
