@@ -326,7 +326,7 @@ export default function AdminOrders() {
         setTotal(data.subscriptions?.length || 0);
       } else {
         params.set('loai_don', tab);
-        const data = await api.get(`/admin/orders?${params.toString()}`);
+        const data = await api.get(`/orders/admin/list?${params.toString()}`);
         setOrders(data.orders || []);
         setTotal(data.total || 0);
       }

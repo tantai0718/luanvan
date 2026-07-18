@@ -6,10 +6,12 @@ const menuItems = [
   { path: '/admin', icon: 'dashboard', label: 'Tổng quan' },
   { path: '/admin/accounts', icon: 'group', label: 'Tài khoản' },
   { path: '/admin/banners', icon: 'ad_units', label: 'Banner' },
-  { path: '/admin/products', icon: 'inventory_2', label: 'Sản phẩm' },
   { path: '/admin/categories', icon: 'category', label: 'Danh mục' },
+  { path: '/admin/products', icon: 'inventory_2', label: 'Sản phẩm' },
   { path: '/admin/seasons', icon: 'eco', label: 'Mùa vụ' },
   { path: '/admin/orders', icon: 'receipt_long', label: 'Đơn hàng' },
+  { path: '/admin/reviews', icon: 'reviews', label: 'Đánh giá' },
+  { path: '/admin/notifications', icon: 'campaign', label: 'Thông báo' },
 ];
 
 export default function AdminLayout({ children }) {

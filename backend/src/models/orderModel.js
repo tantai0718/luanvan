@@ -1,3 +1,4 @@
+const notificationModel = require('./notificationModel');
 const db = require("../config/db");
 
 async function applyPromoCode(maCode, tongTien) {
@@ -286,6 +287,25 @@ async function cancelOrder(madh, mand) {
   );
 }
 
+const STATUS_MESSAGES = {
+  da_xac_nhan: madh => ({
+    tieu_de: 'Đơn hàng đã được xác nhận',
+    noi_dung: `Đơn hàng #${madh} của bạn đã được xác nhận và đang chuẩn bị giao.`,
+  }),
+  dang_giao: madh => ({
+    tieu_de: 'Đơn hàng đang được giao',
+    noi_dung: `Đơn hàng #${madh} đang trên đường giao đến bạn.`,
+  }),
+  da_giao: madh => ({
+    tieu_de: 'Đơn hàng đã giao thành công',
+    noi_dung: `Đơn hàng #${madh} đã giao thành công. Cảm ơn bạn đã mua sắm tại Chợ Nông Sản!`,
+  }),
+  da_huy: madh => ({
+    tieu_de: 'Đơn hàng đã bị hủy',
+    noi_dung: `Đơn hàng #${madh} đã bị hủy. Liên hệ shop nếu bạn cần hỗ trợ thêm.`,
+  }),
+};
+
 async function updateOrderStatus(madh, trang_thai) {
   const valid = [
     "cho_xac_nhan",
@@ -295,21 +315,26 @@ async function updateOrderStatus(madh, trang_thai) {
     "da_huy",
   ];
   if (!valid.includes(trang_thai)) throw new Error("Trang thai khong hop le.");
+
+  const [[dh]] = await db.query("SELECT mand FROM don_hang WHERE madh = ?", [madh]);
+
   await db.query("UPDATE don_hang SET trang_thai = ? WHERE madh = ?", [
     trang_thai,
     madh,
   ]);
+
   if (trang_thai === "da_giao") {
     await db.query(
-      `
-UPDATE don_hang
-SET
-trang_thai_thanh_toan='da_thanh_toan',
-ngay_giao_thuc_te=NOW()
-WHERE madh=?
-`,
+      `UPDATE don_hang
+       SET trang_thai_thanh_toan='da_thanh_toan', ngay_giao_thuc_te=NOW()
+       WHERE madh=?`,
       [madh],
     );
+  }
+
+  if (dh && STATUS_MESSAGES[trang_thai]) {
+    const { tieu_de, noi_dung } = STATUS_MESSAGES[trang_thai](madh);
+    await createNotification({ mand: dh.mand, tieu_de, noi_dung, loai: 'don_hang' });
   }
 }
 
@@ -419,6 +444,13 @@ async function confirmBankingPayment(madh) {
     [madh],
   );
 }
+async function createNotification({ mand, tieu_de, noi_dung, loai = 'don_hang' }) {
+  await db.query(
+    `INSERT INTO thong_bao (mand, tieu_de, noi_dung, loai, da_doc, ngay_tao)
+     VALUES (?, ?, ?, ?, 0, NOW())`,
+    [mand, tieu_de, noi_dung, loai]
+  );
+}
 
 module.exports = {
   createOrder,
@@ -432,4 +464,5 @@ module.exports = {
   updatePaymentSuccess,
   updateBankingPayment,
   confirmBankingPayment,
+  createNotification,
 };

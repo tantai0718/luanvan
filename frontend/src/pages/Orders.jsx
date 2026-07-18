@@ -258,7 +258,6 @@ export function OrderList() {
   );
 }
 
-// --- COMPONENT ORDERDETAIL (giữ nguyên, không đổi) ---
 export function OrderDetail() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -406,6 +405,28 @@ export function OrderDetail() {
             ))}
           </div>
         </div>
+        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm space-y-4 text-[17px]">
+          <div className="flex justify-between text-slate-500">
+            <span className="font-semibold text-slate-600">Tiền tạm tính</span>
+            <span className="font-medium text-slate-900">{formatCurrency(subtotal)}</span>
+          </div>
+          {giamGia > 0 && (
+            <div className="flex justify-between text-rose-600">
+              <span className="font-semibold">Khuyến mãi</span>
+              <span className="font-medium">-{formatCurrency(giamGia)}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-slate-500">
+            <span className="font-semibold text-slate-600">Phí vận chuyển</span>
+            <span className="font-medium text-slate-900">
+              {shippingFee > 0 ? formatCurrency(shippingFee) : "Miễn phí"}
+            </span>
+          </div>
+          <div className="flex justify-between border-t border-slate-100 pt-4 text-[18px]">
+            <span className="font-bold text-slate-900">Tổng tiền thanh toán</span>
+            <span className="text-2xl text-[#1a7a4a] font-bold">{formatCurrency(order.tong_thanh_toan)}</span>
+          </div>
+        </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
@@ -525,29 +546,6 @@ export function OrderDetail() {
           </div>
         )}
 
-        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm space-y-4 text-[17px]">
-          <div className="flex justify-between text-slate-500">
-            <span className="font-semibold text-slate-600">Tiền tạm tính</span>
-            <span className="font-medium text-slate-900">{formatCurrency(subtotal)}</span>
-          </div>
-          {giamGia > 0 && (
-            <div className="flex justify-between text-rose-600">
-              <span className="font-semibold">Khuyến mãi</span>
-              <span className="font-medium">-{formatCurrency(giamGia)}</span>
-            </div>
-          )}
-          <div className="flex justify-between text-slate-500">
-            <span className="font-semibold text-slate-600">Phí vận chuyển</span>
-            <span className="font-medium text-slate-900">
-              {shippingFee > 0 ? formatCurrency(shippingFee) : "Miễn phí"}
-            </span>
-          </div>
-          <div className="flex justify-between border-t border-slate-100 pt-4 text-[18px]">
-            <span className="font-bold text-slate-900">Tổng tiền thanh toán</span>
-            <span className="text-2xl text-[#1a7a4a] font-bold">{formatCurrency(order.tong_thanh_toan)}</span>
-          </div>
-        </div>
-
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
           <Link to="/orders" className="flex-1 rounded-xl border border-slate-200 py-3.5 text-center text-base font-semibold text-slate-600 bg-white hover:bg-slate-50 transition">
             ← Quay lại danh sách
@@ -568,7 +566,7 @@ export function OrderDetail() {
   );
 }
 
-// --- COMPONENT SUBSCRIPTIONDETAIL (MỚI) ---
+
 export function SubscriptionDetail() {
   const { id } = useParams();
   const [subscription, setSubscription] = useState(null);

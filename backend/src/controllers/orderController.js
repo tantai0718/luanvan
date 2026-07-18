@@ -9,13 +9,16 @@ const BANKING_INFO = {
   account_holder: process.env.BANK_ACCOUNT_HOLDER || 'Vo Ngoc Tan Tai',
 };
 
+// Hàm bổ trợ nội bộ (không cần export)
 function getBankingInfo(amount, orderId) {
   const addInfo = `TT${orderId}`;
   const qrUrl = `https://img.vietqr.io/image/${BANKING_INFO.bank_short_name}-${BANKING_INFO.account_number}-compact.jpg?amount=${amount}&addInfo=${encodeURIComponent(addInfo)}&accountName=${encodeURIComponent(BANKING_INFO.account_holder)}`;
   return { ...BANKING_INFO, qr_url: qrUrl, amount, noi_dung_chuyen_khoan: addInfo };
 }
 
-async function createOrder(req, res) {
+// --- USER APIS ---
+
+exports.createOrder = async (req, res) => {
   try {
     const { dia_chi_giao, phuong_thuc_tt, ma_code, ghi_chu, ten_nguoi_nhan, sdt_nguoi_nhan } = req.body;
     if (!dia_chi_giao?.trim())
@@ -47,9 +50,9 @@ async function createOrder(req, res) {
     console.error("[createOrder]", err);
     res.status(400).json({ message: err.message });
   }
-}
+};
 
-async function createPreorder(req, res) {
+exports.createPreorder = async (req, res) => {
   try {
     const {
       product_id,
@@ -106,17 +109,18 @@ async function createPreorder(req, res) {
     console.error("[createPreorder]", err);
     res.status(400).json({ message: err.message });
   }
-}
-async function getMyOrders(req, res) {
+};
+
+exports.getMyOrders = async (req, res) => {
   try {
     const rows = await orderModel.getOrdersByUser(req.user.id);
     res.json({ orders: rows.map(orderModel.mapOrder) });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
-}
+};
 
-async function getOrderById(req, res) {
+exports.getOrderById = async (req, res) => {
   try {
     const raw = await orderModel.getOrderById(req.params.id, req.user.id);
     if (!raw)
@@ -129,18 +133,20 @@ async function getOrderById(req, res) {
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
-}
+};
 
-async function cancelOrder(req, res) {
+exports.cancelOrder = async (req, res) => {
   try {
     await orderModel.cancelOrder(req.params.id, req.user.id);
     res.json({ message: "Đã huỷ đơn hàng." });
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
-}
+};
 
-async function adminGetOrders(req, res) {
+// --- ADMIN APIS ---
+
+exports.adminGetOrders = async (req, res) => {
   try {
     const { page, limit, trang_thai, loai_don } = req.query;
 
@@ -158,25 +164,27 @@ async function adminGetOrders(req, res) {
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
-}
-async function adminUpdateStatus(req, res) {
+};
+
+exports.adminUpdateStatus = async (req, res) => {
   try {
     await orderModel.updateOrderStatus(req.params.id, req.body.trang_thai);
     res.json({ message: "Cập nhật trạng thái đơn hàng thành công." });
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
-}
-async function adminConfirmBanking(req, res) {
+};
+
+exports.adminConfirmBanking = async (req, res) => {
   try {
     await orderModel.confirmBankingPayment(req.params.id);
     res.json({ message: 'Xac nhan thanh toan chuyen khoan thanh cong.' });
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
-}
+};
 
-async function adminGetOrderById(req, res) {
+exports.adminGetOrderById = async (req, res) => {
   try {
     const raw = await orderModel.getOrderById(req.params.id);
 
@@ -199,16 +207,4 @@ async function adminGetOrderById(req, res) {
       message: err.message,
     });
   }
-}
-
-module.exports = {
-  createOrder,
-  createPreorder,
-  getMyOrders,
-  getOrderById,
-  cancelOrder,
-  adminGetOrders,
-  adminUpdateStatus,
-  adminConfirmBanking,
-  adminGetOrderById,
 };

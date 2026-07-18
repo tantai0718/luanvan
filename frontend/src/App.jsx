@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+
 import Navbar       from './components/layout/Navbar';
 import MarketFooter from './components/layout/MarketFooter';
 import AdminLayout  from './components/layout/AdminLayout';
@@ -20,6 +21,9 @@ import AdminOrders     from './pages/admin/Orders';
 import About           from './pages/About';
 import ChatBox from './pages/ChatBox';
 import AdminSeasons from './pages/admin/Seasons';
+import AdminReviews from './pages/admin/Reviews';
+import AdminNotifications from './pages/admin/Notifications';
+import AnnouncementBanner from './components/layout/AnnouncementBanner';
 
 function Spin() { return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin"/></div>; }
 
@@ -41,9 +45,9 @@ function PL({ children }) {
   return (
     <>
       <Navbar />
+      <AnnouncementBanner />
       <main>{children}</main>
       <MarketFooter />
-
     </>
   );
 }
@@ -52,11 +56,10 @@ function AP({ children }) {
   return <Private roles={['admin']}><AdminLayout>{children}</AdminLayout></Private>;
 }
 
-
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/"         element={<PL><Home/></PL>}/>
+      <Route path="/"           element={<PL><Home/></PL>}/>
       <Route path="/products" element={<PL><Products/></PL>}/>
       <Route path="/products/:id" element={<PL><ProductDetail/></PL>}/>
       <Route path="/about" element={<PL><About/></PL>}/>
@@ -74,8 +77,8 @@ function AppRoutes() {
       <Route path="/admin/products"   element={<AP><AdminProducts/></AP>}/>
       <Route path="/admin/banners"    element={<AP><AdminBanners/></AP>}/>
       <Route path="/admin/orders"     element={<AP><AdminOrders/></AP>}/>
-      
-
+      <Route path="/admin/reviews" element={<AP><AdminReviews/></AP>}/>
+      <Route path="/admin/notifications" element={<AP><AdminNotifications/></AP>}/>
       <Route path="*" element={<Navigate to="/"/>}/>
     </Routes>
   );

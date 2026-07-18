@@ -1,6 +1,6 @@
 const db = require('../config/db');
 
-async function list(req, res) {
+exports.list = async (req, res) => {
     try {
         const [rows] = await db.query(
             `SELECT mv.*,
@@ -14,9 +14,9 @@ async function list(req, res) {
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
-}
+};
 
-async function listProducts(req, res) {
+exports.listProducts = async (req, res) => {
     try {
         const [rows] = await db.query(
             `SELECT spmv.maspmv, spmv.masp, spmv.so_luong_du_kien, spmv.so_luong_thuc_te,
@@ -47,9 +47,9 @@ async function listProducts(req, res) {
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
-}
+};
 
-async function create(req, res) {
+exports.create = async (req, res) => {
     try {
         const { ten_mua, thang_bat_dau, thang_ket_thuc, qua_nam, mo_ta = '' } = req.body;
 
@@ -65,9 +65,9 @@ async function create(req, res) {
     } catch (err) {
         res.status(400).json({ message: err.message });
     }
-}
+};
 
-async function update(req, res) {
+exports.update = async (req, res) => {
     try {
         const { ten_mua, thang_bat_dau, thang_ket_thuc, qua_nam, mo_ta } = req.body;
         await db.query(
@@ -80,18 +80,18 @@ async function update(req, res) {
     } catch (err) {
         res.status(400).json({ message: err.message });
     }
-}
+};
 
-async function toggle(req, res) {
+exports.toggle = async (req, res) => {
     try {
         await db.query('UPDATE mua_vu SET trang_thai = 1 - trang_thai WHERE mamv = ?', [req.params.id]);
         res.json({ message: 'Đã thay đổi trạng thái mùa vụ' });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
-}
+};
 
-async function remove(req, res) {
+exports.remove = async (req, res) => {
     try {
         const [[{ count }]] = await db.query(
             'SELECT COUNT(*) AS count FROM san_pham_mua_vu WHERE mamv = ?',
@@ -105,9 +105,9 @@ async function remove(req, res) {
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
-}
+};
 
-async function addProduct(req, res) {
+exports.addProduct = async (req, res) => {
     try {
         const { masp, so_luong_du_kien, gia_du_kien, ghi_chu = '' } = req.body;
         if (!masp) return res.status(400).json({ message: 'Vui lòng chọn sản phẩm.' });
@@ -125,9 +125,9 @@ async function addProduct(req, res) {
     } catch (err) {
         res.status(400).json({ message: err.message });
     }
-}
+};
 
-async function removeProduct(req, res) {
+exports.removeProduct = async (req, res) => {
     try {
         await db.query(
             'DELETE FROM san_pham_mua_vu WHERE mamv = ? AND masp = ?',
@@ -137,6 +137,4 @@ async function removeProduct(req, res) {
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
-}
-
-module.exports = { list, listProducts, create, update, toggle, remove, addProduct, removeProduct };
+};

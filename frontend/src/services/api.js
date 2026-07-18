@@ -51,12 +51,18 @@ export const authAPI = {
 export const productAPI = {
   getAll: (query = '') => api.get(`/products${query}`),
   getById: id => api.get(`/products/${id}`),
-  getReviews: id => api.get(`/products/${id}/reviews`),
-  createReview: body => api.post('/reviews', body),
   create: body => api.post('/products', body),
   update: (id, body) => api.put(`/products/${id}`, body),
   delete: id => api.delete(`/admin/products/${id}`),
   toggle: id => api.patch(`/products/${id}/toggle`),
+};
+
+export const reviewAPI = {
+  getByProduct: id => api.get(`/reviews/product/${id}`),
+  create: body => api.post('/reviews', body),
+  adminAll: (query = '') => api.get(`/reviews/admin${query}`),
+  reply: (id, body) => api.patch(`/reviews/admin/${id}/reply`, body),
+  deleteReply: id => api.delete(`/reviews/admin/${id}/reply`),
 };
 
 export const categoryAPI = {
@@ -105,12 +111,24 @@ export const dashboardAPI = {
 
 export const notificationAPI = {
   getAll: () => api.get('/notifications'),
+  markRead: id => api.patch(`/notifications/${id}/read`),
+  markAllRead: () => api.patch('/notifications/read-all'),
+
+  getGlobal: () => api.get('/notifications/global'),
+
+  adminGetAllGlobal: () => api.get('/admin/notifications/global'),
+  adminCreate: body => api.post('/admin/notifications/global', body),
+  adminUpdate: (id, body) => api.put(`/admin/notifications/global/${id}`, body),
+  adminToggle: id => api.patch(`/admin/notifications/global/${id}/toggle`),
+  adminDelete: id => api.delete(`/admin/notifications/global/${id}`),
+
+  adminGetOrderHistory: (q = '', page = 1) =>
+    api.get(`/admin/notifications/orders?q=${encodeURIComponent(q)}&page=${page}`),
 };
 
 export const chatAPI = {
   getMessages: () => api.get('/chat'),
   sendMessage: (body) => api.post('/chat', body),
-
 
   getSessions: () => api.get('/chat/admin'),
   getSessionMessages: (id) => api.get(`/chat/admin/${id}`),

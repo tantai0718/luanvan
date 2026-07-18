@@ -1,6 +1,7 @@
 const chatModel = require('../models/chatModel');
 const productModel = require('../models/productModel');
 
+// --- CÁC HÀM TRỢ GIÚP NỘI BỘ (GIỮ NGUYÊN) ---
 
 function removeDiacritics(str = '') {
     return str
@@ -28,7 +29,6 @@ function cacheSet(key, value) {
     replyCache.set(key, { value, ts: Date.now() });
 }
 
-
 const STOPWORDS = [
     'tôi', 'muốn', 'tìm', 'mùa', 'có', 'không', 'gì', 'sản', 'phẩm', 'cho', 'xem', 'ơi',
     'nhé', 'là', 'loại', 'giúp', 'với', 'shop', 'của', 'hàng', 'vậy', 'nào', 'giá', 'bao', 'nhiêu',
@@ -44,7 +44,6 @@ function extractKeywords(text) {
         .split(/\s+/)
         .filter((w) => w.length >= 2 && !STOPWORDS.includes(w));
 }
-
 
 function findMatchedSeasonIds(userText, seasons) {
     const textNormalized = removeDiacritics(userText.trim());
@@ -225,8 +224,9 @@ Quy tắc:
     return buildFallback(userMessage, products);
 }
 
+// --- USER APIS (EXPORT TRỰC TIẾP) ---
 
-async function getMyMessages(req, res) {
+exports.getMyMessages = async (req, res) => {
     try {
         const mand = req.user.id;
         const mapc = await chatModel.getOrCreateSession(mand);
@@ -236,10 +236,9 @@ async function getMyMessages(req, res) {
         console.error(err);
         res.status(500).json({ message: err.message });
     }
-}
+};
 
-
-async function sendMyMessage(req, res) {
+exports.sendMyMessage = async (req, res) => {
     try {
         const mand = req.user.id;
         const { noi_dung } = req.body;
@@ -288,28 +287,29 @@ async function sendMyMessage(req, res) {
         console.error(err);
         res.status(500).json({ message: err.message });
     }
-}
+};
 
+// --- ADMIN APIS (EXPORT TRỰC TIẾP) ---
 
-async function getSessions(req, res) {
+exports.getSessions = async (req, res) => {
     try {
         const sessions = await chatModel.getSessions();
         res.json({ sessions });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
-}
+};
 
-async function getSessionMessages(req, res) {
+exports.getSessionMessages = async (req, res) => {
     try {
         const messages = await chatModel.getSessionMessages(req.params.id);
         res.json({ sessionId: req.params.id, messages });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
-}
+};
 
-async function adminSendMessage(req, res) {
+exports.adminSendMessage = async (req, res) => {
     try {
         const { noi_dung } = req.body;
         if (!noi_dung?.trim()) {
@@ -326,22 +326,13 @@ async function adminSendMessage(req, res) {
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
-}
+};
 
-async function closeSession(req, res) {
+exports.closeSession = async (req, res) => {
     try {
         await chatModel.closeSession(req.params.id);
         res.json({ message: 'Đã đóng phiên chat.' });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
-}
-
-module.exports = {
-    getMyMessages,
-    sendMyMessage,
-    getSessions,
-    getSessionMessages,
-    adminSendMessage,
-    closeSession,
 };

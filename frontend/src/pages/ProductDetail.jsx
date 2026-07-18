@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { orderAPI, productAPI, subscriptionAPI } from '../services/api';
+import { orderAPI, productAPI, reviewAPI, subscriptionAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { pickProductImage } from '../utils/marketImages';
@@ -18,6 +18,13 @@ function ReviewItem({ review }) {
       </div>
       <p className="mt-1 text-label-sm text-on-surface-variant">{review.ngay_tao ? new Date(review.ngay_tao).toLocaleDateString('vi-VN') : ''}</p>
       <p className="mt-3 text-body-md font-body-md text-on-surface-variant leading-relaxed">{review.noi_dung || 'Không có nhận xét thêm.'}</p>
+
+      {review.phan_hoi && (
+        <div className="mt-3 rounded-xl bg-primary-fixed/30 p-3">
+          <p className="text-label-xs font-bold text-primary">Phản hồi từ cửa hàng</p>
+          <p className="mt-1 text-body-md text-on-surface">{review.phan_hoi}</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -52,7 +59,7 @@ export default function ProductDetail() {
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([productAPI.getById(id), productAPI.getReviews(id)])
+    Promise.all([productAPI.getById(id), reviewAPI.getByProduct(id)])
       .then(([productData, reviewData]) => {
         const next = productData.product;
         setProduct(next);
@@ -119,19 +126,19 @@ export default function ProductDetail() {
     try { await addToCart(product.ma_san_pham, quantity); navigate('/cart'); } catch { }
   };
 
-  const handleReviewSubmit = async event => {
-    event.preventDefault();
-    if (!user || user.role !== 'buyer') return navigate('/login');
-    setSavingReview(true); setReviewMessage('');
-    try {
-      await productAPI.createReview({ ma_san_pham: product.ma_san_pham, ma_don_hang: null, so_sao: reviewForm.so_sao, noi_dung: reviewForm.noi_dung });
-      const reviewData = await productAPI.getReviews(id);
-      setReviews(reviewData.reviews || []);
-      setReviewForm({ so_sao: 5, noi_dung: '' });
-      setReviewMessage('Đánh giá của bạn đã được ghi nhận.');
-    } catch (err) { setReviewMessage(err.message || 'Không thể gửi đánh giá.'); }
-    finally { setSavingReview(false); }
-  };
+ const handleReviewSubmit = async event => {
+  event.preventDefault();
+  if (!user || user.role !== 'buyer') return navigate('/login');
+  setSavingReview(true); setReviewMessage('');
+  try {
+    await reviewAPI.create({ ma_san_pham: product.ma_san_pham, ma_don_hang: null, so_sao: reviewForm.so_sao, noi_dung: reviewForm.noi_dung });
+    const reviewData = await reviewAPI.getByProduct(id);
+    setReviews(reviewData.reviews || []);
+    setReviewForm({ so_sao: 5, noi_dung: '' });
+    setReviewMessage('Đánh giá của bạn đã được ghi nhận.');
+  } catch (err) { setReviewMessage(err.message || 'Không thể gửi đánh giá.'); }
+  finally { setSavingReview(false); }
+};
 
   const handlePreorder = async event => {
     event.preventDefault();
@@ -299,38 +306,66 @@ export default function ProductDetail() {
         {/* Pre-order & Subscription */}
         <section className="grid gap-xl lg:grid-cols-2">
           <div className="bg-surface rounded-3xl p-lg md:p-xl border border-outline-variant organic-shadow">
-            <h2 className="text-title-md font-title-md text-on-surface mb-lg">Đặt trước sản phẩm</h2>
-            <form onSubmit={handlePreorder} className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <input type="number" min="1" value={preorderForm.quantity} onChange={e => setPreorderForm({ ...preorderForm, quantity: Number(e.target.value) || 1 })} className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none" placeholder="Số lượng" />
-                <input type="date" value={preorderForm.ngay_giao_du_kien} onChange={e => setPreorderForm({ ...preorderForm, ngay_giao_du_kien: e.target.value })} min={new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0]} max={new Date(Date.now() + 60 * 86400000).toISOString().split('T')[0]} className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
-              </div>
-              <p className="text-label-sm text-on-surface-variant">Chọn trong khoảng 3–60 ngày tới. Nếu không chọn, hệ thống sẽ tự đặt ngày giao dự kiến sau 7 ngày.</p>
-              <textarea rows={3} value={preorderForm.dia_chi_giao} onChange={e => setPreorderForm({ ...preorderForm, dia_chi_giao: e.target.value })} placeholder="Địa chỉ giao hàng" className="bg-surface border border-outline-variant rounded-xl w-full resize-none px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
-              <input value={preorderForm.ghi_chu} onChange={e => setPreorderForm({ ...preorderForm, ghi_chu: e.target.value })} placeholder="Ghi chú thêm" className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md w-full focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
-              {preorderMessage && <p className="text-body-md text-secondary">{preorderMessage}</p>}
-              <button disabled={savingPreorder} className="w-full bg-secondary text-on-secondary rounded-xl px-lg py-3 font-bold transition-all active:scale-95">{savingPreorder ? 'Đang tạo...' : 'Đặt trước'}</button>
-            </form>
-          </div>
+  <h2 className="text-title-md font-title-md text-on-surface mb-lg">Đặt trước sản phẩm</h2>
+  <form onSubmit={handlePreorder} className="space-y-4">
+    <div className="grid gap-4 sm:grid-cols-2">
+      <div className="flex flex-col gap-1.5">
+        <label className="text-label-sm font-bold text-on-surface-variant">Số lượng ({product.don_vi})</label>
+        <input type="number" min="1" value={preorderForm.quantity} onChange={e => setPreorderForm({ ...preorderForm, quantity: Number(e.target.value) || 1 })} className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none" placeholder={`Số lượng (${product.don_vi})`} />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-label-sm font-bold text-on-surface-variant">Ngày nhận hàng dự kiến</label>
+        <input type="date" value={preorderForm.ngay_giao_du_kien} onChange={e => setPreorderForm({ ...preorderForm, ngay_giao_du_kien: e.target.value })} min={new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0]} max={new Date(Date.now() + 60 * 86400000).toISOString().split('T')[0]} className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+      </div>
+    </div>
+    <p className="text-label-sm text-on-surface-variant">Chọn trong khoảng 3–60 ngày tới. Nếu không chọn, hệ thống sẽ tự đặt ngày giao dự kiến sau 7 ngày.</p>
+    <div className="flex flex-col gap-1.5">
+      <label className="text-label-sm font-bold text-on-surface-variant">Địa chỉ giao hàng</label>
+      <textarea rows={3} value={preorderForm.dia_chi_giao} onChange={e => setPreorderForm({ ...preorderForm, dia_chi_giao: e.target.value })} placeholder="Ví dụ: 12 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP.HCM" className="bg-surface border border-outline-variant rounded-xl w-full resize-none px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+    </div>
+    <div className="flex flex-col gap-1.5">
+      <label className="text-label-sm font-bold text-on-surface-variant">Ghi chú (không bắt buộc)</label>
+      <input value={preorderForm.ghi_chu} onChange={e => setPreorderForm({ ...preorderForm, ghi_chu: e.target.value })} placeholder="Ví dụ: giao giờ hành chính, gọi trước khi giao..." className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md w-full focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+    </div>
+    {preorderMessage && <p className="text-body-md text-secondary">{preorderMessage}</p>}
+    <button disabled={savingPreorder} className="w-full bg-secondary text-on-secondary rounded-xl px-lg py-3 font-bold transition-all active:scale-95">{savingPreorder ? 'Đang tạo...' : 'Đặt trước'}</button>
+  </form>
+</div>
 
           <div className="bg-surface rounded-3xl p-lg md:p-xl border border-outline-variant organic-shadow">
-            <h2 className="text-title-md font-title-md text-on-surface mb-lg">Giao định kỳ</h2>
-            <form onSubmit={handleSubscription} className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-3">
-                <input type="number" min="1" value={subscriptionForm.quantity} onChange={e => setSubscriptionForm({ ...subscriptionForm, quantity: Number(e.target.value) || 1 })} className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
-                <select value={subscriptionForm.tan_suat_giao} onChange={e => setSubscriptionForm({ ...subscriptionForm, tan_suat_giao: e.target.value })} className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none">
-                  <option value="hang_tuan">Hàng tuần</option>
-                  <option value="hai_tuan">Hai tuần</option>
-                  <option value="hang_thang">Hàng tháng</option>
-                </select>
-                <input type="number" min="2" value={subscriptionForm.so_ky_giao} onChange={e => setSubscriptionForm({ ...subscriptionForm, so_ky_giao: Number(e.target.value) || 2 })} className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
-              </div>
-              <input type="date" value={subscriptionForm.ngay_bat_dau} onChange={e => setSubscriptionForm({ ...subscriptionForm, ngay_bat_dau: e.target.value })} className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md w-full focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
-              <textarea rows={3} value={subscriptionForm.dia_chi_giao} onChange={e => setSubscriptionForm({ ...subscriptionForm, dia_chi_giao: e.target.value })} placeholder="Địa chỉ giao hàng" className="bg-surface border border-outline-variant rounded-xl w-full resize-none px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
-              {subscriptionMessage && <p className="text-body-md text-primary">{subscriptionMessage}</p>}
-              <button disabled={savingSubscription} className="w-full bg-primary text-on-primary rounded-xl px-lg py-3 font-bold transition-all active:scale-95">{savingSubscription ? 'Đang lưu...' : 'Đăng ký định kỳ'}</button>
-            </form>
-          </div>
+  <h2 className="text-title-md font-title-md text-on-surface mb-lg">Giao định kỳ</h2>
+  <form onSubmit={handleSubscription} className="space-y-4">
+    <div className="grid gap-4 sm:grid-cols-3">
+      <div className="flex flex-col gap-1.5">
+        <label className="text-label-sm font-bold text-on-surface-variant">Số lượng / lần giao</label>
+        <input type="number" min="1" value={subscriptionForm.quantity} onChange={e => setSubscriptionForm({ ...subscriptionForm, quantity: Number(e.target.value) || 1 })} placeholder={`Số lượng (${product.don_vi})`} className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-label-sm font-bold text-on-surface-variant">Chu kỳ giao</label>
+        <select value={subscriptionForm.tan_suat_giao} onChange={e => setSubscriptionForm({ ...subscriptionForm, tan_suat_giao: e.target.value })} className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+          <option value="hang_tuan">Hàng tuần</option>
+          <option value="hai_tuan">Hai tuần</option>
+          <option value="hang_thang">Hàng tháng</option>
+        </select>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-label-sm font-bold text-on-surface-variant">Tổng số lần giao</label>
+        <input type="number" min="2" value={subscriptionForm.so_ky_giao} onChange={e => setSubscriptionForm({ ...subscriptionForm, so_ky_giao: Number(e.target.value) || 2 })} placeholder="Số lần giao" className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+      </div>
+    </div>
+    <p className="text-label-sm text-on-surface-variant">Ví dụ: chọn "Hàng tuần" và nhập 4 lần → hệ thống sẽ giao liên tiếp trong 4 tuần.</p>
+    <div className="flex flex-col gap-1.5">
+      <label className="text-label-sm font-bold text-on-surface-variant">Ngày bắt đầu giao lần đầu tiên</label>
+      <input type="date" value={subscriptionForm.ngay_bat_dau} onChange={e => setSubscriptionForm({ ...subscriptionForm, ngay_bat_dau: e.target.value })} className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md w-full focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+    </div>
+    <div className="flex flex-col gap-1.5">
+      <label className="text-label-sm font-bold text-on-surface-variant">Địa chỉ giao hàng</label>
+      <textarea rows={3} value={subscriptionForm.dia_chi_giao} onChange={e => setSubscriptionForm({ ...subscriptionForm, dia_chi_giao: e.target.value })} placeholder="Ví dụ: 12 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP.HCM" className="bg-surface border border-outline-variant rounded-xl w-full resize-none px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+    </div>
+    {subscriptionMessage && <p className="text-body-md text-primary">{subscriptionMessage}</p>}
+    <button disabled={savingSubscription} className="w-full bg-primary text-on-primary rounded-xl px-lg py-3 font-bold transition-all active:scale-95">{savingSubscription ? 'Đang lưu...' : 'Đăng ký định kỳ'}</button>
+  </form>
+</div>
         </section>
 
         {/* Reviews */}

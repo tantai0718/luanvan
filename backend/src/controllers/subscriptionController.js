@@ -42,7 +42,6 @@ const mapSubscription = (subscription) => ({
   },
 });
 
-// POST /api/subscriptions - Tạo subscription mới
 exports.create = async (req, res) => {
   try {
     await subscriptionModel.ensureSubscriptionTable();
@@ -171,7 +170,6 @@ exports.cancel = async (req, res) => {
   }
 };
 
-// GET /api/admin/subscriptions - Lấy tất cả subscription (admin)
 exports.adminGetAll = async (req, res) => {
   try {
     await subscriptionModel.ensureSubscriptionTable();
@@ -186,7 +184,6 @@ exports.adminGetAll = async (req, res) => {
   }
 };
 
-// PATCH /api/admin/subscriptions/:id/deliver 
 exports.adminDeliver = async (req, res) => {
   try {
     await subscriptionModel.ensureSubscriptionTable();

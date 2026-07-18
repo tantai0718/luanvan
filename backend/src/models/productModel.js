@@ -104,30 +104,6 @@ async function getProductById(id) {
     return { ...mapProduct(rows[0]), images: imageUrls, con_hoat_dong: rows[0].trang_thai === 1 };
 }
 
-async function getReviews(masp) {
-    const [rows] = await db.query(
-        `SELECT dg.madg, dg.so_sao,
-            dg.binh_luan     AS noi_dung,
-            dg.ngay_danh_gia AS ngay_tao,
-            nd.ho_ten        AS ten_nguoi_mua
-     FROM danh_gia dg
-     LEFT JOIN nguoi_dung nd ON nd.mand = dg.mand
-     WHERE dg.masp = ?
-     ORDER BY dg.ngay_danh_gia DESC`,
-        [masp]
-    );
-    return rows;
-}
-
-async function createReview({ masp, mand, so_sao, binh_luan = '' }) {
-    const [result] = await db.query(
-        `INSERT INTO danh_gia (mand, masp, so_sao, binh_luan, ngay_danh_gia)
-     VALUES (?, ?, ?, ?, NOW())`,
-        [mand, masp, Math.min(5, Math.max(1, Number(so_sao))), binh_luan]
-    );
-    return result.insertId;
-}
-
 async function listCategories() {
     const [rows] = await db.query(
         `SELECT madm AS id, ten_danh_muc AS name, mo_ta FROM danh_muc WHERE trang_thai = 1`
@@ -201,13 +177,6 @@ async function getActiveSeasons() {
     return rows;
 }
  
-async function getActiveSeasons() {
-    const [rows] = await db.query(
-        `SELECT mamv, ten_mua FROM mua_vu WHERE trang_thai = 1`
-    );
-    return rows;
-}
- 
 
 async function findProductsForChat({ keywords = [], seasonIds = [], currentMonthFallback = false } = {}, limit = 8) {
     if (!keywords.length && !seasonIds.length && currentMonthFallback) {
@@ -266,9 +235,9 @@ async function searchProductsForChat(keyword, limit = 6) {
     if (!keyword) return [];
     return findProductsForChat({ keywords: [keyword] }, limit);
 }
- 
+
 module.exports = {
-    listProducts, listAllProducts, getProductById, getReviews, createReview,
+    listProducts, listAllProducts, getProductById,
     listCategories, createProduct, updateProduct, toggleProduct,
     searchProductsForChat, getActiveSeasons, findProductsForChat,
 };

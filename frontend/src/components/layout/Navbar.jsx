@@ -1,13 +1,151 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
+import { notificationAPI } from '../../services/api';
 
 const links = [
   { to: '/', label: 'Trang chủ' },
   { to: '/products', label: 'Sản phẩm' },
   { to: '/about', label: 'Về chúng tôi' },
 ];
+
+const loaiLabelMap = {
+  he_thong: { label: 'Hệ thống', color: 'bg-slate-100 text-slate-600' },
+  khuyen_mai: { label: 'Khuyến mãi', color: 'bg-amber-50 text-amber-700' },
+  don_hang: { label: 'Đơn hàng', color: 'bg-[#e8f5ee] text-[#1a7a4a]' },
+};
+
+function timeAgo(dateStr) {
+  const diffMs = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'Vừa xong';
+  if (mins < 60) return `${mins} phút trước`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} giờ trước`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} ngày trước`;
+  return new Date(dateStr).toLocaleDateString('vi-VN');
+}
+
+function NotificationBell() {
+  const [open, setOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unread, setUnread] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  const fetchNotifications = () => {
+    setLoading(true);
+    notificationAPI.getAll()
+      .then(data => {
+        setNotifications(data.notifications || []);
+        setUnread(Number(data.chua_doc || 0));
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 60000); // poll mỗi 60s
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleOpen = () => {
+    setOpen(prev => !prev);
+    if (!open) fetchNotifications();
+  };
+
+  const handleMarkRead = async (matb) => {
+    setNotifications(prev => prev.map(n => n.matb === matb ? { ...n, da_doc: 1 } : n));
+    setUnread(prev => Math.max(0, prev - 1));
+    try {
+      await notificationAPI.markRead(matb);
+    } catch {}
+  };
+
+  const handleMarkAllRead = async () => {
+    setNotifications(prev => prev.map(n => ({ ...n, da_doc: 1 })));
+    setUnread(0);
+    try {
+      await notificationAPI.markAllRead();
+    } catch {}
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={handleOpen}
+        className="relative hover:bg-surface-container-low p-2 rounded-full transition-all active:scale-95"
+      >
+        <span className="material-symbols-outlined text-on-surface-variant">notifications</span>
+        {unread > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-secondary text-white text-[10px] font-bold flex items-center justify-center px-1">
+            {unread > 9 ? '9+' : unread}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-11 z-20 w-80 max-h-[420px] overflow-y-auto rounded-xl border border-outline-variant bg-surface-container-lowest shadow-lg">
+            <div className="flex items-center justify-between px-4 py-3 bg-surface-container-low border-b border-outline-variant sticky top-0">
+              <p className="font-semibold text-on-surface text-body-md">Thông báo</p>
+              {unread > 0 && (
+                <button
+                  onClick={handleMarkAllRead}
+                  className="text-xs font-semibold text-primary hover:underline"
+                >
+                  Đánh dấu tất cả đã đọc
+                </button>
+              )}
+            </div>
+
+            {loading ? (
+              <div className="p-6 text-center text-sm text-on-surface-variant">Đang tải...</div>
+            ) : notifications.length ? (
+              <div className="divide-y divide-outline-variant/60">
+                {notifications.map(n => {
+                  const meta = loaiLabelMap[n.loai] || loaiLabelMap.he_thong;
+                  return (
+                    <button
+                      key={n.matb}
+                      onClick={() => !n.da_doc && handleMarkRead(n.matb)}
+                      className={`block w-full text-left px-4 py-3 hover:bg-surface-container transition-colors ${!n.da_doc ? 'bg-[#f3f9f5]' : ''}`}
+                    >
+                      <div className="flex items-start gap-2">
+                        {!n.da_doc && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-secondary" />}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className={`text-sm truncate ${!n.da_doc ? 'font-semibold text-on-surface' : 'font-medium text-on-surface-variant'}`}>
+                              {n.tieu_de}
+                            </p>
+                          </div>
+                          <p className="mt-0.5 text-xs leading-5 text-on-surface-variant line-clamp-2">{n.noi_dung}</p>
+                          <div className="mt-1.5 flex items-center gap-2">
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${meta.color}`}>
+                              {meta.label}
+                            </span>
+                            <span className="text-[11px] text-on-surface-variant/70">{timeAgo(n.ngay_tao)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="p-8 text-center text-sm text-on-surface-variant">
+                Bạn chưa có thông báo nào.
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -78,6 +216,8 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center gap-3">
+            {user && <NotificationBell />}
+
             {user?.role === 'buyer' && (
               <Link to="/cart" className="hover:bg-surface-container-low p-2 rounded-full transition-all active:scale-95 relative">
                 <span className="material-symbols-outlined text-on-surface-variant">shopping_cart</span>

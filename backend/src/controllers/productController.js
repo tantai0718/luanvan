@@ -32,31 +32,6 @@ async function getProductById(req, res) {
     }
 }
 
-async function getProductReviews(req, res) {
-    try {
-        const reviews = await productModel.getReviews(req.params.id);
-        res.json({ reviews });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-}
-
-async function createReview(req, res) {
-    try {
-        const { ma_san_pham, so_sao, noi_dung } = req.body;
-        if (!ma_san_pham || !so_sao) return res.status(400).json({ message: 'Thiếu thông tin đánh giá' });
-        const id = await productModel.createReview({
-            masp: ma_san_pham,
-            mand: req.user.id,
-            so_sao,
-            binh_luan: noi_dung,
-        });
-        res.status(201).json({ message: 'Đánh giá thành công', id });
-    } catch (err) {
-        res.status(400).json({ message: err.message });
-    }
-}
-
 async function getCategories(req, res) {
     try {
         const categories = await productModel.listCategories();
@@ -182,4 +157,8 @@ async function uploadImage(req, res) {
 }
 
 
-module.exports = { getProducts, getProductById, getProductReviews, createReview, getCategories, createProduct, updateProduct, toggleProduct, deleteProduct, uploadImage };
+
+module.exports = {
+    getProducts, getProductById, getCategories,
+    createProduct, updateProduct, toggleProduct, deleteProduct, uploadImage,
+};
