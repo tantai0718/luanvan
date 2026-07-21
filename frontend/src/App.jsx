@@ -23,6 +23,9 @@ import ChatBox from './pages/ChatBox';
 import AdminSeasons from './pages/admin/Seasons';
 import AdminReviews from './pages/admin/Reviews';
 import AdminNotifications from './pages/admin/Notifications';
+import AdminArticles from './pages/admin/Articles';
+import Articles from './pages/Articles';
+import ArticleDetail from './pages/ArticleDetail';
 import AnnouncementBanner from './components/layout/AnnouncementBanner';
 
 function Spin() { return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin"/></div>; }
@@ -63,6 +66,8 @@ function AppRoutes() {
       <Route path="/products" element={<PL><Products/></PL>}/>
       <Route path="/products/:id" element={<PL><ProductDetail/></PL>}/>
       <Route path="/about" element={<PL><About/></PL>}/>
+      <Route path="/articles" element={<PL><Articles/></PL>}/>
+      <Route path="/articles/:id" element={<PL><ArticleDetail/></PL>}/>
       <Route path="/login"    element={<Guest><Login/></Guest>}/>
       <Route path="/register" element={<Guest><Register/></Guest>}/>
       <Route path="/profile" element={<Private><PL><Profile/></PL></Private>}/>
@@ -79,6 +84,7 @@ function AppRoutes() {
       <Route path="/admin/orders"     element={<AP><AdminOrders/></AP>}/>
       <Route path="/admin/reviews" element={<AP><AdminReviews/></AP>}/>
       <Route path="/admin/notifications" element={<AP><AdminNotifications/></AP>}/>
+      <Route path="/admin/articles" element={<AP><AdminArticles/></AP>}/>
       <Route path="*" element={<Navigate to="/"/>}/>
     </Routes>
   );

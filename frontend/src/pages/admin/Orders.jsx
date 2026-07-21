@@ -93,9 +93,16 @@ function OrderDetailModal({ detail, orderId, onClose, onAdvanceStatus, onCancel,
               </h4>
               <Btn size="sm" onClick={() => onConfirmBankingPayment(orderId)}>Xác nhận đã nhận tiền</Btn>
             </div>
+            {(detail.order.tien_coc || 0) > 0 && (
+              <div className="text-sm text-amber-900 space-y-1 bg-amber-100/50 rounded-lg p-3">
+                <p>💰 Tổng đơn: <strong>{formatCurrency(detail.order.tong_thanh_toan)}</strong></p>
+                <p className="font-bold text-amber-950">Cần nhận qua QR: {formatCurrency(detail.order.tien_coc)}</p>
+                <p>Còn lại (COD): {formatCurrency(detail.order.tong_thanh_toan - detail.order.tien_coc)}</p>
+              </div>
+            )}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-amber-950">
-              <div>Ngân hàng: <span className="block font-bold text-base">{detail.order.banking_info?.bank_name || 'Techcombank'}</span></div>
-              <div>Số tài khoản: <span className="block font-bold text-base tracking-wider">{detail.order.banking_info?.account_number || '4718072003'}</span></div>
+              <div>Ngân hàng: <span className="block font-bold text-base">{detail.order.banking_info?.bank_name || 'MB Bank'}</span></div>
+              <div>Số tài khoản: <span className="block font-bold text-base tracking-wider">{detail.order.banking_info?.account_number || '2210118072003'}</span></div>
               <div>Chủ tài khoản: <span className="block font-bold text-base uppercase">{detail.order.banking_info?.account_holder || 'Vo Ngoc Tan Tai'}</span></div>
               <div>Nội dung CK: <span className="inline-block bg-amber-200 px-2 py-1 font-mono font-bold text-base rounded mt-1">{'TT' + orderId}</span></div>
             </div>

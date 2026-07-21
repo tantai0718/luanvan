@@ -205,7 +205,7 @@ export default function AdminProducts() {
     setProducts(prev => prev.filter(item => item.ma_san_pham !== id));
   };
 
-  const exportExcel = () => {
+  const exportExcel = async () => {
     const data = products.map((p, i) => ({
       'STT': i + 1,
       'Tên sản phẩm': p.ten_san_pham,
@@ -218,7 +218,25 @@ export default function AdminProducts() {
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'San pham');
-    XLSX.writeFile(wb, 'san_pham.xlsx');
+
+    const now = new Date();
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const yyyy = now.getFullYear();
+    const fileName = `san_pham_${dd}-${mm}-${yyyy}.xlsx`;
+
+    if (window.showSaveFilePicker) {
+      try {
+        const handle = await window.showSaveFilePicker({ suggestedName: fileName, types: [{ description: 'Excel file', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }] });
+        const bin = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([bin], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+      } catch (e) { if (e.name !== 'AbortError') alert('Không thể lưu file.'); }
+    } else {
+      XLSX.writeFile(wb, fileName);
+    }
   };
 
   return (

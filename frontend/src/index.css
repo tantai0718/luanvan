@@ -13,7 +13,7 @@ html {
 }
 
 body {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', 'Inter', 'Segoe UI', sans-serif;
   background-color: #f8f9ff;
   color: #121c28;
   -webkit-font-smoothing: antialiased;
@@ -87,4 +87,10 @@ input[type="number"]::-webkit-outer-spin-button {
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: #bfc9c1;
   border-radius: 10px;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }

@@ -5,6 +5,7 @@ const http = require("http");
 const path = require("path");
 const { Server } = require("socket.io");
 const routes = require("./routes");
+const sepayController = require("./controllers/sepayController");
 
 const app = express();
 const server = http.createServer(app);
@@ -38,6 +39,13 @@ app.use(
     credentials: true,
   }),
 );
+
+app.post('/api/webhook/sepay', express.raw({ type: 'application/json' }), (req, res, next) => {
+  req.rawBody = req.body.toString();
+  try { req.body = JSON.parse(req.rawBody); } catch {}
+  next();
+}, sepayController.webhook);
+
 app.use(express.json({ limit: "100mb" }));
 app.use(express.urlencoded({ extended: true, limit: "100mb" }));
 app.use("/upload", express.static(path.join(__dirname, "..", "upload")));
@@ -46,6 +54,14 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use((req, res, next) => {
+  const originalJson = res.json.bind(res);
+  res.json = (data) => {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    return originalJson(data);
+  };
+  next();
+});
 
 app.use("/api", routes);
 app.get("/", (req, res) =>
@@ -59,16 +75,8 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: err.message || "Lỗi server" });
 });
 
-
-
-
-
-
-
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`\n🚀 Backend: http://localhost:${PORT}`);
   console.log(`📡 API:     http://localhost:${PORT}/api\n`);
 });
-
-

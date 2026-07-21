@@ -113,8 +113,8 @@ async function createOrder({
       nguoi_dung?.email || "",
       sdt_nguoi_nhan || nguoi_dung?.sdt || "",
       tong_tien,
-      isBanking ? tong_tien : 0,
-      isBanking ? "da_thanh_toan" : "chua_thanh_toan",
+      isBanking ? 0 : tong_tien,
+      "chua_thanh_toan",
       dia_chi_giao,
       ghi_chu || null,
     ],
@@ -134,7 +134,7 @@ async function createOrder({
   await db.query(
     `INSERT INTO thanh_toan (madh, so_tien, phuong_thuc, trang_thai, ngay_thanh_toan)
      VALUES (?, ?, ?, ?, NOW())`,
-    [madh, tong_tien, mapPaymentMethod(phuong_thuc), isBanking ? "da_thanh_toan" : "cho_thanh_toan"],
+     [madh, tong_tien, mapPaymentMethod(phuong_thuc), "cho_thanh_toan"],
   );
   for (const item of items) {
     await db.query(
@@ -165,6 +165,7 @@ async function createPreorder({
   nguoi_dung,
   ten_nguoi_nhan = '',
   sdt_nguoi_nhan = '',
+  tien_coc = 0,
 }) {
   const [[sp]] = await db.query(
     "SELECT ten_san_pham FROM san_pham WHERE masp = ? AND trang_thai = 1",
@@ -180,13 +181,14 @@ async function createPreorder({
   }
   const tong_tien = tong_hang - tien_giam + phi_ship;
   const isBanking = phuong_thuc === "banking";
+  const actualDeposit = Math.min(Number(tien_coc) || 0, tong_tien);
 
   const [dhResult] = await db.query(
     `INSERT INTO don_hang
        (mand, tien_giam, ten_nguoi_nhan, email_nguoi_nhan, sdt_nguoi_nhan,
-        loai_don_hang, tong_tien, tong_da_thanh_toan, trang_thai,
+        loai_don_hang, tong_tien, tong_da_thanh_toan, tien_coc, trang_thai,
         trang_thai_thanh_toan, dia_chi_giao, ghi_chu, ngay_giao_du_kien, ngay_dat)
-     VALUES (?, ?, ?, ?, ?, 'dat_truoc', ?, ?, 'cho_xac_nhan', ?, ?, ?,
+     VALUES (?, ?, ?, ?, ?, 'dat_truoc', ?, ?, ?, 'cho_xac_nhan', ?, ?, ?,
        CASE
          WHEN ? IS NULL THEN DATE_ADD(NOW(), INTERVAL 7 DAY)
          WHEN ? < DATE_ADD(NOW(), INTERVAL 3 DAY) THEN DATE_ADD(NOW(), INTERVAL 3 DAY)
@@ -201,8 +203,9 @@ async function createPreorder({
       nguoi_dung?.email || "",
       sdt_nguoi_nhan || nguoi_dung?.sdt || "",
       tong_tien,
-      isBanking ? tong_tien : 0,
-      isBanking ? "da_thanh_toan" : "chua_thanh_toan",
+      isBanking ? 0 : tong_tien,
+      actualDeposit,
+      isBanking ? "chua_thanh_toan" : "da_thanh_toan",
       dia_chi_giao,
       ghi_chu || null,
       ngay_giao_du_kien || null,
@@ -221,15 +224,15 @@ async function createPreorder({
   await db.query(
     `INSERT INTO thanh_toan (madh, so_tien, phuong_thuc, trang_thai, ngay_thanh_toan)
      VALUES (?, ?, ?, ?, NOW())`,
-    [madh, tong_tien, mapPaymentMethod(phuong_thuc), isBanking ? "da_thanh_toan" : "cho_thanh_toan"],
+     [madh, tong_tien, mapPaymentMethod(phuong_thuc), isBanking ? "cho_thanh_toan" : "da_thanh_toan"],
   );
 
-  return { madh, tong_tien };
+  return { madh, tong_tien, tien_coc: actualDeposit };
 }
 
 async function getOrdersByUser(mand) {
   const [rows] = await db.query(
-    `SELECT madh, loai_don_hang, tong_tien, tien_giam, trang_thai,
+    `SELECT madh, loai_don_hang, tong_tien, tien_giam, tien_coc, trang_thai,
             trang_thai_thanh_toan, dia_chi_giao, ghi_chu, ngay_dat,ngay_giao_du_kien,ngay_giao_thuc_te
      FROM don_hang WHERE mand = ? ORDER BY ngay_dat DESC`,
     [mand],
@@ -368,6 +371,7 @@ async function getAllOrders({
       dh.loai_don_hang,
       dh.tong_tien,
       dh.tien_giam,
+      dh.tien_coc,
       dh.trang_thai,
       dh.trang_thai_thanh_toan,
       dh.ngay_dat,
@@ -395,6 +399,7 @@ function mapOrder(row) {
     loai_don: row.loai_don_hang,
     tong_thanh_toan: Number(row.tong_tien || 0),
     tong_da_thanh_toan: Number(row.tong_da_thanh_toan || 0),
+    tien_coc: Number(row.tien_coc || 0),
     giam_gia: Number(row.tien_giam || 0),
     trang_thai: row.trang_thai,
     trang_thai_tt: row.trang_thai_thanh_toan === "da_thanh_toan" ? "da_tt" : "chua_tt",
@@ -413,10 +418,16 @@ function mapOrder(row) {
 }
 
 async function updatePaymentSuccess(madh, { ma_giao_dich = '', du_lieu_cong = '' }) {
+  const [[dh]] = await db.query(
+    'SELECT tien_coc FROM don_hang WHERE madh = ?', [madh]
+  );
+  const depositAmount = dh ? Number(dh.tien_coc || 0) : 0;
+  const amountPaid = depositAmount > 0 ? depositAmount : undefined;
   await db.query(
-    `UPDATE don_hang SET trang_thai_thanh_toan = 'da_thanh_toan',
-     tong_da_thanh_toan = tong_tien WHERE madh = ?`,
-    [madh],
+    `UPDATE don_hang SET trang_thai = 'da_xac_nhan',
+     trang_thai_thanh_toan = 'da_thanh_toan',
+     tong_da_thanh_toan = ? WHERE madh = ?`,
+    [amountPaid || 0, madh],
   );
   await db.query(
     `UPDATE thanh_toan SET trang_thai = 'thanh_cong', ma_giao_dich = ?,
@@ -433,10 +444,15 @@ async function updateBankingPayment(madh, hinh_anh = '') {
 }
 
 async function confirmBankingPayment(madh) {
+  const [[dh]] = await db.query(
+    'SELECT tien_coc FROM don_hang WHERE madh = ?', [madh]
+  );
+  const depositAmount = dh ? Number(dh.tien_coc || 0) : 0;
+  const amountPaid = depositAmount > 0 ? depositAmount : 0;
   await db.query(
     `UPDATE don_hang SET trang_thai_thanh_toan = 'da_thanh_toan',
-     tong_da_thanh_toan = tong_tien WHERE madh = ?`,
-    [madh],
+     tong_da_thanh_toan = ? WHERE madh = ?`,
+    [amountPaid, madh],
   );
   await db.query(
     `UPDATE thanh_toan SET trang_thai = 'thanh_cong',

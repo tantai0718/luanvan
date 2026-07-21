@@ -71,14 +71,14 @@ module.exports = {
         "sm": "8px"
       },
       fontFamily: {
-        "headline-lg-mobile": ["Plus Jakarta Sans"],
-        "display-lg": ["Plus Jakarta Sans"],
-        "body-md": ["Plus Jakarta Sans"],
-        "title-md": ["Plus Jakarta Sans"],
-        "headline-lg": ["Plus Jakarta Sans"],
-        "label-xs": ["Work Sans"],
-        "body-lg": ["Plus Jakarta Sans"],
-        "label-sm": ["Work Sans"]
+        "headline-lg-mobile": ["Plus Jakarta Sans", "Inter", "sans-serif"],
+        "display-lg": ["Plus Jakarta Sans", "Inter", "sans-serif"],
+        "body-md": ["Plus Jakarta Sans", "Inter", "sans-serif"],
+        "title-md": ["Plus Jakarta Sans", "Inter", "sans-serif"],
+        "headline-lg": ["Plus Jakarta Sans", "Inter", "sans-serif"],
+        "label-xs": ["Work Sans", "Inter", "sans-serif"],
+        "body-lg": ["Plus Jakarta Sans", "Inter", "sans-serif"],
+        "label-sm": ["Work Sans", "Inter", "sans-serif"]
       },
       fontSize: {
         "headline-lg-mobile": ["24px", { lineHeight: "1.3", fontWeight: "700" }],

@@ -146,3 +146,13 @@ export const seasonAPI = {
   addProduct: (id, body) => api.post(`/admin/seasons/${id}/products`, body),
   removeProduct: (id, masp) => api.delete(`/admin/seasons/${id}/products/${masp}`),
 };
+
+export const baiVietAPI = {
+  getAll: (query = '') => api.get(`/articles${query}`),
+  getById: id => api.get(`/articles/${id}`),
+  adminAll: (query = '') => api.get(`/articles/admin/all${query}`),
+  create: body => api.post('/articles/admin', body),
+  update: (id, body) => api.put(`/articles/admin/${id}`, body),
+  remove: id => api.delete(`/articles/admin/${id}`),
+  importUrl: url => api.post('/articles/admin/import-url', { url }),
+};

@@ -12,6 +12,7 @@ const menuItems = [
   { path: '/admin/orders', icon: 'receipt_long', label: 'Đơn hàng' },
   { path: '/admin/reviews', icon: 'reviews', label: 'Đánh giá' },
   { path: '/admin/notifications', icon: 'campaign', label: 'Thông báo' },
+  { path: '/admin/articles', icon: 'article', label: 'Bài viết' },
 ];
 
 export default function AdminLayout({ children }) {

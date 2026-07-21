@@ -30,11 +30,13 @@ const frequencyMap = {
 
 const paymentLabelMap = {
   tien_mat: "💵 Tiền mặt khi nhận hàng (COD)",
+  banking: "🏦 Chuyển khoản ngân hàng",
   vnpay: "💳 VNPay",
 };
 
 const formatCurrency = (value) => `${Number(value || 0).toLocaleString("vi-VN")}₫`;
 const canCancelOrder = (status) => ["cho_xac_nhan", "da_xac_nhan"].includes(status);
+const hasDeposit = (order) => (order?.tien_coc || 0) > 0;
 
 // --- COMPONENT ORDERLIST ---
 export function OrderList() {
@@ -264,6 +266,7 @@ export function OrderDetail() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [canceling, setCanceling] = useState(false);
+  const [polling, setPolling] = useState(false);
   const success = searchParams.get("success");
 
   useEffect(() => {
@@ -274,6 +277,24 @@ export function OrderDetail() {
       .catch(() => setData(null))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!data?.order) return;
+    const order = data.order;
+    if (order.phuong_thuc_tt !== 'banking' || order.trang_thai_tt === 'da_tt' || order.trang_thai === 'da_huy') return;
+    setPolling(true);
+    const interval = setInterval(async () => {
+      try {
+        const refreshed = await orderAPI.getById(id);
+        setData(refreshed);
+        if (refreshed.order.trang_thai_tt === 'da_tt') {
+          clearInterval(interval);
+          setPolling(false);
+        }
+      } catch {}
+    }, 5000);
+    return () => { clearInterval(interval); setPolling(false); };
+  }, [data?.order?.trang_thai_tt, id]);
 
   const handleCancel = async () => {
     if (!data?.order || !canCancelOrder(data.order.trang_thai)) return;
@@ -426,6 +447,20 @@ export function OrderDetail() {
             <span className="font-bold text-slate-900">Tổng tiền thanh toán</span>
             <span className="text-2xl text-[#1a7a4a] font-bold">{formatCurrency(order.tong_thanh_toan)}</span>
           </div>
+          {hasDeposit(order) && order.phuong_thuc_tt === 'banking' && (
+            <>
+              <div className="flex justify-between text-amber-700 bg-amber-50 rounded-xl px-4 py-2.5">
+                <span className="font-semibold">Đã đặt cọc (QR)</span>
+                <span className="font-bold">{formatCurrency(order.tien_coc)}</span>
+              </div>
+              {order.tong_thanh_toan > order.tien_coc && (
+                <div className="flex justify-between text-slate-500">
+                  <span className="font-semibold text-slate-600">Còn lại (COD khi nhận hàng)</span>
+                  <span className="font-medium text-rose-600">{formatCurrency(order.tong_thanh_toan - order.tien_coc)}</span>
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -508,12 +543,31 @@ export function OrderDetail() {
 
         {order.phuong_thuc_tt === "banking" && order.trang_thai !== "da_huy" && (
           <div className="bg-amber-50/60 border border-amber-200 rounded-2xl p-6 shadow-sm">
-            <h3 className="text-base font-black text-amber-900 mb-4">⚡ Quét mã VietQR chuyển khoản nhanh</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-black text-amber-900">⚡ Quét mã QR chuyển khoản nhanh</h3>
+              {polling && <span className="text-xs font-medium text-amber-600 animate-pulse">🔄 Đang chờ xác nhận thanh toán...</span>}
+            </div>
+            {hasDeposit(order) && (
+              <div className="mb-4 bg-white/60 rounded-xl p-3 text-sm text-amber-800 space-y-1">
+                <p>💰 Tổng đơn: <strong>{formatCurrency(order.tong_thanh_toan)}</strong></p>
+                <p className="font-bold text-amber-900">Cần thanh toán qua QR: {formatCurrency(order.tien_coc)}</p>
+                {order.tong_thanh_toan > order.tien_coc && (
+                  <p className="text-amber-700">Còn lại ({formatCurrency(order.tong_thanh_toan - order.tien_coc)}) thanh toán khi nhận hàng</p>
+                )}
+              </div>
+            )}
+            {order.trang_thai_tt === 'da_tt' ? (
+              <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
+                <span className="text-3xl">✅</span>
+                <p className="mt-2 text-lg font-bold text-green-700">Đã thanh toán thành công!</p>
+                <p className="text-sm text-green-600 mt-1">Hệ thống đã xác nhận đơn hàng của bạn.</p>
+              </div>
+            ) : (
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
 
               <div className="md:col-span-3 flex justify-center shrink-0">
                 {order.banking_info?.qr_url && (
-                  <img src={order.banking_info.qr_url} alt="VietQR" className="h-48 w-48 rounded-xl border border-amber-200 bg-white p-2 shadow-sm" />
+                  <img src={order.banking_info.qr_url} alt="QR Chuyển khoản" className="h-48 w-48 rounded-xl border border-amber-200 bg-white p-2 shadow-sm" />
                 )}
               </div>
 
@@ -535,7 +589,7 @@ export function OrderDetail() {
                   📌 Hướng dẫn thực hiện
                 </h4>
                 <ul className="list-disc list-inside space-y-2 font-medium leading-7">
-                  <li>Mở app ngân hàng bất kỳ để quét mã <b>VietQR</b>.</li>
+                  <li>Mở app ngân hàng bất kỳ để quét mã QR.</li>
                   <li>Hệ thống sẽ tự động điền số tiền và nội dung.</li>
                   <li>Kiểm tra kỹ tên chủ tài khoản trước khi bấm xác nhận.</li>
                   <li>Đơn hàng sẽ tự động cập nhật sau khi nhận được tiền (từ 1 - 3 phút).</li>
@@ -543,6 +597,7 @@ export function OrderDetail() {
               </div>
 
             </div>
+            )}
           </div>
         )}
 

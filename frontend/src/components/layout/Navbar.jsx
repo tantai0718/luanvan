@@ -7,6 +7,7 @@ import { notificationAPI } from '../../services/api';
 const links = [
   { to: '/', label: 'Trang chủ' },
   { to: '/products', label: 'Sản phẩm' },
+  { to: '/articles', label: 'Bài viết' },
   { to: '/about', label: 'Về chúng tôi' },
 ];
 

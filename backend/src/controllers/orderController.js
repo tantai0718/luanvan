@@ -3,16 +3,15 @@ const userModel = require("../models/userModel");
 const db = require("../config/db");
 
 const BANKING_INFO = {
-  bank_name: process.env.BANK_BANK_NAME || 'Techcombank',
-  bank_short_name: process.env.BANK_SHORT_NAME || 'TCB',
-  account_number: process.env.BANK_ACCOUNT_NUMBER || '4718072003',
+  bank_name: process.env.BANK_BANK_NAME || 'MB Bank',
+  bank_short_name: process.env.BANK_SHORT_NAME || 'MB',
+  account_number: process.env.BANK_ACCOUNT_NUMBER || '2210118072003',
   account_holder: process.env.BANK_ACCOUNT_HOLDER || 'Vo Ngoc Tan Tai',
 };
 
-// Hàm bổ trợ nội bộ (không cần export)
 function getBankingInfo(amount, orderId) {
   const addInfo = `TT${orderId}`;
-  const qrUrl = `https://img.vietqr.io/image/${BANKING_INFO.bank_short_name}-${BANKING_INFO.account_number}-compact.jpg?amount=${amount}&addInfo=${encodeURIComponent(addInfo)}&accountName=${encodeURIComponent(BANKING_INFO.account_holder)}`;
+  const qrUrl = `https://qr.sepay.vn/img?acc=${BANKING_INFO.account_number}&bank=${BANKING_INFO.bank_short_name}&amount=${amount}&des=${encodeURIComponent(addInfo)}`;
   return { ...BANKING_INFO, qr_url: qrUrl, amount, noi_dung_chuyen_khoan: addInfo };
 }
 
@@ -63,6 +62,7 @@ exports.createPreorder = async (req, res) => {
       ngay_giao_du_kien,
       ten_nguoi_nhan,
       sdt_nguoi_nhan,
+      loai_tien_coc,
     } = req.body;
 
     if (!product_id)
@@ -81,6 +81,19 @@ exports.createPreorder = async (req, res) => {
     );
     if (!sp) return res.status(404).json({ message: "Sản phẩm không tồn tại" });
 
+    const tongHang = sp.gia_ban * quantity;
+    const phiShip = tongHang >= 500000 ? 0 : 30000;
+    let tienGiam = 0;
+    if (quantity >= 10) tienGiam = Math.round(tongHang * 0.05);
+    const tongTien = tongHang - tienGiam + phiShip;
+
+    let tienCoc = 0;
+    if (phuong_thuc_tt === "banking" && loai_tien_coc === "30") {
+      tienCoc = Math.round(tongTien * 0.3);
+    } else if (phuong_thuc_tt === "banking" && loai_tien_coc === "100") {
+      tienCoc = tongTien;
+    }
+
     const { madh, tong_tien } = await orderModel.createPreorder({
       mand: req.user.id,
       masp: product_id,
@@ -93,15 +106,20 @@ exports.createPreorder = async (req, res) => {
       nguoi_dung,
       ten_nguoi_nhan: ten_nguoi_nhan?.trim() || '',
       sdt_nguoi_nhan: sdt_nguoi_nhan?.trim() || '',
+      tien_coc: tienCoc,
     });
 
     const response = {
       message: "Đặt trước thành công",
-      order: { id: madh, ma_don_hang: madh, tong_tien },
+      order: { id: madh, ma_don_hang: madh, tong_tien, tien_coc: tienCoc },
     };
 
     if (phuong_thuc_tt === "banking") {
-      response.banking_info = getBankingInfo(tong_tien, madh);
+      const qrAmount = tienCoc > 0 ? tienCoc : tong_tien;
+      response.banking_info = getBankingInfo(qrAmount, madh);
+      response.banking_info.tien_coc = tienCoc;
+      response.banking_info.tong_tien = tong_tien;
+      response.banking_info.con_lai = tong_tien - qrAmount;
     }
 
     res.status(201).json(response);
@@ -127,7 +145,12 @@ exports.getOrderById = async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng." });
     const order = { ...orderModel.mapOrder(raw), items: raw.items };
     if (order.phuong_thuc_tt === "banking") {
-      order.banking_info = getBankingInfo(order.tong_thanh_toan, order.id);
+      const tienCoc = order.tien_coc || 0;
+      const qrAmount = tienCoc > 0 ? tienCoc : order.tong_thanh_toan;
+      order.banking_info = getBankingInfo(qrAmount, order.id);
+      order.banking_info.tien_coc = tienCoc;
+      order.banking_info.tong_tien = order.tong_thanh_toan;
+      order.banking_info.con_lai = order.tong_thanh_toan - qrAmount;
     }
     res.json({ order });
   } catch (err) {
@@ -199,7 +222,12 @@ exports.adminGetOrderById = async (req, res) => {
       items: raw.items,
     };
     if (order.phuong_thuc_tt === "banking") {
-      order.banking_info = getBankingInfo(order.tong_thanh_toan, order.id);
+      const tienCoc = order.tien_coc || 0;
+      const qrAmount = tienCoc > 0 ? tienCoc : order.tong_thanh_toan;
+      order.banking_info = getBankingInfo(qrAmount, order.id);
+      order.banking_info.tien_coc = tienCoc;
+      order.banking_info.tong_tien = order.tong_thanh_toan;
+      order.banking_info.con_lai = order.tong_thanh_toan - qrAmount;
     }
     res.json({ order });
   } catch (err) {

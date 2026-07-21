@@ -3,54 +3,68 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
 
-function AuthShell({ title, subtitle, children }) {
+function FloatingInput({ label, icon, ...props }) {
+  const [focused, setFocused] = useState(false);
+  const hasValue = props.value && props.value.length > 0;
+  const isActive = focused || hasValue;
+
   return (
-    // Wrapper ngoài cùng: Thêm khoảng đệm lớn hơn cho màn hình rộng
-    <div className="flex min-h-screen w-full items-center justify-center bg-slate-50/50 p-6 md:p-12">
-      
-      {/* KHUNG HÌNH CHỮ NHẬT CHÍNH: Nâng max-width lên 6xl (to và rộng hơn) */}
-      <div className="grid w-full max-w-6xl overflow-hidden rounded-[40px] bg-white shadow-[0_25px_60px_rgba(26,122,74,0.1)] border border-slate-100 lg:grid-cols-[0.95fr_1.05fr]">
-        
-        {/* CỘT TRÁI: Khối màu xanh lá gradient rộng rãi, phóng khoáng hơn */}
-        <aside className="relative flex flex-col justify-between bg-gradient-to-br from-[#1a7a4a] to-[#2d9e63] p-10 md:p-16 text-white lg:rounded-r-[32px]">
-          {/* Họa tiết vòng tròn trang trí */}
-          <div className="absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
-          <div className="absolute -bottom-24 -left-12 h-72 w-72 rounded-full bg-emerald-400/20 blur-3xl" />
-          
-          <div className="relative z-10">
-            <span className="inline-block rounded-full bg-white/20 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-emerald-100 backdrop-blur-sm">
-              Chợ nông sản Việt
-            </span>
-            <h1 className="mt-10 text-4xl font-extrabold leading-tight tracking-tight md:text-5xl">
-              Giao diện tài khoản được rút gọn, rõ ràng và dễ dùng hơn.
-            </h1>
-            <p className="mt-8 text-base leading-relaxed text-white/90">
-              "Để mang lại trải nghiệm mua sắm đơn giản và nhanh chóng nhất, mọi tài khoản đăng ký mới sẽ được thiết lập mặc định là Người mua. Hãy cùng khám phá nguồn nông sản sạch, an toàn và chất lượng ngay hôm nay!"
-            </p>
-          </div>
+    <div className="relative">
+      <span className={`absolute left-4 transition-all duration-300 ${isActive ? 'top-2 text-[10px] font-bold tracking-widest uppercase text-[#1a7a4a]' : 'top-1/2 -translate-y-1/2 text-base text-slate-400'}`}>
+        {icon}
+      </span>
+      <input
+        {...props}
+        onFocus={e => { setFocused(true); props.onFocus?.(e); }}
+        onBlur={e => { setFocused(false); props.onBlur?.(e); }}
+        className={`w-full border-b-2 bg-transparent pt-5 pb-3 pl-11 pr-4 text-base text-slate-800 outline-none transition-all duration-300 placeholder:text-transparent ${focused ? 'border-[#1a7a4a]' : 'border-slate-200 hover:border-slate-300'}`}
+        placeholder=" "
+      />
+      <label className={`absolute left-11 transition-all duration-300 pointer-events-none ${isActive ? 'top-2 text-[10px] font-bold tracking-widest uppercase text-[#1a7a4a]' : 'top-1/2 -translate-y-1/2 text-base text-slate-400'}`}>
+        {label}
+      </label>
+      <div className={`absolute bottom-0 left-0 h-0.5 bg-[#1a7a4a] transition-all duration-500 ${focused ? 'w-full' : 'w-0'}`} />
+    </div>
+  );
+}
 
-          <div className="relative z-10 mt-16 border-t border-white/10 pt-8">
-            <p className="text-sm text-white/50">© 2026 Chợ nông sản Việt. Kết nối nông nghiệp sạch.</p>
-          </div>
-        </aside>
-        <section className="flex flex-col justify-center px-8 py-14 sm:px-16 md:px-20 lg:px-14 xl:px-20">
-          {/* Nâng max-width của cụm form từ md (448px) lên lg (512px) giúp form to và rõ hơn */}
-          <div className="mx-auto w-full max-w-lg">
-            <span className="text-sm font-bold uppercase tracking-[0.25em] text-[#2d9e63]">
-              Tài khoản
-            </span>
-            <h2 className="mt-3 text-4xl font-black tracking-tight text-slate-900 md:text-5xl">
-              {title}
-            </h2>
-            
-            <p className="mt-4 text-base leading-relaxed text-slate-500">
-              {subtitle}
-            </p>
-            
-            <div className="mt-10">{children}</div>
-          </div>
-        </section>
+function AuthLayout({ children }) {
+  return (
+    <div className="min-h-screen bg-[#f5f0eb] flex">
+      {/* Left: Hero collage */}
+      <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden bg-[#0c1f13]">
+        {/* Gradient base */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0c1f13] via-[#145a2c] to-[#0a3518]" />
 
+        {/* Floating product collage */}
+        <div className="absolute inset-0">
+          <img src="/images/raucu.webp" alt="" className="absolute top-[4%] left-[6%] w-[45%] rounded-3xl shadow-2xl rotate-[-6deg] opacity-90 border-2 border-white/10 object-cover aspect-square" />
+          <img src="/images/trai_cay.webp" alt="" className="absolute top-[8%] right-[4%] w-[38%] rounded-3xl shadow-2xl rotate-[8deg] opacity-85 border-2 border-white/10 object-cover aspect-square" />
+          <img src="/images/ngucoc.jpg" alt="" className="absolute bottom-[18%] left-[10%] w-[42%] rounded-3xl shadow-2xl rotate-[4deg] opacity-85 border-2 border-white/10 object-cover aspect-[4/3]" />
+          <img src="/images/gia_vi.jpg" alt="" className="absolute bottom-[12%] right-[8%] w-[36%] rounded-3xl shadow-2xl rotate-[-5deg] opacity-80 border-2 border-white/10 object-cover aspect-square" />
+        </div>
+
+        {/* Blurred accents */}
+        <div className="absolute top-[10%] left-[30%] w-72 h-72 rounded-full bg-[#2d9e63]/25 blur-[80px]" />
+        <div className="absolute bottom-[15%] right-[20%] w-64 h-64 rounded-full bg-[#95d4b3]/15 blur-[60px]" />
+
+        {/* Noise texture */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")` }} />
+
+        {/* Badge only */}
+        <div className="relative z-10 p-12 w-full">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-md px-4 py-2 border border-white/10">
+            <span className="w-2 h-2 rounded-full bg-[#95d4b3] animate-pulse" />
+            <span className="text-xs font-bold tracking-[0.2em] uppercase text-white/80">Chợ Nông Sản Việt</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Right: Form */}
+      <div className="flex-1 flex items-center justify-center p-6 md:p-12">
+        <div className="w-full max-w-md">
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -59,20 +73,14 @@ function AuthShell({ title, subtitle, children }) {
 export function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
-
-  const [form, setForm] = useState({
-    email: '',
-    mat_khau: '',
-  });
-
+  const [form, setForm] = useState({ email: '', mat_khau: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
       const user = await login(form.email, form.mat_khau);
       navigate(user.role === 'admin' ? '/admin' : '/');
@@ -84,74 +92,88 @@ export function Login() {
   };
 
   return (
-    <AuthShell
-      title="Đăng nhập"
-      subtitle="Đăng nhập để tiếp tục mua hàng, theo dõi đơn hàng hoặc vào khu vực quản trị nếu bạn là quản trị viên."
-    >
+    <AuthLayout>
+      <div className="lg:hidden mb-8">
+        <div className="inline-flex items-center gap-2 rounded-full bg-[#1a7a4a]/10 px-4 py-2">
+          <span className="w-2 h-2 rounded-full bg-[#1a7a4a] animate-pulse" />
+          <span className="text-xs font-bold tracking-[0.2em] uppercase text-[#1a7a4a]">Chợ Nông Sản</span>
+        </div>
+      </div>
+
+      <p className="text-xs font-bold tracking-[0.25em] uppercase text-[#1a7a4a] mb-3">Chào mừng trở lại</p>
+      <h2 className="text-4xl font-black text-slate-900 tracking-tight">Đăng nhập</h2>
+      <p className="mt-3 text-slate-500 text-base">Nhập thông tin để tiếp tục mua sắm nông sản sạch.</p>
+
       {error && (
-        <div className="mb-6 rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-sm font-medium text-red-600">
-          {error}
+        <div className="mt-6 flex items-center gap-3 rounded-2xl bg-red-50 border border-red-100 px-5 py-4">
+          <span className="material-symbols-outlined text-red-500 text-xl">error</span>
+          <p className="text-sm font-medium text-red-600">{error}</p>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <input
+      <form onSubmit={handleSubmit} className="mt-10 space-y-7">
+        <FloatingInput
+          label="Email"
+          icon={<span className="material-symbols-outlined text-xl">mail</span>}
           type="email"
           required
           value={form.email}
-          onChange={(e) => setForm({ ...form, email: e.target.value })}
-          placeholder="Địa chỉ Email"
-          className="w-full rounded-2xl border border-[#dce7df] bg-[#fcfdfe] px-5 py-4 text-base text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-[#2d9e63] focus:bg-white focus:ring-4 focus:ring-[#2d9e63]/10"
+          onChange={e => setForm({ ...form, email: e.target.value })}
         />
-
-        <input
+        <FloatingInput
+          label="Mật khẩu"
+          icon={<span className="material-symbols-outlined text-xl">lock</span>}
           type="password"
           required
           value={form.mat_khau}
-          onChange={(e) => setForm({ ...form, mat_khau: e.target.value })}
-          placeholder="Mật khẩu"
-          className="w-full rounded-2xl border border-[#dce7df] bg-[#fcfdfe] px-5 py-4 text-base text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-[#2d9e63] focus:bg-white focus:ring-4 focus:ring-[#2d9e63]/10"
+          onChange={e => setForm({ ...form, mat_khau: e.target.value })}
         />
+
         <button
           disabled={loading}
-          className="w-full rounded-full bg-[#1a7a4a] py-4 text-base font-bold text-white transition-all hover:bg-[#14633b] hover:shadow-lg hover:shadow-emerald-950/10 active:scale-[0.98] disabled:opacity-75"
+          className="w-full rounded-2xl bg-[#1a7a4a] py-4 text-base font-bold text-white transition-all duration-300 hover:bg-[#14633b] hover:shadow-xl hover:shadow-[#1a7a4a]/20 active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-3"
         >
-          {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+          {loading ? (
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+          ) : (
+            <>
+              Đăng nhập
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+            </>
+          )}
         </button>
       </form>
 
-      <p className="mt-8 text-center text-base text-slate-500">
+      <div className="mt-10 relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-slate-200" />
+        </div>
+        <div className="relative flex justify-center">
+          <span className="bg-[#f5f0eb] px-4 text-xs font-bold tracking-widest uppercase text-slate-400">hoặc</span>
+        </div>
+      </div>
+
+      <p className="mt-8 text-center text-slate-500">
         Chưa có tài khoản?{' '}
-        <Link
-          to="/register"
-          className="font-bold text-[#1a7a4a] hover:underline"
-        >
-          Tạo tài khoản ngay
+        <Link to="/register" className="font-bold text-[#1a7a4a] hover:underline underline-offset-4">
+          Đăng ký ngay
         </Link>
       </p>
-    </AuthShell>
+    </AuthLayout>
   );
 }
+
 export function Register() {
   const { login } = useAuth();
   const navigate = useNavigate();
-
-  const [form, setForm] = useState({
-    ho_ten: '',
-    email: '',
-    so_dien_thoai: '',
-    mat_khau: '',
-    vai_tro: 'nguoi_mua',
-  });
-
+  const [form, setForm] = useState({ ho_ten: '', email: '', so_dien_thoai: '', mat_khau: '', vai_tro: 'nguoi_mua' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
       await authAPI.register(form);
       await login(form.email, form.mat_khau);
@@ -164,63 +186,79 @@ export function Register() {
   };
 
   return (
-    <AuthShell
-      title="Tạo tài khoản"
-      subtitle="Tài khoản mới mặc định là người mua để sử dụng các chức năng mua hàng, đặt trước và giao định kỳ."
-    >
+    <AuthLayout>
+      <div className="lg:hidden mb-8">
+        <div className="inline-flex items-center gap-2 rounded-full bg-[#1a7a4a]/10 px-4 py-2">
+          <span className="w-2 h-2 rounded-full bg-[#1a7a4a] animate-pulse" />
+          <span className="text-xs font-bold tracking-[0.2em] uppercase text-[#1a7a4a]">Chợ Nông Sản</span>
+        </div>
+      </div>
+
+      <p className="text-xs font-bold tracking-[0.25em] uppercase text-[#1a7a4a] mb-3">Tạo mới tài khoản</p>
+      <h2 className="text-4xl font-black text-slate-900 tracking-tight">Đăng ký</h2>
+      <p className="mt-3 text-slate-500 text-base">Bắt đầu hành trình mua sắm nông sản sạch.</p>
+
       {error && (
-        <div className="mb-6 rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-sm font-medium text-red-600">
-          {error}
+        <div className="mt-6 flex items-center gap-3 rounded-2xl bg-red-50 border border-red-100 px-5 py-4">
+          <span className="material-symbols-outlined text-red-500 text-xl">error</span>
+          <p className="text-sm font-medium text-red-600">{error}</p>
         </div>
       )}
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <input
+
+      <form onSubmit={handleSubmit} className="mt-10 space-y-6">
+        <FloatingInput
+          label="Họ và tên"
+          icon={<span className="material-symbols-outlined text-xl">person</span>}
           required
           value={form.ho_ten}
-          onChange={(e) => setForm({ ...form, ho_ten: e.target.value })}
-          placeholder="Họ và tên"
-          className="w-full rounded-2xl border border-[#dce7df] bg-[#fcfdfe] px-5 py-4 text-base text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-[#2d9e63] focus:bg-white focus:ring-4 focus:ring-[#2d9e63]/10"
+          onChange={e => setForm({ ...form, ho_ten: e.target.value })}
         />
-        <input
+        <FloatingInput
+          label="Email"
+          icon={<span className="material-symbols-outlined text-xl">mail</span>}
           type="email"
           required
           value={form.email}
-          onChange={(e) => setForm({ ...form, email: e.target.value })}
-          placeholder="Email"
-          className="w-full rounded-2xl border border-[#dce7df] bg-[#fcfdfe] px-5 py-4 text-base text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-[#2d9e63] focus:bg-white focus:ring-4 focus:ring-[#2d9e63]/10"
+          onChange={e => setForm({ ...form, email: e.target.value })}
         />
-        <input
+        <FloatingInput
+          label="Số điện thoại"
+          icon={<span className="material-symbols-outlined text-xl">call</span>}
+          type="tel"
           value={form.so_dien_thoai}
-          onChange={(e) => setForm({ ...form, so_dien_thoai: e.target.value })}
-          placeholder="Số điện thoại"
-          className="w-full rounded-2xl border border-[#dce7df] bg-[#fcfdfe] px-5 py-4 text-base text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-[#2d9e63] focus:bg-white focus:ring-4 focus:ring-[#2d9e63]/10"
+          onChange={e => setForm({ ...form, so_dien_thoai: e.target.value })}
         />
-        <input
+        <FloatingInput
+          label="Mật khẩu (tối thiểu 6 ký tự)"
+          icon={<span className="material-symbols-outlined text-xl">shield</span>}
           type="password"
           minLength={6}
           required
           value={form.mat_khau}
-          onChange={(e) => setForm({ ...form, mat_khau: e.target.value })}
-          placeholder="Mật khẩu (tối thiểu 6 ký tự)"
-          className="w-full rounded-2xl border border-[#dce7df] bg-[#fcfdfe] px-5 py-4 text-base text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-[#2d9e63] focus:bg-white focus:ring-4 focus:ring-[#2d9e63]/10"
+          onChange={e => setForm({ ...form, mat_khau: e.target.value })}
         />
+
         <button
           disabled={loading}
-          className="w-full rounded-full bg-[#e85d04] py-4 text-base font-bold text-white transition-all hover:bg-[#cf5408] hover:shadow-lg hover:shadow-orange-950/10 active:scale-[0.98] disabled:opacity-75"
+          className="w-full rounded-2xl bg-[#e85d04] py-4 text-base font-bold text-white transition-all duration-300 hover:bg-[#d45303] hover:shadow-xl hover:shadow-[#e85d04]/20 active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-3"
         >
-          {loading ? 'Đang tạo tài khoản...' : 'Tạo tài khoản'}
+          {loading ? (
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+          ) : (
+            <>
+              Tạo tài khoản
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+            </>
+          )}
         </button>
       </form>
 
-      <p className="mt-8 text-center text-base text-slate-500">
+      <p className="mt-8 text-center text-slate-500">
         Đã có tài khoản?{' '}
-        <Link
-          to="/login"
-          className="font-bold text-[#1a7a4a] hover:underline"
-        >
+        <Link to="/login" className="font-bold text-[#1a7a4a] hover:underline underline-offset-4">
           Đăng nhập
         </Link>
       </p>
-    </AuthShell>
+    </AuthLayout>
   );
 }

@@ -1,6 +1,20 @@
 const subscriptionModel = require("../models/subscriptionModel");
+const db = require("../config/db");
 const mapStatus = (dbStatus) =>
   dbStatus === "hoan_thanh" ? "hoan_tat" : dbStatus;
+
+const BANKING_INFO = {
+  bank_name: process.env.BANK_BANK_NAME || 'MB Bank',
+  bank_short_name: process.env.BANK_SHORT_NAME || 'MB',
+  account_number: process.env.BANK_ACCOUNT_NUMBER || '2210118072003',
+  account_holder: process.env.BANK_ACCOUNT_HOLDER || 'Vo Ngoc Tan Tai',
+};
+
+function getBankingInfo(amount, orderId) {
+  const addInfo = `TT${orderId}`;
+  const qrUrl = `https://qr.sepay.vn/img?acc=${BANKING_INFO.account_number}&bank=${BANKING_INFO.bank_short_name}&amount=${amount}&des=${encodeURIComponent(addInfo)}`;
+  return { ...BANKING_INFO, qr_url: qrUrl, amount, noi_dung_chuyen_khoan: addInfo };
+}
 
 const mapSubscription = (subscription) => ({
   ma_dang_ky: subscription.madk,
@@ -56,6 +70,7 @@ exports.create = async (req, res) => {
       dia_chi_giao,
       phuong_thuc_tt,
       ghi_chu,
+      loai_tien_coc,
     } = req.body;
 
     const masp = ma_san_pham || product_id;
@@ -89,7 +104,7 @@ exports.create = async (req, res) => {
     const tongHang = giaBan * soLuong;
     const tienGiam = soLuong >= 10 ? Math.round(tongHang * 0.05) : 0;
     const giaDuKien = soLuong >= 10
-      ? giaBan - Math.round(giaBan * 0.05)  // giá mỗi đơn vị sau giảm
+      ? giaBan - Math.round(giaBan * 0.05)
       : giaBan;
     const chuKy = ["hang_tuan", "hai_tuan", "hang_thang"].includes(
       tan_suat_giao,
@@ -97,6 +112,7 @@ exports.create = async (req, res) => {
       ? tan_suat_giao
       : "hang_tuan";
     const soLanGiao = Number(so_ky_giao) >= 2 ? Number(so_ky_giao) : 4;
+    const isBanking = phuong_thuc_tt === "banking";
 
     const subscription = await subscriptionModel.createSubscription({
       mand,
@@ -105,16 +121,71 @@ exports.create = async (req, res) => {
       gia_du_kien: giaDuKien,
       chu_ky: chuKy,
       dia_chi_giao,
-      phuong_thuc_tt: "tien_mat",
+      phuong_thuc_tt: phuong_thuc_tt || "tien_mat",
       ngay_bat_dau: ngay_bat_dau || new Date(),
       so_lan_giao: soLanGiao,
       ghi_chu: ghi_chu || null,
     });
 
-    res.status(201).json({
+    const response = {
       message: "Đăng ký giao định kỳ thành công",
       subscription: mapSubscription(subscription),
-    });
+    };
+
+    if (isBanking) {
+      const tongTienKy = tongHang - tienGiam;
+      let tienCoc = 0;
+      if (loai_tien_coc === "30") {
+        tienCoc = Math.round(tongTienKy * 0.3);
+      } else {
+        tienCoc = tongTienKy;
+      }
+
+      const nguoiDung = await db.query(
+        'SELECT ho_ten, email, sdt FROM nguoi_dung WHERE mand = ?', [mand]
+      );
+      const nd = nguoiDung[0]?.[0] || {};
+
+      const [dhResult] = await db.query(
+        `INSERT INTO don_hang
+           (mand, ten_nguoi_nhan, email_nguoi_nhan, sdt_nguoi_nhan,
+            loai_don_hang, tong_tien, tong_da_thanh_toan, tien_coc, trang_thai,
+            trang_thai_thanh_toan, dia_chi_giao, ghi_chu, ngay_dat, ngay_giao_du_kien)
+         VALUES (?, ?, ?, ?, 'dinh_ky', ?, 0, ?, 'cho_xac_nhan', 'chua_thanh_toan', ?, ?, NOW(), ?)`,
+        [
+          mand,
+          nd.ho_ten || "",
+          nd.email || "",
+          nd.sdt || "",
+          tongTienKy,
+          tienCoc,
+          dia_chi_giao,
+          ghi_chu || null,
+          subscription.ngay_bat_dau,
+        ],
+      );
+      const madh = dhResult.insertId;
+
+      await db.query(
+        `INSERT INTO chi_tiet_don_hang (madh, masp, so_luong, don_gia, thanh_tien)
+         VALUES (?, ?, ?, ?, ?)`,
+        [madh, masp, soLuong, giaBan, tongHang],
+      );
+
+      await db.query(
+        `INSERT INTO thanh_toan (madh, so_tien, phuong_thuc, trang_thai, ngay_thanh_toan)
+         VALUES (?, 'banking', 'banking', 'cho_thanh_toan', NOW())`,
+        [madh],
+      );
+
+      response.banking_info = getBankingInfo(tienCoc, madh);
+      response.banking_info.tien_coc = tienCoc;
+      response.banking_info.tong_tien = tongTienKy;
+      response.banking_info.con_lai = tongTienKy - tienCoc;
+      response.order_id = madh;
+    }
+
+    res.status(201).json(response);
   } catch (error) {
     console.error("[createSubscription]", error);
     res.status(500).json({ message: error.message });
