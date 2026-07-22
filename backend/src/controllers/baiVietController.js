@@ -25,7 +25,6 @@ exports.getById = async (req, res) => {
   }
 };
 
-// Admin
 exports.adminList = async (req, res) => {
   try {
     const { q, the_loai, trang_thai, page, limit } = req.query;
@@ -80,9 +79,6 @@ exports.importUrl = async (req, res) => {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
         'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
         'Sec-Ch-Ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
         'Sec-Ch-Ua-Mobile': '?0',
         'Sec-Ch-Ua-Platform': '"Windows"',
@@ -91,23 +87,20 @@ exports.importUrl = async (req, res) => {
         'Sec-Fetch-Site': 'none',
         'Sec-Fetch-User': '?1',
         'Upgrade-Insecure-Requests': '1',
-        'Referer': new URL(url).origin + '/',
       },
       signal: AbortSignal.timeout(20000),
       redirect: 'follow',
     });
-    if (!response.ok) return res.status(400).json({ message: `Không thể truy cập trang (HTTP ${response.status}). Trang có thể đang chặn truy cập hoặc không tồn tại.` });
+    if (!response.ok) return res.status(400).json({ message: `Không thể truy cập trang (HTTP ${response.status})` });
 
     const html = await response.text();
     const $ = cheerio.load(html);
-
     $('script, style, nav, footer, header, .sidebar, .menu, .ad, .advertisement, .related, .comment, .share, .social').remove();
 
     let tieu_de = '';
     if ($('meta[property="og:title"]').length) tieu_de = $('meta[property="og:title"]').attr('content') || '';
     if (!tieu_de) tieu_de = $('title').text() || '';
     if (!tieu_de) tieu_de = $('h1').first().text() || '';
-    // Strip site name from title (e.g. "Title - Site Name" or "Title | Site Name")
     tieu_de = tieu_de.replace(/\s*[-|–]\s*[^-|–]+$/, '').replace(/\s*\|\s*[^|]+$/, '').trim();
 
     let tom_tat = '';
@@ -119,7 +112,7 @@ exports.importUrl = async (req, res) => {
     if ($('meta[property="og:image"]').length) hinh_anh = $('meta[property="og:image"]').attr('content') || '';
 
     let noi_dung = '';
-    const contentSelectors = ['article', '.post-content', '.entry-content', '.article-content', '.content', '.article-body', '.post-body', 'main'];
+    const contentSelectors = ['article', '.post-content', '.entry-content', '.article-content', '.content', '.article-body', 'main'];
     for (const sel of contentSelectors) {
       if ($(sel).length) { noi_dung = $(sel).html() || ''; break; }
     }
@@ -129,20 +122,10 @@ exports.importUrl = async (req, res) => {
       noi_dung = body.html() || '';
     }
 
-    noi_dung = noi_dung
-      .replace(/class="[^"]*"/g, '')
-      .replace(/style="[^"]*"/g, '')
-      .replace(/id="[^"]*"/g, '')
-      .replace(/<div\s*>\s*<\/div>/gi, '')
-      .replace(/<span\s*>\s*<\/span>/gi, '')
-      .replace(/<p\s*>\s*<\/p>/gi, '')
-      .replace(/<script[\s\S]*?<\/script>/gi, '')
-      .replace(/<style[\s\S]*?<\/style>/gi, '')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim();
+    noi_dung = noi_dung.replace(/class="[^"]*"/g, '').replace(/style="[^"]*"/g, '').replace(/id="[^"]*"/g, '').replace(/<div\s*>\s*<\/div>/gi, '').replace(/<span\s*>\s*<\/span>/gi, '').replace(/<p\s*>\s*<\/p>/gi, '').replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/\n{3,}/g, '\n\n').trim();
 
     if (!tieu_de && !noi_dung) {
-      return res.status(400).json({ message: 'Không thể trích xuất nội dung. Trang có thể đang bảo vệ bởi Cloudflare hoặc không có nội dung HTML.' });
+      return res.status(400).json({ message: 'Không thể trích xuất nội dung.' });
     }
 
     res.json({ tieu_de: tieu_de.trim(), tom_tat: tom_tat.trim(), noi_dung, hinh_anh });

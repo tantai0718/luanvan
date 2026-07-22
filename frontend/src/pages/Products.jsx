@@ -99,7 +99,7 @@ export default function Products() {
 
   return (
     <div className="bg-background min-h-screen py-xl">
-      <div className="max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop grid gap-xl lg:grid-cols-[280px_1fr]">
+      <div className="mx-auto grid w-full max-w-[1600px] gap-xl px-margin-mobile md:px-10 2xl:px-12 lg:grid-cols-[240px_minmax(0,1fr)]">
         {/* Sidebar Filters */}
         <aside className="space-y-lg lg:sticky lg:top-28 lg:self-start">
           <div className="bg-surface rounded-3xl p-lg border border-outline-variant organic-shadow">
@@ -164,7 +164,7 @@ export default function Products() {
           </div>
 
           {loading ? (
-            <div className="grid gap-gutter sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-gutter sm:grid-cols-2 xl:grid-cols-4">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="bg-surface rounded-3xl p-4 border border-outline-variant animate-pulse">
                   <div className="aspect-square rounded-2xl bg-surface-container-high mb-4" />
@@ -176,7 +176,7 @@ export default function Products() {
             </div>
           ) : products.length ? (
             <>
-              <div className="grid gap-gutter sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-gutter sm:grid-cols-2 xl:grid-cols-4">
                 {products.map(product => <ProductTile key={product.ma_san_pham} product={product} />)}
               </div>
               {totalPages > 1 && (

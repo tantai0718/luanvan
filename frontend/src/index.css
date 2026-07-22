@@ -91,6 +91,94 @@ input[type="number"]::-webkit-outer-spin-button {
 
 .glass-card {
   background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.hero-gradient {
+  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.6) 100%);
+}
+
+.article-reading {
+  font-size: 1.0625rem;
+  line-height: 1.85;
+  color: #404943;
+}
+
+.article-reading > * + * {
+  margin-top: 1.5rem;
+}
+
+.article-reading h2,
+.article-reading h3,
+.article-reading h4 {
+  color: #121c28;
+  font-family: 'Montserrat', 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.article-reading h2 {
+  margin-top: 3.5rem;
+  font-size: 1.75rem;
+}
+
+.article-reading h3 {
+  margin-top: 2.5rem;
+  font-size: 1.35rem;
+}
+
+.article-reading p,
+.article-reading li {
+  max-width: 46rem;
+}
+
+.article-reading ul,
+.article-reading ol {
+  padding-left: 1.5rem;
+}
+
+.article-reading li + li {
+  margin-top: 0.55rem;
+}
+
+.article-reading li::marker {
+  color: #0f5238;
+}
+
+.article-reading a {
+  color: #0f5238;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: rgba(15, 82, 56, 0.35);
+  text-underline-offset: 3px;
+}
+
+.article-reading blockquote {
+  margin: 2rem 0;
+  border-left: 4px solid #0f5238;
+  border-radius: 0 0.75rem 0.75rem 0;
+  background: #edf8f1;
+  padding: 1.25rem 1.5rem;
+  color: #234433;
+  font-size: 1.125rem;
+  font-style: italic;
+}
+
+.article-reading img {
+  margin: 2rem 0;
+  border-radius: 1rem;
+  box-shadow: 0 12px 28px rgba(15, 82, 56, 0.12);
+}
+
+@media (max-width: 640px) {
+  .article-reading {
+    font-size: 1rem;
+    line-height: 1.75;
+  }
+
+  .article-reading h2 {
+    margin-top: 2.5rem;
+    font-size: 1.45rem;
+  }
 }

@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const ctrl = require('../controllers/baiVietController');
-const { auth } = require('../middlewares/auth');
-const role = require('../middlewares/role');
+const { auth, role } = require('../middlewares/auth');
 
 // Public
 router.get('/', ctrl.listPublic);

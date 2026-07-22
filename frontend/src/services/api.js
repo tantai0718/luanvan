@@ -156,3 +156,12 @@ export const baiVietAPI = {
   remove: id => api.delete(`/articles/admin/${id}`),
   importUrl: url => api.post('/articles/admin/import-url', { url }),
 };
+
+export const blogAPI = {
+  getAll: (params = '') => api.get(`/blog?${params}`),
+  getBySlug: slug => api.get(`/blog/${slug}`),
+  getCategories: () => api.get('/blog/categories'),
+  create: body => api.post('/blog', body),
+  update: (id, body) => api.put(`/blog/${id}`, body),
+  remove: id => api.delete(`/blog/${id}`),
+};

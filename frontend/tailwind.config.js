@@ -71,23 +71,32 @@ module.exports = {
         "sm": "8px"
       },
       fontFamily: {
-        "headline-lg-mobile": ["Plus Jakarta Sans", "Inter", "sans-serif"],
-        "display-lg": ["Plus Jakarta Sans", "Inter", "sans-serif"],
-        "body-md": ["Plus Jakarta Sans", "Inter", "sans-serif"],
-        "title-md": ["Plus Jakarta Sans", "Inter", "sans-serif"],
-        "headline-lg": ["Plus Jakarta Sans", "Inter", "sans-serif"],
-        "label-xs": ["Work Sans", "Inter", "sans-serif"],
-        "body-lg": ["Plus Jakarta Sans", "Inter", "sans-serif"],
-        "label-sm": ["Work Sans", "Inter", "sans-serif"]
+        "headline-lg-mobile": ["Montserrat", "Plus Jakarta Sans", "Inter", "sans-serif"],
+        "display-lg": ["Montserrat", "Plus Jakarta Sans", "Inter", "sans-serif"],
+        "body-md": ["Inter", "Plus Jakarta Sans", "sans-serif"],
+        "title-md": ["Montserrat", "Plus Jakarta Sans", "Inter", "sans-serif"],
+        "headline-lg": ["Montserrat", "Plus Jakarta Sans", "Inter", "sans-serif"],
+        "label-xs": ["Inter", "Work Sans", "sans-serif"],
+        "body-lg": ["Inter", "Plus Jakarta Sans", "sans-serif"],
+        "body-sm": ["Inter", "Plus Jakarta Sans", "sans-serif"],
+        "label-sm": ["Inter", "Work Sans", "sans-serif"],
+        "label-caps": ["Inter", "Work Sans", "sans-serif"],
+        "h1": ["Montserrat", "Plus Jakarta Sans", "sans-serif"],
+        "h2": ["Montserrat", "Plus Jakarta Sans", "sans-serif"],
+        "h3": ["Montserrat", "Plus Jakarta Sans", "sans-serif"],
+        "price": ["Montserrat", "Plus Jakarta Sans", "sans-serif"]
       },
       fontSize: {
         "headline-lg-mobile": ["24px", { lineHeight: "1.3", fontWeight: "700" }],
         "display-lg": ["48px", { lineHeight: "1.2", letterSpacing: "-0.02em", fontWeight: "800" }],
-        "body-md": ["16px", { lineHeight: "1.6", fontWeight: "400" }],
+        "body-md": ["16px", { lineHeight: "1.5", fontWeight: "400" }],
+        "body-sm": ["14px", { lineHeight: "1.5", fontWeight: "400" }],
         "title-md": ["20px", { lineHeight: "1.4", fontWeight: "600" }],
         "headline-lg": ["32px", { lineHeight: "1.3", fontWeight: "700" }],
         "label-xs": ["12px", { lineHeight: "1.2", fontWeight: "600" }],
+        "label-caps": ["12px", { lineHeight: "1", letterSpacing: "0.05em", fontWeight: "600" }],
         "body-lg": ["18px", { lineHeight: "1.6", fontWeight: "400" }],
+        "price": ["20px", { lineHeight: "1", fontWeight: "700" }],
         "label-sm": ["14px", { lineHeight: "1.2", letterSpacing: "0.01em", fontWeight: "500" }]
       }
     },
