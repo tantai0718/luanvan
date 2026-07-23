@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { Badge, Btn, Loading, PageHero, Pagination, SearchBar, Table } from '../../components/ui/AdminUI';
+import * as XLSX from 'xlsx';
 
 const roleMap = {
   quan_tri: { label: 'Admin', color: 'purple' },
@@ -32,6 +33,37 @@ export default function AdminAccounts() {
 
   useEffect(() => { fetchAccounts(); }, [page, role, search]);
 
+  const exportExcel = async () => {
+    let data = accounts;
+    if (total > accounts.length) {
+      try { const res = await api.get(`/admin/accounts?limit=${total}`); data = res.accounts || []; } catch {}
+    }
+    const rows = data.map((a, i) => ({
+      'STT': i + 1,
+      'Họ tên': a.ho_ten,
+      'Email': a.email,
+      'Số điện thoại': a.so_dien_thoai || '',
+      'Vai trò': roleMap[a.vai_tro]?.label || a.vai_tro,
+      'Trạng thái': a.con_hoat_dong ? 'Hoạt động' : 'Đã khóa',
+      'Ngày tạo': a.ngay_tao ? new Date(a.ngay_tao).toLocaleDateString('vi-VN') : '',
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Tai khoan');
+    const now = new Date();
+    const fileName = `tai_khoan_${String(now.getDate()).padStart(2,'0')}-${String(now.getMonth()+1).padStart(2,'0')}-${now.getFullYear()}.xlsx`;
+    if (window.showSaveFilePicker) {
+      try {
+        const handle = await window.showSaveFilePicker({ suggestedName: fileName, types: [{ description: 'Excel file', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }] });
+        const bin = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([bin], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+      } catch (e) { if (e.name !== 'AbortError') alert('Không thể lưu file.'); }
+    } else { XLSX.writeFile(wb, fileName); }
+  };
+
   const toggleActive = async (id, current) => {
     try { await api.patch(`/admin/accounts/${id}/toggle`); setAccounts(prev => prev.map(account => (account.ma_tai_khoan === id ? { ...account, con_hoat_dong: !current } : account))); }
     catch (err) { setError(err.message || 'Không cập nhật được trạng thái tài khoản.'); }
@@ -49,7 +81,12 @@ export default function AdminAccounts() {
             <option value="quan_tri">Admin</option>
             <option value="nguoi_mua">Người mua</option>
           </select>
-          <div className="ml-auto text-body-md text-on-surface-variant">Tổng tài khoản: <span className="font-bold text-on-surface">{total}</span></div>
+          <div className="ml-auto flex items-center gap-3">
+            <Btn variant="outline" onClick={exportExcel} disabled={!accounts.length}>
+              <span className="material-symbols-outlined text-sm mr-1">download</span> Xuất Excel
+            </Btn>
+            <span className="text-body-md text-on-surface-variant">Tổng tài khoản: <span className="font-bold text-on-surface">{total}</span></span>
+          </div>
         </div>
       </div>
 

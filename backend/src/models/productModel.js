@@ -106,7 +106,7 @@ async function getProductById(id) {
 
 async function listCategories() {
     const [rows] = await db.query(
-        `SELECT madm AS id, ten_danh_muc AS name, mo_ta FROM danh_muc WHERE trang_thai = 1`
+        `SELECT madm, madm AS id, ten_danh_muc, ten_danh_muc AS name, mo_ta, loai FROM danh_muc WHERE trang_thai = 1`
     );
     return rows;
 }

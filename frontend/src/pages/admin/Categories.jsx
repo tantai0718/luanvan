@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { api, productAPI } from '../../services/api';
 import { Badge, Btn, Input, Loading, Modal, PageHero, Table } from '../../components/ui/AdminUI';
+import * as XLSX from 'xlsx';
 
-const emptyForm = { ten_danh_muc: '', con_hoat_dong: 1 };
+const emptyForm = { ten_danh_muc: '', mo_ta: '', loai: 'san_pham', con_hoat_dong: 1 };
 
 function CategoryProductsModal({ category, products, loading, onClose, onToggle, onDelete }) {
   return (
@@ -59,6 +60,31 @@ export default function AdminCategories() {
 
   useEffect(() => { fetchCategories(); }, []);
 
+  const exportExcel = async () => {
+    const rows = categories.map((c, i) => ({
+      'STT': i + 1,
+      'Tên danh mục': c.ten_danh_muc,
+      'Loại': c.loai === 'bai_viet' ? 'Bài viết' : 'Sản phẩm',
+      'Số mục': c.loai === 'bai_viet' ? c.so_bai_viet : c.so_san_pham,
+      'Trạng thái': c.con_hoat_dong ? 'Đang hiển thị' : 'Đã ẩn',
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Danh muc');
+    const now = new Date();
+    const fileName = `danh_muc_${String(now.getDate()).padStart(2,'0')}-${String(now.getMonth()+1).padStart(2,'0')}-${now.getFullYear()}.xlsx`;
+    if (window.showSaveFilePicker) {
+      try {
+        const handle = await window.showSaveFilePicker({ suggestedName: fileName, types: [{ description: 'Excel file', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }] });
+        const bin = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([bin], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+      } catch (e) { if (e.name !== 'AbortError') alert('Không thể lưu file.'); }
+    } else { XLSX.writeFile(wb, fileName); }
+  };
+
   const openAdd = () => { setForm(emptyForm); setModal('add'); };
   const openEdit = category => { setForm({ ...category }); setModal('edit'); };
 
@@ -103,21 +129,27 @@ export default function AdminCategories() {
 
   return (
     <div className="space-y-6">
-      <PageHero eyebrow="Danh mục" title="Quản lý nhóm sản phẩm đang dùng trên hệ thống" body="Admin có thể thêm, sửa, ẩn hoặc xóa danh mục, đồng thời xem nhanh toàn bộ sản phẩm thuộc từng danh mục." actions={<Btn onClick={openAdd}>+ Thêm danh mục</Btn>} />
+      <PageHero eyebrow="Danh mục" title="Quản lý nhóm sản phẩm đang dùng trên hệ thống" body="Admin có thể thêm, sửa, ẩn hoặc xóa danh mục, đồng thời xem nhanh toàn bộ sản phẩm thuộc từng danh mục." actions={<><Btn variant="outline" onClick={exportExcel} disabled={!categories.length}><span className="material-symbols-outlined text-sm mr-1">download</span> Xuất Excel</Btn><Btn onClick={openAdd}>+ Thêm danh mục</Btn></>} />
       {error && <div className="bg-surface rounded-3xl p-lg border border-outline-variant text-body-md text-on-error-container bg-error-container/20">{error}</div>}
       {loading ? <Loading /> : (
-        <Table headers={['#', 'Tên danh mục', 'Trạng thái', 'Hành động']} empty={{ icon: '🗂️', text: 'Chưa có danh mục nào.' }}>
+        <Table headers={['#', 'Tên danh mục', 'Loại', 'Số mục', 'Trạng thái', 'Hành động']} empty={{ icon: '🗂️', text: 'Chưa có danh mục nào.' }}>
           {categories.map((category, index) => (
             <tr key={category.ma_danh_muc} className="hover:bg-surface-container-low">
               <td className="px-4 py-3 text-label-sm text-on-surface-variant">{index + 1}</td>
               <td className="px-4 py-3">
                 <button onClick={() => openProducts(category)} className="text-left text-title-md font-title-md text-on-surface hover:text-primary">{category.ten_danh_muc}</button>
-                <p className="mt-1 text-label-sm text-on-surface-variant">Bấm để quản lý sản phẩm thuộc danh mục này</p>
+                <p className="mt-1 text-label-sm text-on-surface-variant">{category.loai === 'bai_viet' ? 'Bấm để quản lý bài viết' : 'Bấm để quản lý sản phẩm'}</p>
               </td>
+              <td className="px-4 py-3">
+                <span className={`inline-block rounded-full px-3 py-1 text-xs font-bold ${category.loai === 'bai_viet' ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                  {category.loai === 'bai_viet' ? 'Bài viết' : 'Sản phẩm'}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-body-md text-on-surface-variant">{category.loai === 'bai_viet' ? category.so_bai_viet : category.so_san_pham}</td>
               <td className="px-4 py-3"><Badge text={category.con_hoat_dong ? 'Đang hiển thị' : 'Đã ẩn'} color={category.con_hoat_dong ? 'green' : 'gray'} /></td>
               <td className="px-4 py-3">
                 <div className="flex flex-wrap gap-2">
-                  <Btn size="sm" variant="ghost" onClick={() => openProducts(category)}>Xem sản phẩm</Btn>
+                  <Btn size="sm" variant="ghost" onClick={() => openProducts(category)}>Xem</Btn>
                   <Btn size="sm" variant="outline" onClick={() => openEdit(category)}>Sửa</Btn>
                   <Btn size="sm" variant={category.con_hoat_dong ? 'ghost' : 'primary'} onClick={() => toggleCategory(category.ma_danh_muc, category.con_hoat_dong)}>{category.con_hoat_dong ? 'Ẩn' : 'Hiện'}</Btn>
                   <Btn size="sm" variant="danger" onClick={() => deleteCategory(category.ma_danh_muc)}>Xóa</Btn>
@@ -131,6 +163,14 @@ export default function AdminCategories() {
         <Modal title={modal === 'add' ? 'Thêm danh mục' : 'Sửa danh mục'} onClose={() => setModal(null)}>
           <div className="space-y-4">
             <Input label="Tên danh mục" value={form.ten_danh_muc} onChange={e => setForm({ ...form, ten_danh_muc: e.target.value })} />
+            <label className="grid gap-2">
+              <span className="text-label-sm font-bold text-on-surface-variant">Loại danh mục</span>
+              <select value={form.loai || 'san_pham'} onChange={e => setForm({ ...form, loai: e.target.value })}
+                className="bg-white border border-outline-variant rounded-lg px-4 py-3 text-body-md outline-none focus:ring-2 focus:ring-primary">
+                <option value="san_pham">Sản phẩm</option>
+                <option value="bai_viet">Bài viết</option>
+              </select>
+            </label>
             <div className="flex gap-3">
               <Btn className="flex-1 justify-center" onClick={handleSave} disabled={saving}>{saving ? 'Đang lưu...' : 'Lưu danh mục'}</Btn>
               <Btn variant="outline" className="flex-1 justify-center" onClick={() => setModal(null)}>Đóng</Btn>

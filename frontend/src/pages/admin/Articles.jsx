@@ -266,6 +266,14 @@ export default function AdminArticles() {
                   <option value={0}>Bản nháp</option>
                 </select>
               </label>
+              <label className="grid gap-2">
+                <span className="text-label-sm font-bold text-on-surface-variant">Chuyên mục</span>
+                <select value={editing.madm || ''} onChange={e => setEditing({ ...editing, madm: Number(e.target.value) })}
+                  className="bg-white border border-outline-variant rounded-lg px-4 py-3 text-body-md outline-none">
+                  <option value="">Chọn chuyên mục</option>
+                  {categories.map(c => <option key={c.madm} value={c.madm}>{c.ten_danh_muc}</option>)}
+                </select>
+              </label>
               <div className="grid gap-2">
                 <span className="text-label-sm font-bold text-on-surface-variant">Hình ảnh bìa</span>
                 {editing.hinh_anh ? (
