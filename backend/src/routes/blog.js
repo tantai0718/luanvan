@@ -6,7 +6,7 @@ const { auth, role } = require('../middlewares/auth');
 // Public
 router.get('/', ctrl.list);
 router.get('/categories', ctrl.categories);
-router.get('/:slug', ctrl.detail);
+router.get('/:id', ctrl.detail);
 
 // Admin
 router.post('/', auth, role('admin'), ctrl.create);

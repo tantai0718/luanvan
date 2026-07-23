@@ -18,7 +18,7 @@ export default function Blog() {
 
   useEffect(() => {
     setLoading(true);
-    const q = `page=${page}&limit=${limit}${filter ? `&danh_muc=${encodeURIComponent(filter)}` : ''}`;
+    const q = `page=${page}&limit=${limit}${filter ? `&madm=${filter}` : ''}`;
     blogAPI.getAll(q)
       .then(data => { setPosts(data.posts || []); setTotal(data.total || 0); setCategories(data.categories || []); })
       .catch(() => {})
@@ -53,7 +53,7 @@ export default function Blog() {
               </button>
               {categories.map(c => (
                 <button key={c.slug} onClick={() => { setFilter(c.slug); setPage(1); }}
-                  className={`px-4 py-2 rounded-lg text-body-sm font-bold transition-all ${filter === c.slug ? 'bg-primary text-white shadow-sm' : 'bg-white border border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary'}`}>
+                  className={`px-4 py-2 rounded-lg text-body-sm font-bold transition-all ${filter === String(c.slug) ? 'bg-primary text-white shadow-sm' : 'bg-white border border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary'}`}>
                   {c.ten_dm}
                 </button>
               ))}
@@ -66,7 +66,7 @@ export default function Blog() {
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {posts.map(post => (
-                    <Link key={post.mabv} to={`/blog/${post.slug}`}
+                    <Link key={post.mabv} to={`/blog/${post.mabv}`}
                       className="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm hover:shadow-md border border-outline-variant group transition-all">
                       <div className="aspect-video overflow-hidden">
                         {post.hinh_anh ? (
@@ -79,14 +79,14 @@ export default function Blog() {
                       </div>
                       <div className="p-5">
                         <div className="flex items-center gap-2 mb-2">
-                          {post.danh_muc && <span className="px-2.5 py-0.5 bg-primary/10 text-primary text-label-caps rounded-full font-bold">{post.danh_muc}</span>}
+                          {post.ten_danh_muc && <span className="px-2.5 py-0.5 bg-primary/10 text-primary text-label-caps rounded-full font-bold">{post.ten_danh_muc}</span>}
                           <span className="text-on-surface-variant font-body-sm text-body-sm">{fmtDate(post.ngay_tao)}</span>
                         </div>
                         <h3 className="font-h3 text-h3 text-on-surface mb-2 leading-snug group-hover:text-primary transition-colors">{post.tieu_de}</h3>
-                        {post.mo_ta_ngan && <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-3">{post.mo_ta_ngan}</p>}
+                        {post.tom_tat && <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-3">{post.tom_tat}</p>}
                         <div className="flex items-center gap-3 mt-3 pt-3 border-t border-outline-variant/40">
                           <span className="text-body-sm text-on-surface-variant flex items-center gap-1">
-                            <span className="material-symbols-outlined text-sm text-primary">person</span>{post.tac_gia}
+                            <span className="material-symbols-outlined text-sm text-primary">person</span>{post.ho_ten}
                           </span>
                           <span className="text-body-sm text-on-surface-variant flex items-center gap-1">
                             <span className="material-symbols-outlined text-sm text-primary">visibility</span>{post.luot_xem}
@@ -136,7 +136,7 @@ export default function Blog() {
                 </button>
                 {categories.map(c => (
                   <button key={c.slug} onClick={() => { setFilter(c.slug); setPage(1); }}
-                    className={`flex justify-between items-center px-4 py-2.5 rounded-lg transition-all text-left ${filter === c.slug ? 'bg-primary/10 text-primary' : 'hover:bg-surface-container text-on-surface'}`}>
+                    className={`flex justify-between items-center px-4 py-2.5 rounded-lg transition-all text-left ${filter === String(c.slug) ? 'bg-primary/10 text-primary' : 'hover:bg-surface-container text-on-surface'}`}>
                     <span className="font-body-md text-body-md">{c.ten_dm}</span>
                   </button>
                 ))}

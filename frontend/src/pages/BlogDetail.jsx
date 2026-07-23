@@ -8,7 +8,7 @@ function fmtDate(d) {
 }
 
 export default function BlogDetail() {
-  const { slug } = useParams();
+  const { id } = useParams();
   const [post, setPost] = useState(null);
   const [related, setRelated] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,11 +19,11 @@ export default function BlogDetail() {
   useEffect(() => {
     setLoading(true);
     setError('');
-    blogAPI.getBySlug(slug)
+    blogAPI.getById(id)
       .then(data => { setPost(data.post); setRelated(data.related || []); })
       .catch(err => setError(err.message || 'Không tìm thấy bài viết'))
       .finally(() => setLoading(false));
-  }, [slug]);
+  }, [id]);
 
   useEffect(() => {
     const onScroll = () => setShowTop(window.scrollY > 500);
@@ -31,7 +31,7 @@ export default function BlogDetail() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  useEffect(() => { window.scrollTo(0, 0); }, [slug]);
+  useEffect(() => { window.scrollTo(0, 0); }, [id]);
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
@@ -46,17 +46,6 @@ export default function BlogDetail() {
       <Link to="/blog" className="text-primary font-bold hover:underline">← Quay lại danh sách</Link>
     </div>
   );
-
-  const categoryColors = {
-    'Tin Tuc': 'bg-primary-container/15 text-primary-container',
-    'Meo Bao Quan': 'bg-secondary-container/15 text-secondary-container',
-    'Cong thuc nau an': 'bg-tertiary-container/15 text-tertiary-container',
-    'Mua vu': 'bg-primary-fixed/20 text-primary',
-    'Kinh nghiem mua sam': 'bg-secondary-fixed/30 text-secondary',
-  };
-
-  const danhMucNormalized = post.danh_muc?.replace(/\s+/g, ' ').trim();
-  const badgeClass = categoryColors[danhMucNormalized] || 'bg-primary/10 text-primary';
 
   return (
     <div className="bg-background min-h-screen">
@@ -81,9 +70,9 @@ export default function BlogDetail() {
             {/* ── Header ── */}
             <header className="mb-12">
               <div className="flex items-center gap-4 mb-4">
-                {post.danh_muc && (
-                  <span className={`px-3 py-1 rounded-full text-label-caps font-semibold ${badgeClass}`}>
-                    {post.danh_muc}
+                {post.ten_danh_muc && (
+                  <span className="px-3 py-1 rounded-full text-label-caps font-semibold bg-primary/10 text-primary">
+                    {post.ten_danh_muc}
                   </span>
                 )}
                 <div className="flex items-center gap-1 text-on-surface-variant text-body-sm">
@@ -100,9 +89,9 @@ export default function BlogDetail() {
                 {post.tieu_de}
               </h1>
 
-              {post.mo_ta_ngan && (
+              {post.tom_tat && (
                 <p className="text-body-lg text-on-surface-variant italic border-l-4 border-primary pl-4">
-                  "{post.mo_ta_ngan}"
+                  "{post.tom_tat}"
                 </p>
               )}
             </header>
@@ -163,7 +152,7 @@ export default function BlogDetail() {
                 <h4 className="font-bold text-lg text-on-surface border-b-2 border-primary inline-block pb-1">Tin liên quan</h4>
                 <div className="space-y-4">
                   {related.map(item => (
-                    <Link key={item.mabv} to={`/blog/${item.slug}`} className="flex gap-4 group">
+                    <Link key={item.mabv} to={`/blog/${item.mabv}`} className="flex gap-4 group">
                       <div className="w-20 h-20 rounded-lg overflow-hidden shrink-0">
                         {item.hinh_anh ? (
                           <img src={item.hinh_anh} alt={item.tieu_de} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />

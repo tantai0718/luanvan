@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { blogAPI } from '../../services/api';
-import { Btn, Loading, PageHero } from '../../components/ui/AdminUI';
 
-const emptyForm = { tieu_de: '', mo_ta_ngan: '', noi_dung: '', hinh_anh: '', danh_muc: '', tac_gia: 'Ban Bien Tap', trang_thai: 1 };
+const emptyForm = { tieu_de: '', tom_tat: '', noi_dung: '', hinh_anh: '', madm: 5, trang_thai: 1 };
 
 function fmtDate(d) {
   if (!d) return '';
@@ -21,7 +20,7 @@ export default function AdminBlog() {
 
   const fetchPosts = () => {
     setLoading(true);
-    const q = `?${search ? `q=${encodeURIComponent(search)}` : ''}${filterDm ? `&danh_muc=${encodeURIComponent(filterDm)}` : ''}`;
+    const q = `?${search ? `q=${encodeURIComponent(search)}` : ''}${filterDm ? `&madm=${filterDm}` : ''}`;
     blogAPI.getAll(q)
       .then(data => { setPosts(data.posts || []); setCategories(data.categories || []); })
       .catch(() => {})
@@ -125,7 +124,7 @@ export default function AdminBlog() {
 
       {/* ── Table ── */}
       <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 overflow-hidden">
-        {loading ? <Loading /> : posts.length ? (
+        {loading ? <div className="py-16 text-center"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></div> : posts.length ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead className="bg-surface-container-low border-b border-outline-variant">
@@ -154,11 +153,11 @@ export default function AdminBlog() {
                     <td className="p-5">
                       <div className="max-w-xs">
                         <p className="font-body-md text-body-md text-on-surface font-semibold line-clamp-2">{post.tieu_de}</p>
-                        {post.mo_ta_ngan && <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-1 mt-0.5">{post.mo_ta_ngan}</p>}
+                        {post.tom_tat && <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-1 mt-0.5">{post.tom_tat}</p>}
                       </div>
                     </td>
                     <td className="p-5">
-                      {post.danh_muc && <span className="px-3 py-1 bg-primary/10 text-primary text-label-caps rounded-full font-bold">{post.danh_muc}</span>}
+                      {post.ten_danh_muc && <span className="px-3 py-1 bg-primary/10 text-primary text-label-caps rounded-full font-bold">{post.ten_danh_muc}</span>}
                     </td>
                     <td className="p-5"><p className="font-body-sm text-body-sm text-on-surface-variant">{post.luot_xem}</p></td>
                     <td className="p-5"><p className="font-body-sm text-body-sm text-on-surface-variant">{fmtDate(post.ngay_tao)}</p></td>
@@ -212,23 +211,19 @@ export default function AdminBlog() {
               </label>
 
               <label className="grid gap-2">
-                <span className="text-label-sm font-bold text-on-surface-variant">Mô tả ngắn</span>
-                <textarea rows={2} value={editing.mo_ta_ngan} onChange={e => setEditing({ ...editing, mo_ta_ngan: e.target.value })}
+                <span className="text-label-sm font-bold text-on-surface-variant">Tóm tắt</span>
+                <textarea rows={2} value={editing.tom_tat || ''} onChange={e => setEditing({ ...editing, tom_tat: e.target.value })}
                   placeholder="Mô tả ngắn gọn..."
                   className="bg-white border border-outline-variant rounded-lg px-4 py-3 text-body-md resize-none focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
               </label>
 
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <label className="grid gap-2">
                   <span className="text-label-sm font-bold text-on-surface-variant">Danh mục</span>
-                  <input value={editing.danh_muc} onChange={e => setEditing({ ...editing, danh_muc: e.target.value })}
-                    placeholder="VD: Mẹo bảo quản"
-                    className="bg-white border border-outline-variant rounded-lg px-4 py-3 text-body-md outline-none" />
-                </label>
-                <label className="grid gap-2">
-                  <span className="text-label-sm font-bold text-on-surface-variant">Tác giả</span>
-                  <input value={editing.tac_gia} onChange={e => setEditing({ ...editing, tac_gia: e.target.value })}
-                    className="bg-white border border-outline-variant rounded-lg px-4 py-3 text-body-md outline-none" />
+                  <select value={editing.madm} onChange={e => setEditing({ ...editing, madm: Number(e.target.value) })}
+                    className="bg-white border border-outline-variant rounded-lg px-4 py-3 text-body-md outline-none">
+                    {categories.map(c => <option key={c.slug} value={c.slug}>{c.ten_dm}</option>)}
+                  </select>
                 </label>
                 <label className="grid gap-2">
                   <span className="text-label-sm font-bold text-on-surface-variant">Trạng thái</span>

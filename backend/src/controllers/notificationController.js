@@ -1,4 +1,3 @@
-const db = require('../config/db');
 const notificationModel = require('../models/notificationModel');
 const { saveDataUrlImage } = require("../utils/imageHelpers");
 

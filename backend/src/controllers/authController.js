@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { JWT_SECRET, isBcryptHash } = require("../config/auth");
+const db = require("../config/db");
 const userModel = require("../models/userModel");
 
 const roleFromUser = (user) => {

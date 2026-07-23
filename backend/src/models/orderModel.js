@@ -1,4 +1,3 @@
-const notificationModel = require('./notificationModel');
 const db = require("../config/db");
 
 async function applyPromoCode(maCode, tongTien) {

@@ -174,8 +174,8 @@ exports.create = async (req, res) => {
 
       await db.query(
         `INSERT INTO thanh_toan (madh, so_tien, phuong_thuc, trang_thai, ngay_thanh_toan)
-         VALUES (?, 'banking', 'banking', 'cho_thanh_toan', NOW())`,
-        [madh],
+         VALUES (?, ?, 'chuyen_khoan', 'cho_thanh_toan', NOW())`,
+        [madh, tienCoc],
       );
 
       response.banking_info = getBankingInfo(tienCoc, madh);

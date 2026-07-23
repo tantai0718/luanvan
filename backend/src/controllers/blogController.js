@@ -1,14 +1,9 @@
 const blogModel = require('../models/blogModel');
-const slugify = require('slugify');
-
-function makeSlug(text) {
-  return slugify(text, { lower: true, strict: true, locale: 'vi' });
-}
 
 exports.list = async (req, res) => {
   try {
-    const { page, limit, danh_muc } = req.query;
-    const data = await blogModel.getAllPosts({ page: Number(page) || 1, limit: Number(limit) || 6, danh_muc });
+    const { page, limit, madm } = req.query;
+    const data = await blogModel.getAllPosts({ page: Number(page) || 1, limit: Number(limit) || 6, madm });
     const categories = await blogModel.getCategories();
     res.json({ ...data, categories });
   } catch (err) {
@@ -19,11 +14,11 @@ exports.list = async (req, res) => {
 
 exports.detail = async (req, res) => {
   try {
-    const post = await blogModel.getPostBySlug(req.params.slug);
+    const post = await blogModel.getPostById(req.params.id);
     if (!post) return res.status(404).json({ message: 'Không tìm thấy bài viết' });
-    await blogModel.incrementViews(req.params.slug);
+    await blogModel.incrementViews(req.params.id);
     post.luot_xem += 1;
-    const related = await blogModel.getRelated(post.danh_muc, post.mabv, 3);
+    const related = await blogModel.getRelated(post.madm, post.mabv, 3);
     res.json({ post, related });
   } catch (err) {
     console.error('[blog:detail]', err);
@@ -36,8 +31,8 @@ exports.create = async (req, res) => {
     const { tieu_de, noi_dung } = req.body;
     if (!tieu_de?.trim()) return res.status(400).json({ message: 'Thiếu tiêu đề' });
     if (!noi_dung?.trim()) return res.status(400).json({ message: 'Thiếu nội dung' });
-    const slug = makeSlug(tieu_de);
-    const result = await blogModel.create({ ...req.body, slug });
+    const mand = req.user?.id || 1;
+    const result = await blogModel.create({ ...req.body, mand });
     res.status(201).json({ message: 'Tạo bài viết thành công', ...result });
   } catch (err) {
     console.error('[blog:create]', err);
@@ -48,9 +43,6 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const data = { ...req.body };
-    if (data.tieu_de && !data.slug) {
-      data.slug = makeSlug(data.tieu_de);
-    }
     await blogModel.update(req.params.id, data);
     res.json({ message: 'Cập nhật thành công' });
   } catch (err) {

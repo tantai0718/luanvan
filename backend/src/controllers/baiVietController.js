@@ -1,5 +1,6 @@
 const baiVietModel = require('../models/baiVietModel');
 const cheerio = require('cheerio');
+const { saveDataUrlImage } = require('../utils/imageHelpers');
 
 exports.listPublic = async (req, res) => {
   try {
@@ -132,5 +133,17 @@ exports.importUrl = async (req, res) => {
   } catch (err) {
     console.error('[baiViet:importUrl]', err);
     res.status(400).json({ message: err.message || 'Không thể lấy nội dung từ URL' });
+  }
+};
+
+exports.uploadImage = async (req, res) => {
+  try {
+    const { base64, filename } = req.body;
+    if (!base64) return res.status(400).json({ message: 'Thiếu dữ liệu ảnh' });
+    const url = await saveDataUrlImage(base64, 'articles', 'article');
+    res.json({ url });
+  } catch (err) {
+    console.error('[baiViet:uploadImage]', err);
+    res.status(500).json({ message: err.message });
   }
 };

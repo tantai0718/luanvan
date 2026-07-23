@@ -1,19 +1,14 @@
 import { useEffect, useState, useRef } from 'react';
-import { baiVietAPI } from '../../services/api';
-import { Btn, Loading, PageHero } from '../../components/ui/AdminUI';
+import { baiVietAPI, categoryAPI } from '../../services/api';
 
-const theLoaiOptions = [
-  { value: 'quy_trinh', label: 'Quy trình', color: 'bg-primary/10 text-primary', icon: 'eco' },
-  { value: 'suc_khoe', label: 'Sức khỏe', color: 'bg-blue-50 text-blue-700', icon: 'favorite' },
-  { value: 'am_thuc', label: 'Ẩm thực', color: 'bg-secondary/10 text-secondary', icon: 'restaurant' },
-  { value: 'kinh_nghiem', label: 'Kinh nghiệm', color: 'bg-purple-50 text-purple-700', icon: 'lightbulb' },
-  { value: 'khac', label: 'Khác', color: 'bg-surface-variant text-on-surface-variant', icon: 'article' },
-];
-const theLoaiLabel = Object.fromEntries(theLoaiOptions.map(o => [o.value, o.label]));
-const theLoaiBadge = Object.fromEntries(theLoaiOptions.map(o => [o.value, o.color]));
-const theLoaiIcon = Object.fromEntries(theLoaiOptions.map(o => [o.value, o.icon]));
+const emptyForm = { tieu_de: '', tom_tat: '', noi_dung: '', hinh_anh: '', madm: 4, trang_thai: 1 };
 
-const emptyForm = { tieu_de: '', tom_tat: '', noi_dung: '', hinh_anh: '', the_loai: 'khac', trang_thai: 1 };
+const readFileAsDataUrl = file => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(reader.result);
+  reader.onerror = () => reject(new Error(`Không đọc được ảnh ${file.name}`));
+  reader.readAsDataURL(file);
+});
 
 function fmtDate(d) {
   if (!d) return '';
@@ -22,21 +17,42 @@ function fmtDate(d) {
 
 export default function AdminArticles() {
   const [items, setItems] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filterLoai, setFilterLoai] = useState('');
+  const [filterDm, setFilterDm] = useState('');
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState('');
   const editorRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const fetchItems = () => {
     setLoading(true);
-    const q = `?${search ? `q=${encodeURIComponent(search)}` : ''}${filterLoai ? `&the_loai=${filterLoai}` : ''}`;
+    const q = `?${search ? `q=${encodeURIComponent(search)}` : ''}${filterDm ? `&the_loai=${filterDm}` : ''}`;
     baiVietAPI.adminAll(q).then(data => setItems(data.items)).catch(() => {}).finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchItems(); }, [search, filterLoai]);
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setMsg('Chỉ chấp nhận file ảnh'); return; }
+    setUploading(true); setMsg('');
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      const data = await baiVietAPI.uploadImage({ base64: dataUrl, filename: file.name });
+      setEditing(prev => ({ ...prev, hinh_anh: data.url }));
+    } catch (err) { setMsg(err.message || 'Lỗi tải ảnh'); }
+    finally { setUploading(false); e.target.value = ''; }
+  };
+
+  useEffect(() => { categoryAPI.getAll().then(d => {
+    const bvCats = (d.categories || d || []).filter(c => c.loai === 'bai_viet');
+    setCategories(bvCats);
+  }).catch(() => {}); }, []);
+
+  useEffect(() => { fetchItems(); }, [search, filterDm]);
 
   const handleSave = async () => {
     if (!editing.tieu_de.trim()) { setMsg('Thiếu tiêu đề'); return; }
@@ -135,17 +151,17 @@ export default function AdminArticles() {
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm kiếm bài viết..."
               className="w-full pl-10 pr-4 py-2.5 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-body-sm" />
           </div>
-          <select value={filterLoai} onChange={e => setFilterLoai(e.target.value)}
+          <select value={filterDm} onChange={e => setFilterDm(e.target.value)}
             className="border border-outline-variant rounded-lg py-2.5 pl-3 pr-8 text-body-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary">
             <option value="">Tất cả chuyên mục</option>
-            {theLoaiOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            {categories.map(c => <option key={c.madm} value={c.madm}>{c.ten_danh_muc}</option>)}
           </select>
         </div>
       </div>
 
       {/* ── News Table ── */}
       <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 overflow-hidden">
-        {loading ? <Loading /> : items.length ? (
+        {loading ? <div className="py-16 text-center"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></div> : items.length ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead className="bg-surface-container-low border-b border-outline-variant">
@@ -166,7 +182,7 @@ export default function AdminArticles() {
                         <img src={item.hinh_anh} alt={item.tieu_de} className="w-16 h-12 rounded-lg object-cover shadow-sm" />
                       ) : (
                         <div className="w-16 h-12 rounded-lg bg-emerald-50 flex items-center justify-center">
-                          <span className="material-symbols-outlined text-xl text-emerald-300">{theLoaiIcon[item.the_loai] || 'article'}</span>
+                          <span className="material-symbols-outlined text-xl text-emerald-300">article</span>
                         </div>
                       )}
                     </td>
@@ -177,9 +193,7 @@ export default function AdminArticles() {
                       </div>
                     </td>
                     <td className="p-5">
-                      <span className={`px-3 py-1 text-label-caps rounded-full font-bold ${theLoaiBadge[item.the_loai] || theLoaiBadge.khac}`}>
-                        {theLoaiLabel[item.the_loai] || 'Khác'}
-                      </span>
+                      {item.ten_danh_muc && <span className="px-3 py-1 bg-primary/10 text-primary text-label-caps rounded-full font-bold">{item.ten_danh_muc}</span>}
                     </td>
                     <td className="p-5">
                       <p className="font-body-sm text-body-sm text-on-surface-variant">{fmtDate(item.ngay_tao)}</p>
@@ -240,26 +254,41 @@ export default function AdminArticles() {
               </label>
               <label className="grid gap-2">
                 <span className="text-label-sm font-bold text-on-surface-variant">Tóm tắt</span>
-                <textarea rows={2} value={editing.tom_tat} onChange={e => setEditing({ ...editing, tom_tat: e.target.value })}
+                <textarea rows={2} value={editing.tom_tat || ''} onChange={e => setEditing({ ...editing, tom_tat: e.target.value })}
                   placeholder="Mô tả ngắn gọn..."
                   className="bg-white border border-outline-variant rounded-lg px-4 py-3 text-body-md resize-none focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
               </label>
-              <div className="grid gap-4 sm:grid-cols-3">
-                <label className="grid gap-2">
-                  <span className="text-label-sm font-bold text-on-surface-variant">Chuyên mục</span>
-                  <select value={editing.the_loai} onChange={e => setEditing({ ...editing, the_loai: e.target.value })}
-                    className="bg-white border border-outline-variant rounded-lg px-4 py-3 text-body-md outline-none">
-                    {theLoaiOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
-                </label>
-                <label className="grid gap-2">
-                  <span className="text-label-sm font-bold text-on-surface-variant">Trạng thái</span>
-                  <select value={editing.trang_thai} onChange={e => setEditing({ ...editing, trang_thai: Number(e.target.value) })}
-                    className="bg-white border border-outline-variant rounded-lg px-4 py-3 text-body-md outline-none">
-                    <option value={1}>Đã xuất bản</option>
-                    <option value={0}>Bản nháp</option>
-                  </select>
-                </label>
+              <label className="grid gap-2">
+                <span className="text-label-sm font-bold text-on-surface-variant">Trạng thái</span>
+                <select value={editing.trang_thai} onChange={e => setEditing({ ...editing, trang_thai: Number(e.target.value) })}
+                  className="bg-white border border-outline-variant rounded-lg px-4 py-3 text-body-md outline-none">
+                  <option value={1}>Đã xuất bản</option>
+                  <option value={0}>Bản nháp</option>
+                </select>
+              </label>
+              <div className="grid gap-2">
+                <span className="text-label-sm font-bold text-on-surface-variant">Hình ảnh bìa</span>
+                {editing.hinh_anh ? (
+                  <div className="relative rounded-lg overflow-hidden border border-outline-variant">
+                    <img src={editing.hinh_anh.startsWith('/upload/') ? `http://localhost:5000${editing.hinh_anh}` : editing.hinh_anh} alt="Ảnh bìa" className="w-full h-48 object-cover" />
+                    <button type="button" onClick={() => setEditing(prev => ({ ...prev, hinh_anh: '' }))}
+                      className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors">
+                      <span className="material-symbols-outlined text-base">close</span>
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center h-40 border-2 border-dashed border-outline-variant rounded-lg cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
+                    {uploading ? (
+                      <span className="material-symbols-outlined animate-spin text-3xl text-primary">progress_activity</span>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-4xl text-on-surface-variant/40">add_photo_alternate</span>
+                        <span className="text-body-sm text-on-surface-variant mt-1">Chọn ảnh từ máy</span>
+                      </>
+                    )}
+                    <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
+                  </label>
+                )}
               </div>
               <label className="grid gap-2">
                 <span className="text-label-sm font-bold text-on-surface-variant">Nội dung (HTML) <span className="text-error">*</span></span>
@@ -290,7 +319,6 @@ export default function AdminArticles() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

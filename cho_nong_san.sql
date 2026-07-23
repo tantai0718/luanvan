@@ -157,7 +157,7 @@ INSERT INTO `danh_gia` (`madg`, `mand`, `masp`, `so_sao`, `binh_luan`, `phan_hoi
 
 -- --------------------------------------------------------
 
---
+-- --------------------------------------------------------
 -- Table structure for table `danh_muc`
 --
 
@@ -166,18 +166,21 @@ CREATE TABLE IF NOT EXISTS `danh_muc` (
   `madm` int NOT NULL AUTO_INCREMENT,
   `ten_danh_muc` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `mo_ta` text COLLATE utf8mb4_unicode_ci,
-  `trang_thai` tinyint(1) DEFAULT NULL,
+  `loai` enum('san_pham','bai_viet') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'san_pham',
+  `trang_thai` tinyint(1) DEFAULT '1',
   PRIMARY KEY (`madm`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `danh_muc`
 --
 
-INSERT INTO `danh_muc` (`madm`, `ten_danh_muc`, `mo_ta`, `trang_thai`) VALUES
-(1, 'Trái Cây', 'Các loại trái cây tươi ngon bốn mùa', 1),
-(2, 'Rau Củ Quả', 'Rau củ hữu cơ, VietGAP an toàn sinh học', 1),
-(3, 'Gạo & Ngũ Cốc', 'Gạo đặc sản và các loại hạt dinh dưỡng', 1);
+INSERT INTO `danh_muc` (`madm`, `ten_danh_muc`, `mo_ta`, `loai`, `trang_thai`) VALUES
+(1, 'Trái Cây', 'Các loại trái cây tươi ngon bốn mùa', 'san_pham', 1),
+(2, 'Rau Củ Quả', 'Rau củ hữu cơ, VietGAP an toàn sinh học', 'san_pham', 1),
+(3, 'Gạo & Ngũ Cốc', 'Gạo đặc sản và các loại hạt dinh dưỡng', 'san_pham', 1),
+(4, 'Tin Tức Nông Sản', 'Tổng hợp tin tức thị trường và giá cả nông sản', 'bai_viet', 1),
+(5, 'Mẹo Bảo Quản', 'Hướng dẫn mẹo bảo quản nông sản tươi lâu', 'bai_viet', 1);
 -- --------------------------------------------------------
 
 --
@@ -574,6 +577,33 @@ INSERT INTO `vai_tro` (`mavt`, `ten_vai_tro`, `mo_ta`, `trang_thai`) VALUES
 (1, 'Admin', 'Quản trị viên toàn quyền hệ thống', 1),
 (2, 'User', 'Người dùng/Khách hàng tham gia sàn', 1);
 
+-- --------------------------------------------------------
+-- Table structure for table `bai_viet`
+--
+DROP TABLE IF EXISTS `bai_viet`;
+CREATE TABLE IF NOT EXISTS `bai_viet` (
+  `mabv` int NOT NULL AUTO_INCREMENT,
+  `madm` int NOT NULL,
+  `mand` int NOT NULL,
+  `tieu_de` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `tom_tat` text COLLATE utf8mb4_unicode_ci,
+  `noi_dung` longtext COLLATE utf8mb4_unicode_ci,
+  `hinh_anh` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `luot_xem` int DEFAULT '0',
+  `trang_thai` tinyint(1) DEFAULT '1',
+  `ngay_tao` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`mabv`),
+  KEY `fk_bv_dm` (`madm`),
+  KEY `fk_bv_nd` (`mand`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `bai_viet`
+--
+
+INSERT INTO `bai_viet` (`mabv`, `madm`, `mand`, `tieu_de`, `tom_tat`, `noi_dung`, `hinh_anh`, `luot_xem`, `trang_thai`, `ngay_tao`) VALUES
+(1, 4, 1, 'Giá xoài Cát Chu tăng mạnh mùa nông sản 2026', 'Thị trường tiêu thụ xoài miền Tây ghi nhận mức tăng giá kỷ lục.', '<p>Chi tiết bài viết tin tức nông sản...</p>', 'posts/tin_xoai.png', 120, 1, '2026-07-15 10:00:00');
+
 --
 -- Constraints for dumped tables
 --
@@ -673,6 +703,13 @@ ALTER TABLE `thanh_toan`
 --
 ALTER TABLE `thong_bao`
   ADD CONSTRAINT `fk_tb_nd` FOREIGN KEY (`mand`) REFERENCES `nguoi_dung` (`mand`);
+
+--
+-- Constraints for table `bai_viet`
+--
+ALTER TABLE `bai_viet`
+  ADD CONSTRAINT `fk_bv_dm` FOREIGN KEY (`madm`) REFERENCES `danh_muc` (`madm`),
+  ADD CONSTRAINT `fk_bv_nd` FOREIGN KEY (`mand`) REFERENCES `nguoi_dung` (`mand`);
 
 --
 -- Constraints for table `tin_nhan_chat`
