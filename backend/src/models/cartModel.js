@@ -42,13 +42,16 @@ async function getCart(mand) {
     const totalPrice = items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
     const totalQty = items.reduce((s, i) => s + i.quantity, 0);
 
+    const orderModel = require('./orderModel');
+    const { tienGiam, mienPhiShip, appliedList } = await orderModel.tinhUuDaiTuDong(totalPrice, totalQty, 'thuong_va_dat_truoc');
+
     const discounts = [];
-    if (totalQty >= 10) {
-        discounts.push({ code: 'BULK_QUANTITY', label: 'Mua từ 10 sản phẩm', amount: Math.round(totalPrice * 0.05) });
+    if (tienGiam > 0) {
+        discounts.push({ code: 'DISCOUNT', label: 'Giảm giá tự động', amount: tienGiam });
     }
 
-    const discountAmount = discounts.reduce((s, d) => s + d.amount, 0);
-    const shipping = (totalPrice - discountAmount) >= 500000 ? 0 : 30000;
+    const discountAmount = tienGiam;
+    const shipping = mienPhiShip ? 0 : (totalPrice - discountAmount >= 500000 ? 0 : 30000);
     const total = totalPrice - discountAmount + shipping;
 
     return {

@@ -21,7 +21,6 @@ function resolveImage(hinh_anh) {
   return `${SERVER}${hinh_anh.startsWith('/') ? '' : '/upload/'}${hinh_anh}`;
 }
 
-// Cấu trúc mới gọn gàng theo ý bạn
 const LOAI_LABEL = {
   khuyen_mai: { label: 'Khuyến mãi' },
   he_thong:   { label: 'Hệ thống' },
@@ -78,29 +77,28 @@ export default function AnnouncementBanner() {
       onClick={handleDismiss}
     >
       <div
-        className="relative w-full overflow-hidden rounded-2xl bg-white shadow-2xl"
-        style={{ maxWidth: hasImg ? 460 : 400 }}
+        className="relative w-full overflow-hidden rounded-2xl bg-white shadow-2xl transition-all"
+        style={{ maxWidth: hasImg ? 580 : 440 }} /* TĂNG NỔI BẬT: Nâng độ rộng tối đa từ 460 lên 580px */
         onClick={e => e.stopPropagation()}
       >
         <button
           onClick={handleDismiss}
-          className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/20 text-white transition-all hover:bg-black/40"
+          className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/30 text-white transition-all hover:bg-black/50"
           aria-label="Đóng">
-          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
         </button>
 
         {hasImg ? (
           <>
-            {/* Ảnh hiển thị trọn vẹn, không còn lớp gradient/chữ đè lên trên */}
+            {/* TĂNG CHIỀU CAO TỐI ĐA: Nâng maxHeight lên 450px để hình hiển thị to và rõ chi tiết */}
             <img
               src={imgSrc}
               alt={current.tieu_de}
               className="w-full object-cover"
-              style={{ maxHeight: 320 }}
+              style={{ maxHeight: 450 }} 
             />
 
-            {/* Tiêu đề chuyển xuống khối trắng bên dưới ảnh, không còn che chữ trong ảnh nữa */}
-            <div className="px-5 pt-4">
+            <div className="px-6 pt-4">
               <div className="mb-1 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-primary">
                 {meta.label}
               </div>
@@ -110,18 +108,18 @@ export default function AnnouncementBanner() {
             </div>
 
             {current.noi_dung && (
-              <div className="px-5 pt-2 pb-4">
+              <div className="px-6 pt-2 pb-4">
                 <p className="text-sm text-on-surface-variant leading-relaxed whitespace-pre-line">{current.noi_dung}</p>
               </div>
             )}
 
-            <div className="flex items-center justify-between border-t border-outline-variant/40 px-5 py-3">
+            <div className="flex items-center justify-between border-t border-outline-variant/40 px-6 py-3.5">
               {queue.length > 1 && (
                 <p className="text-xs text-on-surface-variant">Còn {queue.length - 1} thông báo khác</p>
               )}
               <button
                 onClick={handleDismiss}
-                className="ml-auto rounded-full bg-primary px-5 py-2 text-sm font-bold text-white hover:bg-primary/90 active:scale-95 transition-all">
+                className="ml-auto rounded-full bg-primary px-6 py-2.5 text-sm font-bold text-white hover:bg-primary/90 active:scale-95 transition-all">
                 Đã hiểu & Đóng
               </button>
             </div>
@@ -142,7 +140,7 @@ export default function AnnouncementBanner() {
               )}
               <button
                 onClick={handleDismiss}
-                className="ml-auto rounded-full bg-primary px-5 py-2 text-sm font-bold text-white hover:bg-primary/90 active:scale-95 transition-all">
+                className="ml-auto rounded-full bg-primary px-6 py-2.5 text-sm font-bold text-white hover:bg-primary/90 active:scale-95 transition-all">
                 Đã hiểu & Đóng
               </button>
             </div>

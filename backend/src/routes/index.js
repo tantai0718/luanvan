@@ -20,6 +20,7 @@ const notificationRoutes = require("./notifications");
 const baiVietRoutes = require("./baiViet");
 const blogRoutes = require("./blog");
 
+
 router.get("/", (req, res) =>
   res.json({ message: "Cho Nong San API dang chay", version: "2.0.0" }),
 );

@@ -190,6 +190,8 @@ async function deliverSubscription(madk) {
   return getSubscriptionById(madk);
 }
 
+
+
 module.exports = {
   ensureSubscriptionTable,
   getProductInfo,
