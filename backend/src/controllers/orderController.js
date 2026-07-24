@@ -19,7 +19,7 @@ function getBankingInfo(amount, orderId) {
 
 exports.createOrder = async (req, res) => {
   try {
-    const { dia_chi_giao, phuong_thuc_tt, ghi_chu, ten_nguoi_nhan, sdt_nguoi_nhan } = req.body;
+    const { dia_chi_giao, phuong_thuc_tt, ma_code, ghi_chu, ten_nguoi_nhan, sdt_nguoi_nhan } = req.body;
     if (!dia_chi_giao?.trim())
       return res
         .status(400)
@@ -29,6 +29,7 @@ exports.createOrder = async (req, res) => {
       mand: req.user.id,
       dia_chi_giao,
       phuong_thuc: phuong_thuc_tt || "tien_mat",
+      ma_code: ma_code || "",
       ghi_chu: ghi_chu || "",
       nguoi_dung,
       ten_nguoi_nhan: ten_nguoi_nhan?.trim() || '',
@@ -80,22 +81,17 @@ exports.createPreorder = async (req, res) => {
     );
     if (!sp) return res.status(404).json({ message: "Sản phẩm không tồn tại" });
 
-    // Uu dai tu dong (giam theo so luong, mien phi ship) duoc tinh
-    // ben trong orderModel.createPreorder, khong can tinh tay o day nua.
-    // Tinh coc chi can biet truoc tong_tien du kien de tinh % tien coc:
-    const { tienGiam, mienPhiShip } = await orderModel.tinhUuDaiTuDong(
-      sp.gia_ban * quantity,
-      quantity,
-    );
     const tongHang = sp.gia_ban * quantity;
-    const phiShip = mienPhiShip ? 0 : 30000;
-    const tongTienDuKien = tongHang - tienGiam + phiShip;
+    const phiShip = tongHang >= 500000 ? 0 : 30000;
+    let tienGiam = 0;
+    if (quantity >= 10) tienGiam = Math.round(tongHang * 0.05);
+    const tongTien = tongHang - tienGiam + phiShip;
 
     let tienCoc = 0;
     if (phuong_thuc_tt === "banking" && loai_tien_coc === "30") {
-      tienCoc = Math.round(tongTienDuKien * 0.3);
+      tienCoc = Math.round(tongTien * 0.3);
     } else if (phuong_thuc_tt === "banking" && loai_tien_coc === "100") {
-      tienCoc = tongTienDuKien;
+      tienCoc = tongTien;
     }
 
     const { madh, tong_tien } = await orderModel.createPreorder({

@@ -622,6 +622,18 @@ const exportExcel = async () => {
     }
 };
 
+  const fetchSummary = async () => {
+    setSummaryLoading(true);
+    try {
+      const data = await orderAPI.adminPreorderSummary();
+      setSummary(data.summary || []);
+    } catch {
+      setSummary([]);
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
   const fetchSubSummary = async () => {
     setSubSummaryLoading(true);
     try {
