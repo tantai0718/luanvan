@@ -104,7 +104,7 @@ exports.create = async (req, res) => {
     const giaBan = Number(product.gia_ban);
     const tongHang = giaBan * soLuong;
 
-    const { tienGiam } = await orderModel.tinhUuDaiTuDong(tongHang, soLuong, 'dinh_ky');
+    const { tienGiam, mienPhiShip, appliedPromotions } = await orderModel.tinhUuDaiTuDong(tongHang, soLuong, 'dinh_ky');
 
     const giaDuKien = soLuong > 0
       ? Math.round((tongHang - tienGiam) / soLuong)
@@ -137,7 +137,8 @@ exports.create = async (req, res) => {
     };
 
     if (isBanking) {
-      const tongTienKy = tongHang - tienGiam;
+      const phiShip = mienPhiShip ? 0 : 30000;
+      const tongTienKy = tongHang - tienGiam + phiShip;
       let tienCoc = 0;
       if (loai_tien_coc === "30") {
         tienCoc = Math.round(tongTienKy * 0.3);
@@ -152,12 +153,13 @@ exports.create = async (req, res) => {
 
       const [dhResult] = await db.query(
         `INSERT INTO don_hang
-           (mand, ten_nguoi_nhan, email_nguoi_nhan, sdt_nguoi_nhan,
+           (mand, tien_giam, ten_nguoi_nhan, email_nguoi_nhan, sdt_nguoi_nhan,
             loai_don_hang, tong_tien, tong_da_thanh_toan, tien_coc, trang_thai,
             trang_thai_thanh_toan, dia_chi_giao, ghi_chu, ngay_dat, ngay_giao_du_kien)
-         VALUES (?, ?, ?, ?, 'dinh_ky', ?, 0, ?, 'cho_xac_nhan', 'chua_thanh_toan', ?, ?, NOW(), ?)`,
+         VALUES (?, ?, ?, ?, ?, 'dinh_ky', ?, 0, ?, 'cho_xac_nhan', 'chua_thanh_toan', ?, ?, NOW(), ?)`,
         [
           mand,
+          tienGiam,
           nd.ho_ten || "",
           nd.email || "",
           nd.sdt || "",
@@ -169,6 +171,8 @@ exports.create = async (req, res) => {
         ],
       );
       const madh = dhResult.insertId;
+      const promotionModel = require("../models/promotionModel");
+      await promotionModel.saveOrderPromotions(madh, appliedPromotions);
 
       await db.query(
         `INSERT INTO chi_tiet_don_hang (madh, masp, so_luong, don_gia, thanh_tien)

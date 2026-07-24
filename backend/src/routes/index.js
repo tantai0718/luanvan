@@ -19,6 +19,7 @@ const dashboardRoutes = require("./dashboard");
 const notificationRoutes = require("./notifications");
 const baiVietRoutes = require("./baiViet");
 const blogRoutes = require("./blog");
+const promotionRoutes = require("./promotions");
 
 
 router.get("/", (req, res) =>
@@ -42,4 +43,5 @@ router.use("/admin/dashboard", dashboardRoutes);
 router.use("/", notificationRoutes);
 router.use("/articles", baiVietRoutes);
 router.use("/blog", blogRoutes);
+router.use("/", promotionRoutes);
 module.exports = router;

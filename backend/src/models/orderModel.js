@@ -1,26 +1,8 @@
 const db = require("../config/db");
+const promotionModel = require("./promotionModel");
 
-async function applyPromoCode(maCode, tongTien) {
-  if (!maCode) return { makm: null, tien_giam: 0 };
-  const [[km]] = await db.query(
-    `SELECT * FROM khuyen_mai
-     WHERE ma_code = ? AND trang_thai = 1
-       AND NOW() BETWEEN ngay_bat_dau AND ngay_ket_thuc
-       AND (so_luong IS NULL OR da_su_dung < so_luong)
-       AND (so_luong_toi_thieu IS NULL OR ? >= so_luong_toi_thieu)`,
-    [maCode, tongTien],
-  );
-  if (!km)
-    throw new Error(`Ma giam gia "${maCode}" khong hop le hoac da het luot.`);
-  let tien_giam = 0;
-  if (km.loai_khuyen_mai === "phan_tram") {
-    tien_giam = Math.round((tongTien * Number(km.phan_tram_giam)) / 100);
-    if (km.gia_tri_giam_toi_da)
-      tien_giam = Math.min(tien_giam, Number(km.gia_tri_giam_toi_da));
-  } else {
-    tien_giam = Number(km.gia_tri_giam_toi_da || 0);
-  }
-  return { makm: km.makm, tien_giam };
+async function tinhUuDaiTuDong(tongTien, tongSoLuong, loai_don) {
+  return await promotionModel.tinhUuDaiTuDong(tongTien, tongSoLuong, loai_don);
 }
 
 const PAYMENT_METHOD_MAP = { tien_mat: 'tien_mat', banking: 'banking', vnpay: 'vnpay' };
@@ -33,7 +15,6 @@ async function createOrder({
   mand,
   dia_chi_giao,
   phuong_thuc = "tien_mat",
-  ma_code = "",
   ghi_chu = "",
   nguoi_dung,
   ten_nguoi_nhan = '',
@@ -63,20 +44,17 @@ async function createOrder({
     0,
   );
   const totalQty = items.reduce((s, i) => s + i.so_luong, 0);
-  let bulkDiscount = 0;
-  if (totalQty >= 10) {
-    bulkDiscount = Math.round(tongHang * 0.05);
-  }
-  const { makm, tien_giam: promoDiscount } = await applyPromoCode(ma_code, tongHang);
-  const tien_giam = bulkDiscount + promoDiscount;
-  const phi_ship = (tongHang - tien_giam) >= 500000 ? 0 : 30000;
+  const { tienGiam, mienPhiShip, appliedPromotions } = await promotionModel.tinhUuDaiTuDong(tongHang, totalQty, 'thuong');
+  
+  const tien_giam = tienGiam;
+  const phi_ship = mienPhiShip ? 0 : 30000;
   const tong_tien = tongHang - tien_giam + phi_ship;
   const isBanking = phuong_thuc === "banking";
+
   const [dhResult] = await db.query(
     `INSERT INTO don_hang
     (
       mand,
-      makm,
       tien_giam,
       ten_nguoi_nhan,
       email_nguoi_nhan,
@@ -93,7 +71,7 @@ async function createOrder({
     )
     VALUES
     (
-      ?, ?, ?, ?, ?, ?,
+      ?, ?, ?, ?, ?,
       'thuong',
       ?,
       ?,
@@ -106,7 +84,6 @@ async function createOrder({
     )`,
     [
       mand,
-      makm,
       tien_giam,
       ten_nguoi_nhan || nguoi_dung?.ho_ten || "",
       nguoi_dung?.email || "",
@@ -119,6 +96,8 @@ async function createOrder({
     ],
   );
   const madh = dhResult.insertId;
+  await promotionModel.saveOrderPromotions(madh, appliedPromotions);
+
   const ctValues = items.map((i) => [
     madh,
     i.masp,
@@ -141,12 +120,7 @@ async function createOrder({
       [item.so_luong, item.masp],
     );
   }
-  if (makm) {
-    await db.query(
-      "UPDATE khuyen_mai SET da_su_dung = da_su_dung + 1 WHERE makm = ?",
-      [makm],
-    );
-  }
+
   await db.query("DELETE FROM chi_tiet_gio_hang WHERE magh = ?", [gh.magh]);
 
   return { madh, tong_tien };
@@ -173,11 +147,9 @@ async function createPreorder({
   if (!sp) throw new Error("Sản phẩm không tồn tại hoặc đã ngừng bán");
 
   const tong_hang = gia_ban * so_luong;
-  const phi_ship = tong_hang >= 500000 ? 0 : 30000;
-  let tien_giam = 0;
-  if (so_luong >= 10) {
-    tien_giam = Math.round(tong_hang * 0.05);
-  }
+  const { tienGiam, mienPhiShip, appliedPromotions } = await promotionModel.tinhUuDaiTuDong(tong_hang, so_luong, 'dat_truoc');
+  const tien_giam = tienGiam;
+  const phi_ship = mienPhiShip ? 0 : 30000;
   const tong_tien = tong_hang - tien_giam + phi_ship;
   const isBanking = phuong_thuc === "banking";
   const actualDeposit = Math.min(Number(tien_coc) || 0, tong_tien);
@@ -188,13 +160,13 @@ async function createPreorder({
         loai_don_hang, tong_tien, tong_da_thanh_toan, tien_coc, trang_thai,
         trang_thai_thanh_toan, dia_chi_giao, ghi_chu, ngay_giao_du_kien, ngay_dat)
      VALUES (?, ?, ?, ?, ?, 'dat_truoc', ?, ?, ?, 'cho_xac_nhan', ?, ?, ?,
-       CASE
-         WHEN ? IS NULL THEN DATE_ADD(NOW(), INTERVAL 7 DAY)
-         WHEN ? < DATE_ADD(NOW(), INTERVAL 3 DAY) THEN DATE_ADD(NOW(), INTERVAL 3 DAY)
-         WHEN ? > DATE_ADD(NOW(), INTERVAL 60 DAY) THEN DATE_ADD(NOW(), INTERVAL 60 DAY)
-         ELSE ?
-       END,
-       NOW())`,
+        CASE
+          WHEN ? IS NULL THEN DATE_ADD(NOW(), INTERVAL 7 DAY)
+          WHEN ? < DATE_ADD(NOW(), INTERVAL 3 DAY) THEN DATE_ADD(NOW(), INTERVAL 3 DAY)
+          WHEN ? > DATE_ADD(NOW(), INTERVAL 60 DAY) THEN DATE_ADD(NOW(), INTERVAL 60 DAY)
+          ELSE ?
+        END,
+        NOW())`,
     [
       mand,
       tien_giam,
@@ -214,6 +186,7 @@ async function createPreorder({
     ],
   );
   const madh = dhResult.insertId;
+  await promotionModel.saveOrderPromotions(madh, appliedPromotions);
 
   await db.query(
     "INSERT INTO chi_tiet_don_hang (madh, masp, so_luong, don_gia, thanh_tien) VALUES (?, ?, ?, ?, ?)",
@@ -255,11 +228,18 @@ async function getOrderById(madh, mand = null) {
      FROM chi_tiet_don_hang ct
      JOIN san_pham sp ON sp.masp = ct.masp
      LEFT JOIN hinh_anh_video hav
-       ON hav.masp = sp.masp AND hav.la_chinh = 1 AND hav.loai = 'hinh_anh'
+        ON hav.masp = sp.masp AND hav.la_chinh = 1 AND hav.loai = 'hinh_anh'
      WHERE ct.madh = ?`,
     [madh],
   );
-  return { ...dh, items };
+  const [khuyenMai] = await db.query(
+    `SELECT dhkm.makm, km.ten_km, km.loai_uu_dai, dhkm.tien_giam_ap_dung
+     FROM don_hang_khuyen_mai dhkm
+     JOIN khuyen_mai km ON km.makm = dhkm.makm
+     WHERE dhkm.madh = ?`,
+    [madh],
+  );
+  return { ...dh, items, khuyen_mai: khuyenMai };
 }
 
 async function cancelOrder(madh, mand) {
@@ -407,7 +387,7 @@ function mapOrder(row) {
     trang_thai_tt: row.trang_thai_thanh_toan === "da_thanh_toan" ? "da_tt" : "chua_tt",
     trang_thai_thanh_toan: row.trang_thai_thanh_toan,
     dia_chi_giao: row.dia_chi_giao,
-     ghi_chu: row.ghi_chu,
+    ghi_chu: row.ghi_chu,
     ngay_tao: row.ngay_dat,
     ngay_giao_du_kien: row.ngay_giao_du_kien,
     ngay_giao_thuc_te: row.ngay_giao_thuc_te,
@@ -427,13 +407,13 @@ async function updatePaymentSuccess(madh, { ma_giao_dich = '', du_lieu_cong = ''
   const amountPaid = depositAmount > 0 ? depositAmount : undefined;
   await db.query(
     `UPDATE don_hang SET trang_thai = 'da_xac_nhan',
-     trang_thai_thanh_toan = 'da_thanh_toan',
-     tong_da_thanh_toan = ? WHERE madh = ?`,
+      trang_thai_thanh_toan = 'da_thanh_toan',
+      tong_da_thanh_toan = ? WHERE madh = ?`,
     [amountPaid || 0, madh],
   );
   await db.query(
     `UPDATE thanh_toan SET trang_thai = 'thanh_cong', ma_giao_dich = ?,
-     du_lieu_cong = ?, ngay_thanh_toan = NOW() WHERE madh = ?`,
+      du_lieu_cong = ?, ngay_thanh_toan = NOW() WHERE madh = ?`,
     [ma_giao_dich, du_lieu_cong, madh],
   );
 }
@@ -453,41 +433,43 @@ async function confirmBankingPayment(madh) {
   const amountPaid = depositAmount > 0 ? depositAmount : 0;
   await db.query(
     `UPDATE don_hang SET trang_thai_thanh_toan = 'da_thanh_toan',
-     tong_da_thanh_toan = ? WHERE madh = ?`,
+      tong_da_thanh_toan = ? WHERE madh = ?`,
     [amountPaid, madh],
   );
   await db.query(
     `UPDATE thanh_toan SET trang_thai = 'thanh_cong',
-     ngay_thanh_toan = NOW() WHERE madh = ?`,
+      ngay_thanh_toan = NOW() WHERE madh = ?`,
     [madh],
   );
 }
+
 async function createNotification({ mand, tieu_de, noi_dung, loai = 'don_hang' }) {
   await db.query(
     `INSERT INTO thong_bao (mand, tieu_de, noi_dung, loai, da_doc, ngay_tao)
-     VALUES (?, ?, ?, ?, 0, NOW())`,
+      VALUES (?, ?, ?, ?, 0, NOW())`,
     [mand, tieu_de, noi_dung, loai]
   );
 }
+
 // Tổng hợp đơn đặt trước theo ngày giao dự kiến + sản phẩm
 async function getPreorderSummary() {
   const [rows] = await db.query(
     `SELECT
-       DATE_FORMAT(dh.ngay_giao_du_kien, '%Y-%m-%d') AS ngay_giao,
-       ct.masp,
-       sp.ten_san_pham,
-       sp.don_vi,
-       hav.duong_dan AS hinh_san_pham,
-       SUM(ct.so_luong) AS tong_so_luong,
-       COUNT(DISTINCT dh.madh) AS so_don
-     FROM don_hang dh
-     JOIN chi_tiet_don_hang ct ON ct.madh = dh.madh
-     JOIN san_pham sp ON sp.masp = ct.masp
-     LEFT JOIN hinh_anh_video hav
-       ON hav.masp = sp.masp AND hav.la_chinh = 1 AND hav.loai = 'hinh_anh'
-     WHERE dh.loai_don_hang = 'dat_truoc' AND dh.trang_thai != 'da_huy'
-     GROUP BY DATE_FORMAT(dh.ngay_giao_du_kien, '%Y-%m-%d'), ct.masp
-     ORDER BY ngay_giao ASC, tong_so_luong DESC`
+        DATE_FORMAT(dh.ngay_giao_du_kien, '%Y-%m-%d') AS ngay_giao,
+        ct.masp,
+        sp.ten_san_pham,
+        sp.don_vi,
+        hav.duong_dan AS hinh_san_pham,
+        SUM(ct.so_luong) AS tong_so_luong,
+        COUNT(DISTINCT dh.madh) AS so_don
+      FROM don_hang dh
+      JOIN chi_tiet_don_hang ct ON ct.madh = dh.madh
+      JOIN san_pham sp ON sp.masp = ct.masp
+      LEFT JOIN hinh_anh_video hav
+        ON hav.masp = sp.masp AND hav.la_chinh = 1 AND hav.loai = 'hinh_anh'
+      WHERE dh.loai_don_hang = 'dat_truoc' AND dh.trang_thai != 'da_huy'
+      GROUP BY DATE_FORMAT(dh.ngay_giao_du_kien, '%Y-%m-%d'), ct.masp
+      ORDER BY ngay_giao ASC, tong_so_luong DESC`
   );
   return rows;
 }
@@ -496,15 +478,15 @@ async function getPreorderSummary() {
 async function getPreorderSummaryDetail(ngay, masp) {
   const [rows] = await db.query(
     `SELECT
-       dh.madh, dh.ten_nguoi_nhan, dh.sdt_nguoi_nhan, dh.dia_chi_giao,
-       dh.trang_thai, dh.trang_thai_thanh_toan,
-       dh.tong_tien, dh.tong_da_thanh_toan, dh.tien_coc,
-       ct.so_luong, ct.don_gia, ct.thanh_tien
-     FROM don_hang dh
-     JOIN chi_tiet_don_hang ct ON ct.madh = dh.madh
-     WHERE dh.loai_don_hang = 'dat_truoc' AND dh.trang_thai != 'da_huy'
-       AND DATE(dh.ngay_giao_du_kien) = ? AND ct.masp = ?
-     ORDER BY dh.ngay_dat ASC`,
+        dh.madh, dh.ten_nguoi_nhan, dh.sdt_nguoi_nhan, dh.dia_chi_giao,
+        dh.trang_thai, dh.trang_thai_thanh_toan,
+        dh.tong_tien, dh.tong_da_thanh_toan, dh.tien_coc,
+        ct.so_luong, ct.don_gia, ct.thanh_tien
+      FROM don_hang dh
+      JOIN chi_tiet_don_hang ct ON ct.madh = dh.madh
+      WHERE dh.loai_don_hang = 'dat_truoc' AND dh.trang_thai != 'da_huy'
+        AND DATE(dh.ngay_giao_du_kien) = ? AND ct.masp = ?
+      ORDER BY dh.ngay_dat ASC`,
     [ngay, masp],
   );
   return rows;
@@ -525,4 +507,5 @@ module.exports = {
   createNotification,
   getPreorderSummary,
   getPreorderSummaryDetail,
+  tinhUuDaiTuDong,
 };

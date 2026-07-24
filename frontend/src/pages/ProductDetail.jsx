@@ -1,12 +1,53 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { orderAPI, productAPI, reviewAPI, subscriptionAPI } from '../services/api';
+import { orderAPI, productAPI, reviewAPI, subscriptionAPI, promotionAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { pickProductImage } from '../utils/marketImages';
 
 const isVideoUrl = url => /\.(mp4|webm|mov)$/i.test(url || '');
 const formatCurrency = value => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
+
+function calcPromotions(promos, totalAmount, quantity, loaiDon) {
+  let tienGiam = 0;
+  let mienPhiShip = false;
+  const appliedList = [];
+
+  for (const promo of promos || []) {
+    if (!promo.trang_thai) continue;
+    const apDung = promo.ap_dung_cho;
+    const isMatchOrder =
+      apDung === 'tat_ca' ||
+      (apDung === 'thuong_va_dat_truoc' && ['thuong', 'dat_truoc', 'thuong_va_dat_truoc'].includes(loaiDon)) ||
+      (apDung === 'dinh_ky' && loaiDon === 'dinh_ky');
+
+    if (!isMatchOrder) continue;
+
+    const minVal = Number(promo.dieu_kien_toi_thieu || 0);
+
+    if (promo.loai_uu_dai === 'giam_theo_so_luong') {
+      if (quantity >= minVal) {
+        const pct = Number(promo.phan_tram_giam || 0);
+        let discount = Math.round(totalAmount * (pct / 100));
+        if (promo.gia_tri_giam_toi_da && Number(promo.gia_tri_giam_toi_da) > 0) {
+          discount = Math.min(discount, Number(promo.gia_tri_giam_toi_da));
+        }
+        tienGiam += discount;
+        appliedList.push({
+          name: promo.ten_km,
+          amount: discount,
+          label: `${promo.ten_km} (-${Number(discount).toLocaleString('vi-VN')}đ)`,
+        });
+      }
+    } else if (promo.loai_uu_dai === 'mien_phi_ship') {
+      if ((totalAmount - tienGiam) >= minVal) {
+        mienPhiShip = true;
+      }
+    }
+  }
+
+  return { tienGiam, mienPhiShip, appliedList };
+}
 
 function ReviewItem({ review }) {
   const stars = Math.max(0, Math.min(5, Number(review.so_sao || 0)));
@@ -37,6 +78,7 @@ export default function ProductDetail() {
 
   const [product, setProduct] = useState(null);
   const [reviews, setReviews] = useState([]);
+  const [promotions, setPromotions] = useState([]);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -59,11 +101,12 @@ export default function ProductDetail() {
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([productAPI.getById(id), reviewAPI.getByProduct(id)])
-      .then(([productData, reviewData]) => {
+    Promise.all([productAPI.getById(id), reviewAPI.getByProduct(id), promotionAPI.getActive().catch(() => ({ promotions: [] }))])
+      .then(([productData, reviewData, promoData]) => {
         const next = productData.product;
         setProduct(next);
         setReviews(reviewData.reviews || []);
+        setPromotions(promoData.promotions || []);
         const BACKEND = 'http://localhost:5000';
         const firstImage = next?.images?.[0];
         const initialImage = firstImage ? (firstImage.startsWith('/upload/') ? `${BACKEND}${firstImage}` : firstImage) : pickProductImage(next);
@@ -116,14 +159,28 @@ export default function ProductDetail() {
 
   const handleAddToCart = async () => {
     if (!user) return navigate('/login');
-    if (user.role !== 'buyer' || stock <= 0) return;
-    try { await addToCart(product.ma_san_pham, quantity); setAdded(true); setTimeout(() => setAdded(false), 1400); } catch { }
+    if (user.role !== 'buyer') {
+      alert('Chỉ tài khoản người mua mới có thể thêm vào giỏ hàng.');
+      return;
+    }
+    if (stock <= 0) return;
+    try { await addToCart(product.ma_san_pham, quantity); setAdded(true); setTimeout(() => setAdded(false), 1400); } catch (err) {
+      console.error(err);
+      alert('Có lỗi xảy ra, không thể thêm vào giỏ hàng.');
+    }
   };
 
   const handleBuyNow = async () => {
     if (!user) return navigate('/login');
-    if (user.role !== 'buyer' || stock <= 0) return;
-    try { await addToCart(product.ma_san_pham, quantity); navigate('/cart'); } catch { }
+    if (user.role !== 'buyer') {
+      alert('Chỉ tài khoản người mua mới có thể mua hàng.');
+      return;
+    }
+    if (stock <= 0) return;
+    try { await addToCart(product.ma_san_pham, quantity); navigate('/cart'); } catch (err) {
+      console.error(err);
+      alert('Có lỗi xảy ra, không thể mua ngay.');
+    }
   };
 
   const handleReviewSubmit = async event => {
@@ -355,11 +412,25 @@ export default function ProductDetail() {
                     </label>
                   </div>
                   {(() => {
-                    const finalTotal = (product.gia_ban || 0) * preorderForm.quantity;
+                    const subtotal = (product.gia_ban || 0) * preorderForm.quantity;
+                    const { tienGiam: discount, mienPhiShip, appliedList } = calcPromotions(promotions, subtotal, preorderForm.quantity, 'dat_truoc');
+                    const subtotalAfterDiscount = subtotal - discount;
+                    const shippingFee = mienPhiShip ? 0 : 30000;
+                    const finalTotal = subtotalAfterDiscount + shippingFee;
                     const depositAmount = preorderForm.loai_tien_coc === '30' ? Math.round(finalTotal * 0.3) : finalTotal;
                     const remaining = finalTotal - depositAmount;
                     return (
                       <div className="text-body-md space-y-1">
+                        {appliedList.map((item, i) => (
+                          <p key={i} className="text-xs text-[#1a7a4a] font-semibold">
+                            {item.label}
+                          </p>
+                        ))}
+                        {shippingFee === 0 ? (
+                          <p className="text-xs text-blue-600 font-semibold"> Miễn phí vận chuyển (Đơn từ 500.000đ)</p>
+                        ) : (
+                          <p className="text-xs text-on-surface-variant">Phí vận chuyển: +{formatCurrency(30000)}</p>
+                        )}
                         <p className="text-on-surface">Tổng tiền (tạm tính): <strong>{formatCurrency(finalTotal)}</strong></p>
                         <p className="text-primary font-bold">Số tiền cần chuyển khoản: {formatCurrency(depositAmount)}</p>
                         {remaining > 0 && <p className="text-on-surface-variant text-label-sm">Phần còn lại ({formatCurrency(remaining)}) thanh toán khi nhận hàng</p>}
@@ -430,11 +501,25 @@ export default function ProductDetail() {
                     </label>
                   </div>
                   {(() => {
-                    const finalPerCycle = (product.gia_ban || 0) * subscriptionForm.quantity;
+                    const subtotal = (product.gia_ban || 0) * subscriptionForm.quantity;
+                    const { tienGiam: discount, mienPhiShip, appliedList } = calcPromotions(promotions, subtotal, subscriptionForm.quantity, 'dinh_ky');
+                    const subtotalAfterDiscount = subtotal - discount;
+                    const shippingFee = mienPhiShip ? 0 : 30000;
+                    const finalPerCycle = subtotalAfterDiscount + shippingFee;
                     const depositAmount = subscriptionForm.loai_tien_coc === '30' ? Math.round(finalPerCycle * 0.3) : finalPerCycle;
                     const remaining = finalPerCycle - depositAmount;
                     return (
                       <div className="text-body-md space-y-1">
+                        {appliedList.map((item, i) => (
+                          <p key={i} className="text-xs text-[#1a7a4a] font-semibold">
+                            {item.label}
+                          </p>
+                        ))}
+                        {shippingFee === 0 ? (
+                          <p className="text-xs text-blue-600 font-semibold"> Miễn phí vận chuyển (Đơn từ 500.000đ)</p>
+                        ) : (
+                          <p className="text-xs text-on-surface-variant">Phí vận chuyển: +{formatCurrency(30000)}</p>
+                        )}
                         <p className="text-on-surface">Giá mỗi kỳ (tạm tính): <strong>{formatCurrency(finalPerCycle)}</strong></p>
                         <p className="text-primary font-bold">Số tiền cần chuyển khoản: {formatCurrency(depositAmount)}</p>
                         {remaining > 0 && <p className="text-on-surface-variant text-label-sm">Phần còn lại ({formatCurrency(remaining)}) thanh toán khi nhận hàng</p>}

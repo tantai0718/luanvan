@@ -9,6 +9,7 @@ const menuItems = [
   { path: '/admin/categories', icon: 'category', label: 'Danh mục' },
   { path: '/admin/products', icon: 'inventory_2', label: 'Sản phẩm' },
   { path: '/admin/seasons', icon: 'eco', label: 'Mùa vụ' },
+  { path: '/admin/promotions', icon: 'local_offer', label: 'Khuyến mãi' },
   { path: '/admin/orders', icon: 'receipt_long', label: 'Đơn hàng' },
   { path: '/admin/reviews', icon: 'reviews', label: 'Đánh giá' },
   { path: '/admin/notifications', icon: 'campaign', label: 'Thông báo' },

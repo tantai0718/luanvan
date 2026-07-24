@@ -181,7 +181,8 @@ export default function AdminProducts() {
         categoryAPI.getAll(),
       ]);
       setProducts(productResponse.products || []);
-      setCategories(categoryResponse.categories || []);
+      const cats = categoryResponse.categories || categoryResponse || [];
+      setCategories(cats.filter(c => c.loai === 'san_pham'));
     } catch { setProducts([]); setCategories([]); }
     finally { setLoading(false); }
   };

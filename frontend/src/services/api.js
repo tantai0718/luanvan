@@ -175,3 +175,12 @@ export const blogAPI = {
   remove: id => api.delete(`/blog/${id}`),
 };
 
+export const promotionAPI = {
+  getActive: () => api.get('/promotions'),
+  adminAll: () => api.get('/admin/promotions'),
+  create: body => api.post('/admin/promotions', body),
+  update: (id, body) => api.put(`/admin/promotions/${id}`, body),
+  toggleStatus: id => api.patch(`/admin/promotions/${id}/status`),
+  remove: id => api.delete(`/admin/promotions/${id}`),
+};
+
