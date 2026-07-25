@@ -199,6 +199,50 @@ async function deliverSubscription(madk) {
   return getSubscriptionById(madk);
 }
 
+async function getSubscriptionSummary() {
+  const [rows] = await db.query(
+    `SELECT
+        DATE_FORMAT(dk.ngay_giao_tiep_theo, '%Y-%m-%d') AS ngay_giao,
+        dk.masp,
+        sp.ten_san_pham,
+        sp.don_vi,
+        hav.duong_dan AS hinh_san_pham,
+        SUM(dk.so_luong) AS tong_so_luong,
+        COUNT(DISTINCT dk.madk) AS so_don
+      FROM dang_ky_san_pham dk
+      JOIN san_pham sp ON sp.masp = dk.masp
+      LEFT JOIN hinh_anh_video hav
+        ON hav.masp = sp.masp AND hav.la_chinh = 1 AND hav.loai = 'hinh_anh'
+      WHERE dk.loai_dang_ky = 'dinh_ky' AND dk.trang_thai = 'dang_hoat_dong'
+      GROUP BY DATE_FORMAT(dk.ngay_giao_tiep_theo, '%Y-%m-%d'), dk.masp
+      ORDER BY ngay_giao ASC, tong_so_luong DESC`
+  );
+  return rows;
+}
+
+async function getSubscriptionSummaryDetail(ngay, masp) {
+  const [rows] = await db.query(
+    `SELECT
+        dk.madk,
+        nd.ho_ten,
+        nd.sdt,
+        dk.dia_chi_giao,
+        dk.trang_thai,
+        dk.so_luong,
+        dk.gia_du_kien,
+        dk.so_lan_giao,
+        dk.so_lan_da_giao,
+        dk.chu_ky
+      FROM dang_ky_san_pham dk
+      JOIN nguoi_dung nd ON nd.mand = dk.mand
+      WHERE dk.loai_dang_ky = 'dinh_ky' AND dk.trang_thai = 'dang_hoat_dong'
+        AND DATE(dk.ngay_giao_tiep_theo) = ? AND dk.masp = ?
+      ORDER BY dk.ngay_bat_dau ASC`,
+    [ngay, masp],
+  );
+  return rows;
+}
+
 module.exports = {
   ensureSubscriptionTable,
   getProductInfo,
@@ -210,4 +254,6 @@ module.exports = {
   getSubscriptionById,
   cancelSubscription,
   deliverSubscription,
+  getSubscriptionSummary,
+  getSubscriptionSummaryDetail,
 };

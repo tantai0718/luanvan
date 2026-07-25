@@ -171,13 +171,14 @@ exports.cancelOrder = async (req, res) => {
 
 exports.adminGetOrders = async (req, res) => {
   try {
-    const { page, limit, trang_thai, loai_don } = req.query;
+    const { page, limit, trang_thai, loai_don, q } = req.query;
 
     const data = await orderModel.getAllOrders({
       page,
       limit,
       trang_thai,
       loai_don,
+      q,
     });
 
     res.json({
@@ -234,5 +235,50 @@ exports.adminGetOrderById = async (req, res) => {
     res.status(500).json({
       message: err.message,
     });
+  }
+};
+
+exports.adminGetPreorderSummary = async (req, res) => {
+  try {
+    const rows = await orderModel.getPreorderSummary();
+    const summary = rows.map(r => ({
+      ngay_giao: r.ngay_giao,
+      masp: r.masp,
+      ten_san_pham: r.ten_san_pham,
+      don_vi: r.don_vi,
+      hinh_san_pham: r.hinh_san_pham || null,
+      tong_so_luong: Number(r.tong_so_luong || 0),
+      so_don: Number(r.so_don || 0),
+    }));
+    res.json({ summary });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.adminGetPreorderSummaryDetail = async (req, res) => {
+  try {
+    const { ngay, masp } = req.query;
+    if (!ngay || !masp) {
+      return res.status(400).json({ message: "Thiếu ngày hoặc mã sản phẩm." });
+    }
+    const rows = await orderModel.getPreorderSummaryDetail(ngay, masp);
+    const orders = rows.map(r => ({
+      ma_don_hang: r.madh,
+      ten_nguoi_nhan: r.ten_nguoi_nhan,
+      sdt_nguoi_nhan: r.sdt_nguoi_nhan,
+      dia_chi_giao: r.dia_chi_giao,
+      trang_thai: r.trang_thai,
+      trang_thai_tt: r.trang_thai_thanh_toan === "da_thanh_toan" ? "da_tt" : "chua_tt",
+      tong_thanh_toan: Number(r.tong_tien || 0),
+      tong_da_thanh_toan: Number(r.tong_da_thanh_toan || 0),
+      tien_coc: Number(r.tien_coc || 0),
+      so_luong: r.so_luong,
+      don_gia: Number(r.don_gia || 0),
+      thanh_tien: Number(r.thanh_tien || 0),
+    }));
+    res.json({ orders });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };

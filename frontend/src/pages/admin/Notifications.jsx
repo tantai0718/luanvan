@@ -4,6 +4,20 @@ import { Badge, Btn, Loading, Modal, PageHero, Table } from '../../components/ui
 
 const SERVER = 'http://localhost:5000';
 
+
+const formatDateTime = (value) => {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return '—';
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  const hh = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  const ss = String(d.getSeconds()).padStart(2, '0');
+  return `${dd}/${mm}/${yyyy} ${hh}:${min}:${ss}`;
+};
+
 const LOAI_OPTIONS = [
   { value: 'khuyen_mai', label: 'Khuyến mãi', color: 'amber' },
   { value: 'he_thong', label: 'Hệ thống', color: 'gray' },
@@ -233,9 +247,9 @@ export default function AdminNotifications() {
                 <td className="px-4 py-3">
                   <Badge text={n.kich_hoat ? 'Đang chạy' : 'Đã tắt'} color={n.kich_hoat ? 'green' : 'gray'} />
                 </td>
-                <td className="px-4 py-3 text-body-md text-on-surface-variant whitespace-nowrap">
-                  {new Date(n.ngay_tao).toLocaleString('vi-VN')}
-                </td>
+               <td className="px-4 py-3 text-body-md text-on-surface-variant whitespace-nowrap">
+                    {formatDateTime(n.ngay_tao)}
+                </td> 
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-2">
                     <Btn size="sm" variant={n.kich_hoat ? 'ghost' : 'primary'} onClick={() => handleToggle(n.matb)}>
@@ -285,8 +299,8 @@ export default function AdminNotifications() {
                   <Badge text={n.da_doc ? 'Đã đọc' : 'Chưa đọc'} color={n.da_doc ? 'gray' : 'amber'} />
                 </td>
                 <td className="px-4 py-3 text-body-md text-on-surface-variant whitespace-nowrap">
-                  {new Date(n.ngay_tao).toLocaleString('vi-VN')}
-                </td>
+                    {formatDateTime(n.ngay_tao)}
+</td>
               </tr>
             ))}
           </Table>

@@ -18,6 +18,7 @@ import AdminCategories from './pages/admin/Categories';
 import AdminProducts   from './pages/admin/Products';
 import AdminBanners    from './pages/admin/Banners';
 import AdminOrders     from './pages/admin/Orders';
+import AdminPromotions from './pages/admin/Promotions';
 import About           from './pages/About';
 import ChatBox from './pages/ChatBox';
 import AdminSeasons from './pages/admin/Seasons';
@@ -86,6 +87,7 @@ function AppRoutes() {
       <Route path="/admin/seasons" element={<AP><AdminSeasons/></AP>}/>
       <Route path="/admin/products"   element={<AP><AdminProducts/></AP>}/>
       <Route path="/admin/banners"    element={<AP><AdminBanners/></AP>}/>
+      <Route path="/admin/promotions" element={<AP><AdminPromotions/></AP>}/>
       <Route path="/admin/orders"     element={<AP><AdminOrders/></AP>}/>
       <Route path="/admin/reviews" element={<AP><AdminReviews/></AP>}/>
       <Route path="/admin/notifications" element={<AP><AdminNotifications/></AP>}/>

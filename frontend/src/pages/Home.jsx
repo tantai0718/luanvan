@@ -20,12 +20,27 @@ function ProductCard({ product }) {
   const [added, setAdded] = useState(false);
   const stock = Number(product.ton_kho || 0);
 
+  const navigate = useNavigate();
+
   const handleAdd = async e => {
     e.preventDefault(); e.stopPropagation();
-    if (!user || user.role !== 'buyer' || stock <= 0) return;
-    await addToCart(product.ma_san_pham, 1);
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1200);
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    if (user.role !== 'buyer') {
+      alert('Chỉ tài khoản người mua mới có thể thêm vào giỏ hàng.');
+      return;
+    }
+    if (stock <= 0) return;
+    try {
+      await addToCart(product.ma_san_pham, 1);
+      setAdded(true);
+      setTimeout(() => setAdded(false), 1200);
+    } catch (err) {
+      console.error(err);
+      alert('Có lỗi xảy ra, không thể thêm vào giỏ hàng.');
+    }
   };
 
   return (
@@ -72,7 +87,10 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    categoryAPI.getAll().then(d => setCategories(d.categories || [])).catch(() => { });
+    categoryAPI.getAll().then(d => {
+      const list = d.categories || d || [];
+      setCategories(list.filter(c => c.loai === 'san_pham'));
+    }).catch(() => { });
     bannerAPI.getAll()
       .then(d => {
         const slides = (d.banners || []).filter(b => b.image).map(b => ({ src: b.image, alt: b.title || 'Banner' }));

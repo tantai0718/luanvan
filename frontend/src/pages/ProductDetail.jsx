@@ -1,12 +1,53 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { orderAPI, productAPI, reviewAPI, subscriptionAPI } from '../services/api';
+import { orderAPI, productAPI, reviewAPI, subscriptionAPI, promotionAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { pickProductImage } from '../utils/marketImages';
 
 const isVideoUrl = url => /\.(mp4|webm|mov)$/i.test(url || '');
 const formatCurrency = value => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
+
+function calcPromotions(promos, totalAmount, quantity, loaiDon) {
+  let tienGiam = 0;
+  let mienPhiShip = false;
+  const appliedList = [];
+
+  for (const promo of promos || []) {
+    if (!promo.trang_thai) continue;
+    const apDung = promo.ap_dung_cho;
+    const isMatchOrder =
+      apDung === 'tat_ca' ||
+      (apDung === 'thuong_va_dat_truoc' && ['thuong', 'dat_truoc', 'thuong_va_dat_truoc'].includes(loaiDon)) ||
+      (apDung === 'dinh_ky' && loaiDon === 'dinh_ky');
+
+    if (!isMatchOrder) continue;
+
+    const minVal = Number(promo.dieu_kien_toi_thieu || 0);
+
+    if (promo.loai_uu_dai === 'giam_theo_so_luong') {
+      if (quantity >= minVal) {
+        const pct = Number(promo.phan_tram_giam || 0);
+        let discount = Math.round(totalAmount * (pct / 100));
+        if (promo.gia_tri_giam_toi_da && Number(promo.gia_tri_giam_toi_da) > 0) {
+          discount = Math.min(discount, Number(promo.gia_tri_giam_toi_da));
+        }
+        tienGiam += discount;
+        appliedList.push({
+          name: promo.ten_km,
+          amount: discount,
+          label: `${promo.ten_km} (-${Number(discount).toLocaleString('vi-VN')}đ)`,
+        });
+      }
+    } else if (promo.loai_uu_dai === 'mien_phi_ship') {
+      if ((totalAmount - tienGiam) >= minVal) {
+        mienPhiShip = true;
+      }
+    }
+  }
+
+  return { tienGiam, mienPhiShip, appliedList };
+}
 
 function ReviewItem({ review }) {
   const stars = Math.max(0, Math.min(5, Number(review.so_sao || 0)));
@@ -37,6 +78,7 @@ export default function ProductDetail() {
 
   const [product, setProduct] = useState(null);
   const [reviews, setReviews] = useState([]);
+  const [promotions, setPromotions] = useState([]);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -59,11 +101,12 @@ export default function ProductDetail() {
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([productAPI.getById(id), reviewAPI.getByProduct(id)])
-      .then(([productData, reviewData]) => {
+    Promise.all([productAPI.getById(id), reviewAPI.getByProduct(id), promotionAPI.getActive().catch(() => ({ promotions: [] }))])
+      .then(([productData, reviewData, promoData]) => {
         const next = productData.product;
         setProduct(next);
         setReviews(reviewData.reviews || []);
+        setPromotions(promoData.promotions || []);
         const BACKEND = 'http://localhost:5000';
         const firstImage = next?.images?.[0];
         const initialImage = firstImage ? (firstImage.startsWith('/upload/') ? `${BACKEND}${firstImage}` : firstImage) : pickProductImage(next);
@@ -116,29 +159,43 @@ export default function ProductDetail() {
 
   const handleAddToCart = async () => {
     if (!user) return navigate('/login');
-    if (user.role !== 'buyer' || stock <= 0) return;
-    try { await addToCart(product.ma_san_pham, quantity); setAdded(true); setTimeout(() => setAdded(false), 1400); } catch { }
+    if (user.role !== 'buyer') {
+      alert('Chỉ tài khoản người mua mới có thể thêm vào giỏ hàng.');
+      return;
+    }
+    if (stock <= 0) return;
+    try { await addToCart(product.ma_san_pham, quantity); setAdded(true); setTimeout(() => setAdded(false), 1400); } catch (err) {
+      console.error(err);
+      alert('Có lỗi xảy ra, không thể thêm vào giỏ hàng.');
+    }
   };
 
   const handleBuyNow = async () => {
     if (!user) return navigate('/login');
-    if (user.role !== 'buyer' || stock <= 0) return;
-    try { await addToCart(product.ma_san_pham, quantity); navigate('/cart'); } catch { }
+    if (user.role !== 'buyer') {
+      alert('Chỉ tài khoản người mua mới có thể mua hàng.');
+      return;
+    }
+    if (stock <= 0) return;
+    try { await addToCart(product.ma_san_pham, quantity); navigate('/cart'); } catch (err) {
+      console.error(err);
+      alert('Có lỗi xảy ra, không thể mua ngay.');
+    }
   };
 
- const handleReviewSubmit = async event => {
-  event.preventDefault();
-  if (!user || user.role !== 'buyer') return navigate('/login');
-  setSavingReview(true); setReviewMessage('');
-  try {
-    await reviewAPI.create({ ma_san_pham: product.ma_san_pham, ma_don_hang: null, so_sao: reviewForm.so_sao, noi_dung: reviewForm.noi_dung });
-    const reviewData = await reviewAPI.getByProduct(id);
-    setReviews(reviewData.reviews || []);
-    setReviewForm({ so_sao: 5, noi_dung: '' });
-    setReviewMessage('Đánh giá của bạn đã được ghi nhận.');
-  } catch (err) { setReviewMessage(err.message || 'Không thể gửi đánh giá.'); }
-  finally { setSavingReview(false); }
-};
+  const handleReviewSubmit = async event => {
+    event.preventDefault();
+    if (!user || user.role !== 'buyer') return navigate('/login');
+    setSavingReview(true); setReviewMessage('');
+    try {
+      await reviewAPI.create({ ma_san_pham: product.ma_san_pham, ma_don_hang: null, so_sao: reviewForm.so_sao, noi_dung: reviewForm.noi_dung });
+      const reviewData = await reviewAPI.getByProduct(id);
+      setReviews(reviewData.reviews || []);
+      setReviewForm({ so_sao: 5, noi_dung: '' });
+      setReviewMessage('Đánh giá của bạn đã được ghi nhận.');
+    } catch (err) { setReviewMessage(err.message || 'Không thể gửi đánh giá.'); }
+    finally { setSavingReview(false); }
+  };
 
   const handlePreorder = async event => {
     event.preventDefault();
@@ -220,9 +277,8 @@ export default function ProductDetail() {
               </div>
               <div className="grid grid-cols-5 gap-3">
                 {images.map((img, i) => (
-                  <button key={i} onClick={() => setActiveImage(img)} className={`aspect-square rounded-2xl overflow-hidden border-2 transition-all ${
-                    activeImage === img ? 'border-primary organic-shadow-sm' : 'border-transparent hover:border-outline-variant'
-                  }`}>
+                  <button key={i} onClick={() => setActiveImage(img)} className={`aspect-square rounded-2xl overflow-hidden border-2 transition-all ${activeImage === img ? 'border-primary organic-shadow-sm' : 'border-transparent hover:border-outline-variant'
+                    }`}>
                     {isVideoUrl(img) ? (
                       <div className="w-full h-full bg-surface flex items-center justify-center relative">
                         <img src="/images/ngucoc.jpg" alt="" className="absolute inset-0 w-full h-full object-cover opacity-50" />
@@ -292,14 +348,12 @@ export default function ProductDetail() {
               <div className="bg-surface-container-low rounded-2xl px-lg py-3 text-body-md text-on-surface-variant">Tài khoản quản trị không dùng để mua hàng.</div>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
-                <button onClick={handleAddToCart} disabled={stock <= 0} className={`rounded-2xl px-lg py-4 text-title-md font-title-md transition-all active:scale-95 ${
-                  stock <= 0 ? 'bg-surface-container-high text-on-surface-variant cursor-not-allowed' : added ? 'bg-primary-container text-on-primary-container font-bold' : 'bg-primary text-on-primary hover:bg-on-primary-fixed-variant'
-                }`}>
+                <button onClick={handleAddToCart} disabled={stock <= 0} className={`rounded-2xl px-lg py-4 text-title-md font-title-md transition-all active:scale-95 ${stock <= 0 ? 'bg-surface-container-high text-on-surface-variant cursor-not-allowed' : added ? 'bg-primary-container text-on-primary-container font-bold' : 'bg-primary text-on-primary hover:bg-on-primary-fixed-variant'
+                  }`}>
                   {stock <= 0 ? 'Sản phẩm tạm hết' : added ? 'Đã thêm vào giỏ' : 'Thêm vào giỏ'}
                 </button>
-                <button onClick={handleBuyNow} disabled={stock <= 0} className={`rounded-2xl px-lg py-4 text-title-md font-title-md border transition-all active:scale-95 ${
-                  stock <= 0 ? 'border-outline bg-surface-container-high text-on-surface-variant cursor-not-allowed' : 'border-primary bg-surface text-primary hover:bg-primary-fixed'
-                }`}>
+                <button onClick={handleBuyNow} disabled={stock <= 0} className={`rounded-2xl px-lg py-4 text-title-md font-title-md border transition-all active:scale-95 ${stock <= 0 ? 'border-outline bg-surface-container-high text-on-surface-variant cursor-not-allowed' : 'border-primary bg-surface text-primary hover:bg-primary-fixed'
+                  }`}>
                   Mua ngay
                 </button>
               </div>
@@ -310,151 +364,174 @@ export default function ProductDetail() {
         {/* Pre-order & Subscription */}
         <section className="grid gap-xl lg:grid-cols-2">
           <div className="bg-surface rounded-3xl p-lg md:p-xl border border-outline-variant organic-shadow">
-  <h2 className="text-title-md font-title-md text-on-surface mb-lg">Đặt trước sản phẩm</h2>
-  <form onSubmit={handlePreorder} className="space-y-4">
-    <div className="grid gap-4 sm:grid-cols-2">
-      <div className="flex flex-col gap-1.5">
-        <label className="text-label-sm font-bold text-on-surface-variant">Số lượng ({product.don_vi})</label>
-        <input type="number" min="1" value={preorderForm.quantity} onChange={e => setPreorderForm({ ...preorderForm, quantity: Number(e.target.value) || 1 })} className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none" placeholder={`Số lượng (${product.don_vi})`} />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <label className="text-label-sm font-bold text-on-surface-variant">Ngày nhận hàng dự kiến</label>
-        <input type="date" value={preorderForm.ngay_giao_du_kien} onChange={e => setPreorderForm({ ...preorderForm, ngay_giao_du_kien: e.target.value })} min={new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0]} max={new Date(Date.now() + 60 * 86400000).toISOString().split('T')[0]} className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
-      </div>
-    </div>
-    <p className="text-label-sm text-on-surface-variant">Chọn trong khoảng 3–60 ngày tới. Nếu không chọn, hệ thống sẽ tự đặt ngày giao dự kiến sau 7 ngày.</p>
-    <div className="flex flex-col gap-1.5">
-      <label className="text-label-sm font-bold text-on-surface-variant">Địa chỉ giao hàng</label>
-      <textarea rows={3} value={preorderForm.dia_chi_giao} onChange={e => setPreorderForm({ ...preorderForm, dia_chi_giao: e.target.value })} placeholder="Ví dụ: 12 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP.HCM" className="bg-surface border border-outline-variant rounded-xl w-full resize-none px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
-    </div>
-    <div className="flex flex-col gap-1.5">
-      <label className="text-label-sm font-bold text-on-surface-variant">Ghi chú (không bắt buộc)</label>
-      <input value={preorderForm.ghi_chu} onChange={e => setPreorderForm({ ...preorderForm, ghi_chu: e.target.value })} placeholder="Ví dụ: giao giờ hành chính, gọi trước khi giao..." className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md w-full focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
-    </div>
-    <div className="flex flex-col gap-1.5">
-      <label className="text-label-sm font-bold text-on-surface-variant">Phương thức thanh toán</label>
-      <select value={preorderForm.phuong_thuc_tt} onChange={e => setPreorderForm({ ...preorderForm, phuong_thuc_tt: e.target.value })} className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none">
-        <option value="tien_mat">💵 Tiền mặt khi nhận hàng (COD)</option>
-        <option value="banking">🏦 Chuyển khoản ngân hàng (Sepay QR)</option>
-      </select>
-    </div>
-    {preorderForm.phuong_thuc_tt === 'banking' && (
-      <div className="bg-primary-fixed/20 rounded-xl p-4 space-y-3">
-        <p className="text-label-sm font-bold text-on-surface-variant">Hình thức thanh toán</p>
-        <div className="flex gap-3">
-          <label className={`flex-1 flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${preorderForm.loai_tien_coc === '30' ? 'border-primary bg-primary-fixed/30' : 'border-outline-variant hover:border-primary/40'}`}>
-            <input type="radio" name="deposit_preorder" value="30" checked={preorderForm.loai_tien_coc === '30'} onChange={e => setPreorderForm({ ...preorderForm, loai_tien_coc: e.target.value })} className="accent-primary" />
-            <div>
-              <span className="text-body-md font-bold text-on-surface block">Cọc 30%</span>
-              <span className="text-label-sm text-on-surface-variant">Thanh toán trước 30%, phần còn lại khi nhận hàng</span>
-            </div>
-          </label>
-          <label className={`flex-1 flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${preorderForm.loai_tien_coc === '100' ? 'border-primary bg-primary-fixed/30' : 'border-outline-variant hover:border-primary/40'}`}>
-            <input type="radio" name="deposit_preorder" value="100" checked={preorderForm.loai_tien_coc === '100'} onChange={e => setPreorderForm({ ...preorderForm, loai_tien_coc: e.target.value })} className="accent-primary" />
-            <div>
-              <span className="text-body-md font-bold text-on-surface block">Thanh toán toàn bộ</span>
-              <span className="text-label-sm text-on-surface-variant">Trả trước 100% khi đặt hàng</span>
-            </div>
-          </label>
-        </div>
-        {(() => {
-          const total = (product.gia_ban || 0) * preorderForm.quantity;
-          const discount = preorderForm.quantity >= 10 ? Math.round(total * 0.05) : 0;
-          const ship = (total - discount) >= 500000 ? 0 : 30000;
-          const finalTotal = total - discount + ship;
-          const depositAmount = preorderForm.loai_tien_coc === '30' ? Math.round(finalTotal * 0.3) : finalTotal;
-          const remaining = finalTotal - depositAmount;
-          return (
-            <div className="text-body-md space-y-1">
-              <p className="text-on-surface">Tổng đơn: <strong>{formatCurrency(finalTotal)}</strong></p>
-              <p className="text-primary font-bold">Số tiền cần chuyển khoản: {formatCurrency(depositAmount)}</p>
-              {remaining > 0 && <p className="text-on-surface-variant text-label-sm">Phần còn lại ({formatCurrency(remaining)}) thanh toán khi nhận hàng</p>}
-            </div>
-          );
-        })()}
-      </div>
-    )}
-    {preorderMessage && <p className="text-body-md text-secondary">{preorderMessage}</p>}
-    <button disabled={savingPreorder} className="w-full bg-secondary text-on-secondary rounded-xl px-lg py-3 font-bold transition-all active:scale-95">{savingPreorder ? 'Đang tạo...' : 'Đặt trước'}</button>
-  </form>
-</div>
+            <h2 className="text-title-md font-title-md text-on-surface mb-lg">Đặt trước sản phẩm</h2>
+            <form onSubmit={handlePreorder} className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-label-sm font-bold text-on-surface-variant">Số lượng ({product.don_vi})</label>
+                  <input type="number" min="1" value={preorderForm.quantity} onChange={e => setPreorderForm({ ...preorderForm, quantity: Number(e.target.value) || 1 })} className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none" placeholder={`Số lượng (${product.don_vi})`} />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-label-sm font-bold text-on-surface-variant">Ngày nhận hàng dự kiến</label>
+                  <input type="date" value={preorderForm.ngay_giao_du_kien} onChange={e => setPreorderForm({ ...preorderForm, ngay_giao_du_kien: e.target.value })} min={new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0]} max={new Date(Date.now() + 60 * 86400000).toISOString().split('T')[0]} className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+                </div>
+              </div>
+              <p className="text-label-sm text-on-surface-variant">Chọn trong khoảng 3–60 ngày tới. Nếu không chọn, hệ thống sẽ tự đặt ngày giao dự kiến sau 7 ngày.</p>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-label-sm font-bold text-on-surface-variant">Địa chỉ giao hàng</label>
+                <textarea rows={3} value={preorderForm.dia_chi_giao} onChange={e => setPreorderForm({ ...preorderForm, dia_chi_giao: e.target.value })} placeholder="Ví dụ: 12 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP.HCM" className="bg-surface border border-outline-variant rounded-xl w-full resize-none px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-label-sm font-bold text-on-surface-variant">Ghi chú (không bắt buộc)</label>
+                <input value={preorderForm.ghi_chu} onChange={e => setPreorderForm({ ...preorderForm, ghi_chu: e.target.value })} placeholder="Ví dụ: giao giờ hành chính, gọi trước khi giao..." className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md w-full focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-label-sm font-bold text-on-surface-variant">Phương thức thanh toán</label>
+                <select value={preorderForm.phuong_thuc_tt} onChange={e => setPreorderForm({ ...preorderForm, phuong_thuc_tt: e.target.value })} className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+                  <option value="tien_mat">💵 Tiền mặt khi nhận hàng (COD)</option>
+                  <option value="banking">🏦 Chuyển khoản ngân hàng (Sepay QR)</option>
+                </select>
+              </div>
+              {preorderForm.phuong_thuc_tt === 'banking' && (
+                <div className="bg-primary-fixed/20 rounded-xl p-4 space-y-3">
+                  <p className="text-label-sm font-bold text-on-surface-variant">Hình thức thanh toán</p>
+                  <div className="flex gap-3">
+                    <label className={`flex-1 flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${preorderForm.loai_tien_coc === '30' ? 'border-primary bg-primary-fixed/30' : 'border-outline-variant hover:border-primary/40'}`}>
+                      <input type="radio" name="deposit_preorder" value="30" checked={preorderForm.loai_tien_coc === '30'} onChange={e => setPreorderForm({ ...preorderForm, loai_tien_coc: e.target.value })} className="accent-primary" />
+                      <div>
+                        <span className="text-body-md font-bold text-on-surface block">Cọc 30%</span>
+                        <span className="text-label-sm text-on-surface-variant">Thanh toán trước 30%, phần còn lại khi nhận hàng</span>
+                      </div>
+                    </label>
+                    <label className={`flex-1 flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${preorderForm.loai_tien_coc === '100' ? 'border-primary bg-primary-fixed/30' : 'border-outline-variant hover:border-primary/40'}`}>
+                      <input type="radio" name="deposit_preorder" value="100" checked={preorderForm.loai_tien_coc === '100'} onChange={e => setPreorderForm({ ...preorderForm, loai_tien_coc: e.target.value })} className="accent-primary" />
+                      <div>
+                        <span className="text-body-md font-bold text-on-surface block">Thanh toán toàn bộ</span>
+                        <span className="text-label-sm text-on-surface-variant">Trả trước 100% khi đặt hàng</span>
+                      </div>
+                    </label>
+                  </div>
+                  {(() => {
+                    const subtotal = (product.gia_ban || 0) * preorderForm.quantity;
+                    const { tienGiam: discount, mienPhiShip, appliedList } = calcPromotions(promotions, subtotal, preorderForm.quantity, 'dat_truoc');
+                    const subtotalAfterDiscount = subtotal - discount;
+                    const shippingFee = mienPhiShip ? 0 : 30000;
+                    const finalTotal = subtotalAfterDiscount + shippingFee;
+                    const depositAmount = preorderForm.loai_tien_coc === '30' ? Math.round(finalTotal * 0.3) : finalTotal;
+                    const remaining = finalTotal - depositAmount;
+                    return (
+                      <div className="text-body-md space-y-1">
+                        {appliedList.map((item, i) => (
+                          <p key={i} className="text-xs text-[#1a7a4a] font-semibold">
+                            {item.label}
+                          </p>
+                        ))}
+                        {shippingFee === 0 ? (
+                          <p className="text-xs text-blue-600 font-semibold"> Miễn phí vận chuyển (Đơn từ 500.000đ)</p>
+                        ) : (
+                          <p className="text-xs text-on-surface-variant">Phí vận chuyển: +{formatCurrency(30000)}</p>
+                        )}
+                        <p className="text-on-surface">Tổng tiền (tạm tính): <strong>{formatCurrency(finalTotal)}</strong></p>
+                        <p className="text-primary font-bold">Số tiền cần chuyển khoản: {formatCurrency(depositAmount)}</p>
+                        {remaining > 0 && <p className="text-on-surface-variant text-label-sm">Phần còn lại ({formatCurrency(remaining)}) thanh toán khi nhận hàng</p>}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+              {preorderMessage && <p className="text-body-md text-secondary">{preorderMessage}</p>}
+              <button disabled={savingPreorder} className="w-full bg-secondary text-on-secondary rounded-xl px-lg py-3 font-bold transition-all active:scale-95">{savingPreorder ? 'Đang tạo...' : 'Đặt trước'}</button>
+            </form>
+          </div>
 
           <div className="bg-surface rounded-3xl p-lg md:p-xl border border-outline-variant organic-shadow">
-  <h2 className="text-title-md font-title-md text-on-surface mb-lg">Giao định kỳ</h2>
-  <form onSubmit={handleSubscription} className="space-y-4">
-    <div className="grid gap-4 sm:grid-cols-3">
-      <div className="flex flex-col gap-1.5">
-        <label className="text-label-sm font-bold text-on-surface-variant">Số lượng / lần giao</label>
-        <input type="number" min="1" value={subscriptionForm.quantity} onChange={e => setSubscriptionForm({ ...subscriptionForm, quantity: Number(e.target.value) || 1 })} placeholder={`Số lượng (${product.don_vi})`} className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <label className="text-label-sm font-bold text-on-surface-variant">Chu kỳ giao</label>
-        <select value={subscriptionForm.tan_suat_giao} onChange={e => setSubscriptionForm({ ...subscriptionForm, tan_suat_giao: e.target.value })} className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none">
-          <option value="hang_tuan">Hàng tuần</option>
-          <option value="hai_tuan">Hai tuần</option>
-          <option value="hang_thang">Hàng tháng</option>
-        </select>
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <label className="text-label-sm font-bold text-on-surface-variant">Tổng số lần giao</label>
-        <input type="number" min="2" value={subscriptionForm.so_ky_giao} onChange={e => setSubscriptionForm({ ...subscriptionForm, so_ky_giao: Number(e.target.value) || 2 })} placeholder="Số lần giao" className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
-      </div>
-    </div>
-    <p className="text-label-sm text-on-surface-variant">Ví dụ: chọn "Hàng tuần" và nhập 4 lần → hệ thống sẽ giao liên tiếp trong 4 tuần.</p>
-    <div className="flex flex-col gap-1.5">
-      <label className="text-label-sm font-bold text-on-surface-variant">Ngày bắt đầu giao lần đầu tiên</label>
-      <input type="date" value={subscriptionForm.ngay_bat_dau} onChange={e => setSubscriptionForm({ ...subscriptionForm, ngay_bat_dau: e.target.value })} className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md w-full focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
-    </div>
-    <div className="flex flex-col gap-1.5">
-      <label className="text-label-sm font-bold text-on-surface-variant">Địa chỉ giao hàng</label>
-      <textarea rows={3} value={subscriptionForm.dia_chi_giao} onChange={e => setSubscriptionForm({ ...subscriptionForm, dia_chi_giao: e.target.value })} placeholder="Ví dụ: 12 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP.HCM" className="bg-surface border border-outline-variant rounded-xl w-full resize-none px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
-    </div>
-    <div className="flex flex-col gap-1.5">
-      <label className="text-label-sm font-bold text-on-surface-variant">Phương thức thanh toán</label>
-      <select value={subscriptionForm.phuong_thuc_tt} onChange={e => setSubscriptionForm({ ...subscriptionForm, phuong_thuc_tt: e.target.value })} className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none">
-        <option value="tien_mat">💵 Tiền mặt khi nhận hàng (COD)</option>
-        <option value="banking">🏦 Chuyển khoản ngân hàng (Sepay QR)</option>
-      </select>
-    </div>
-    {subscriptionForm.phuong_thuc_tt === 'banking' && (
-      <div className="bg-primary-fixed/20 rounded-xl p-4 space-y-3">
-        <p className="text-label-sm font-bold text-on-surface-variant">Hình thức thanh toán</p>
-        <div className="flex gap-3">
-          <label className={`flex-1 flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${subscriptionForm.loai_tien_coc === '30' ? 'border-primary bg-primary-fixed/30' : 'border-outline-variant hover:border-primary/40'}`}>
-            <input type="radio" name="deposit_sub" value="30" checked={subscriptionForm.loai_tien_coc === '30'} onChange={e => setSubscriptionForm({ ...subscriptionForm, loai_tien_coc: e.target.value })} className="accent-primary" />
-            <div>
-              <span className="text-body-md font-bold text-on-surface block">Cọc 30%</span>
-              <span className="text-label-sm text-on-surface-variant">Trả trước 30% mỗi kỳ, phần còn lại khi nhận</span>
-            </div>
-          </label>
-          <label className={`flex-1 flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${subscriptionForm.loai_tien_coc === '100' ? 'border-primary bg-primary-fixed/30' : 'border-outline-variant hover:border-primary/40'}`}>
-            <input type="radio" name="deposit_sub" value="100" checked={subscriptionForm.loai_tien_coc === '100'} onChange={e => setSubscriptionForm({ ...subscriptionForm, loai_tien_coc: e.target.value })} className="accent-primary" />
-            <div>
-              <span className="text-body-md font-bold text-on-surface block">Thanh toán toàn bộ</span>
-              <span className="text-label-sm text-on-surface-variant">Trả trước 100% khi đăng ký</span>
-            </div>
-          </label>
-        </div>
-        {(() => {
-          const totalPerCycle = (product.gia_ban || 0) * subscriptionForm.quantity;
-          const discount = subscriptionForm.quantity >= 10 ? Math.round(totalPerCycle * 0.05) : 0;
-          const finalPerCycle = totalPerCycle - discount;
-          const depositAmount = subscriptionForm.loai_tien_coc === '30' ? Math.round(finalPerCycle * 0.3) : finalPerCycle;
-          const remaining = finalPerCycle - depositAmount;
-          return (
-            <div className="text-body-md space-y-1">
-              <p className="text-on-surface">Giá mỗi kỳ: <strong>{formatCurrency(finalPerCycle)}</strong></p>
-              <p className="text-primary font-bold">Số tiền cần chuyển khoản: {formatCurrency(depositAmount)}</p>
-              {remaining > 0 && <p className="text-on-surface-variant text-label-sm">Phần còn lại ({formatCurrency(remaining)}) thanh toán khi nhận hàng</p>}
-            </div>
-          );
-        })()}
-      </div>
-    )}
-    {subscriptionMessage && <p className="text-body-md text-primary">{subscriptionMessage}</p>}
-    <button disabled={savingSubscription} className="w-full bg-primary text-on-primary rounded-xl px-lg py-3 font-bold transition-all active:scale-95">{savingSubscription ? 'Đang lưu...' : 'Đăng ký định kỳ'}</button>
-  </form>
-</div>
+            <h2 className="text-title-md font-title-md text-on-surface mb-lg">Giao định kỳ</h2>
+            <form onSubmit={handleSubscription} className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-label-sm font-bold text-on-surface-variant">Số lượng / lần giao</label>
+                  <input type="number" min="1" value={subscriptionForm.quantity} onChange={e => setSubscriptionForm({ ...subscriptionForm, quantity: Number(e.target.value) || 1 })} placeholder={`Số lượng (${product.don_vi})`} className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-label-sm font-bold text-on-surface-variant">Chu kỳ giao</label>
+                  <select value={subscriptionForm.tan_suat_giao} onChange={e => setSubscriptionForm({ ...subscriptionForm, tan_suat_giao: e.target.value })} className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+                    <option value="hang_tuan">Hàng tuần</option>
+                    <option value="hai_tuan">Hai tuần</option>
+                    <option value="hang_thang">Hàng tháng</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-label-sm font-bold text-on-surface-variant">Tổng số lần giao</label>
+                  <input type="number" min="2" value={subscriptionForm.so_ky_giao} onChange={e => setSubscriptionForm({ ...subscriptionForm, so_ky_giao: Number(e.target.value) || 2 })} placeholder="Số lần giao" className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+                </div>
+              </div>
+              <p className="text-label-sm text-on-surface-variant">Ví dụ: chọn "Hàng tuần" và nhập 4 lần → hệ thống sẽ giao liên tiếp trong 4 tuần.</p>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-label-sm font-bold text-on-surface-variant">Ngày bắt đầu giao lần đầu tiên</label>
+                <input type="date" value={subscriptionForm.ngay_bat_dau} onChange={e => setSubscriptionForm({ ...subscriptionForm, ngay_bat_dau: e.target.value })} className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md w-full focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-label-sm font-bold text-on-surface-variant">Địa chỉ giao hàng</label>
+                <textarea rows={3} value={subscriptionForm.dia_chi_giao} onChange={e => setSubscriptionForm({ ...subscriptionForm, dia_chi_giao: e.target.value })} placeholder="Ví dụ: 12 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP.HCM" className="bg-surface border border-outline-variant rounded-xl w-full resize-none px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-label-sm font-bold text-on-surface-variant">Phương thức thanh toán</label>
+                <select value={subscriptionForm.phuong_thuc_tt} onChange={e => setSubscriptionForm({ ...subscriptionForm, phuong_thuc_tt: e.target.value })} className="bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+                  <option value="tien_mat">💵 Tiền mặt khi nhận hàng (COD)</option>
+                  <option value="banking">🏦 Chuyển khoản ngân hàng (Sepay QR)</option>
+                </select>
+              </div>
+              {subscriptionForm.phuong_thuc_tt === 'banking' && (
+                <div className="bg-primary-fixed/20 rounded-xl p-4 space-y-3">
+                  <p className="text-label-sm font-bold text-on-surface-variant">Hình thức thanh toán</p>
+                  <div className="flex gap-3">
+                    <label className={`flex-1 flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${subscriptionForm.loai_tien_coc === '30' ? 'border-primary bg-primary-fixed/30' : 'border-outline-variant hover:border-primary/40'}`}>
+                      <input type="radio" name="deposit_sub" value="30" checked={subscriptionForm.loai_tien_coc === '30'} onChange={e => setSubscriptionForm({ ...subscriptionForm, loai_tien_coc: e.target.value })} className="accent-primary" />
+                      <div>
+                        <span className="text-body-md font-bold text-on-surface block">Cọc 30%</span>
+                        <span className="text-label-sm text-on-surface-variant">Trả trước 30% mỗi kỳ, phần còn lại khi nhận</span>
+                      </div>
+                    </label>
+                    <label className={`flex-1 flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${subscriptionForm.loai_tien_coc === '100' ? 'border-primary bg-primary-fixed/30' : 'border-outline-variant hover:border-primary/40'}`}>
+                      <input type="radio" name="deposit_sub" value="100" checked={subscriptionForm.loai_tien_coc === '100'} onChange={e => setSubscriptionForm({ ...subscriptionForm, loai_tien_coc: e.target.value })} className="accent-primary" />
+                      <div>
+                        <span className="text-body-md font-bold text-on-surface block">Thanh toán toàn bộ</span>
+                        <span className="text-label-sm text-on-surface-variant">Trả trước 100% khi đăng ký</span>
+                      </div>
+                    </label>
+                  </div>
+                  {(() => {
+                    const subtotal = (product.gia_ban || 0) * subscriptionForm.quantity;
+                    const { tienGiam: discount, mienPhiShip, appliedList } = calcPromotions(promotions, subtotal, subscriptionForm.quantity, 'dinh_ky');
+                    const subtotalAfterDiscount = subtotal - discount;
+                    const shippingFee = mienPhiShip ? 0 : 30000;
+                    const finalPerCycle = subtotalAfterDiscount + shippingFee;
+                    const depositAmount = subscriptionForm.loai_tien_coc === '30' ? Math.round(finalPerCycle * 0.3) : finalPerCycle;
+                    const remaining = finalPerCycle - depositAmount;
+                    return (
+                      <div className="text-body-md space-y-1">
+                        {appliedList.map((item, i) => (
+                          <p key={i} className="text-xs text-[#1a7a4a] font-semibold">
+                            {item.label}
+                          </p>
+                        ))}
+                        {shippingFee === 0 ? (
+                          <p className="text-xs text-blue-600 font-semibold"> Miễn phí vận chuyển (Đơn từ 500.000đ)</p>
+                        ) : (
+                          <p className="text-xs text-on-surface-variant">Phí vận chuyển: +{formatCurrency(30000)}</p>
+                        )}
+                        <p className="text-on-surface">Giá mỗi kỳ (tạm tính): <strong>{formatCurrency(finalPerCycle)}</strong></p>
+                        <p className="text-primary font-bold">Số tiền cần chuyển khoản: {formatCurrency(depositAmount)}</p>
+                        {remaining > 0 && <p className="text-on-surface-variant text-label-sm">Phần còn lại ({formatCurrency(remaining)}) thanh toán khi nhận hàng</p>}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+              {subscriptionMessage && <p className="text-body-md text-primary">{subscriptionMessage}</p>}
+              <button disabled={savingSubscription} className="w-full bg-primary text-on-primary rounded-xl px-lg py-3 font-bold transition-all active:scale-95">{savingSubscription ? 'Đang lưu...' : 'Đăng ký định kỳ'}</button>
+            </form>
+          </div>
         </section>
 
         {/* Reviews */}

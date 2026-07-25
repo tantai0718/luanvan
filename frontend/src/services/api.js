@@ -95,6 +95,10 @@ export const orderAPI = {
 
   adminGetById: id => api.get(`/orders/admin/${id}`),
   adminUpdateStatus: (id, body) => api.patch(`/orders/admin/${id}/status`, body),
+
+  adminPreorderSummary: () => api.get('/orders/admin/preorder-summary'),
+  adminPreorderSummaryDetail: (ngay, masp) =>
+    api.get(`/orders/admin/preorder-summary/detail?ngay=${ngay}&masp=${masp}`),
 };
 
 export const subscriptionAPI = {
@@ -103,7 +107,12 @@ export const subscriptionAPI = {
   cancel: id => api.patch(`/subscriptions/${id}/cancel`),
   adminAll: () => api.get('/admin/subscriptions'),
   adminDeliver: id => api.patch(`/admin/subscriptions/${id}/deliver`),
+
+  adminSummary: () => api.get('/admin/subscriptions/summary'),
+  adminSummaryDetail: (ngay, masp) =>
+    api.get(`/admin/subscriptions/summary/detail?ngay=${ngay}&masp=${masp}`),
 };
+
 
 export const dashboardAPI = {
   admin: () => api.get('/admin/dashboard'),
@@ -165,3 +174,13 @@ export const blogAPI = {
   update: (id, body) => api.put(`/blog/${id}`, body),
   remove: id => api.delete(`/blog/${id}`),
 };
+
+export const promotionAPI = {
+  getActive: () => api.get('/promotions'),
+  adminAll: () => api.get('/admin/promotions'),
+  create: body => api.post('/admin/promotions', body),
+  update: (id, body) => api.put(`/admin/promotions/${id}`, body),
+  toggleStatus: id => api.patch(`/admin/promotions/${id}/status`),
+  remove: id => api.delete(`/admin/promotions/${id}`),
+};
+

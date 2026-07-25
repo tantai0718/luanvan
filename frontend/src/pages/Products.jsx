@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { categoryAPI, productAPI } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -13,12 +13,27 @@ function ProductTile({ product }) {
   const [added, setAdded] = useState(false);
   const stock = Number(product.ton_kho || 0);
 
+  const navigate = useNavigate();
+
   const handleAdd = async event => {
     event.preventDefault(); event.stopPropagation();
-    if (!user || user.role !== 'buyer' || stock <= 0) return;
-    await addToCart(product.ma_san_pham, 1);
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1200);
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    if (user.role !== 'buyer') {
+      alert('Chỉ tài khoản người mua mới có thể thêm vào giỏ hàng.');
+      return;
+    }
+    if (stock <= 0) return;
+    try {
+      await addToCart(product.ma_san_pham, 1);
+      setAdded(true);
+      setTimeout(() => setAdded(false), 1200);
+    } catch (err) {
+      console.error(err);
+      alert('Có lỗi xảy ra, không thể thêm vào giỏ hàng.');
+    }
   };
 
   return (
@@ -71,7 +86,10 @@ export default function Products() {
   const limit = 12;
 
   useEffect(() => {
-    categoryAPI.getAll().then(data => setCategories(data.categories || [])).catch(() => setCategories([]));
+    categoryAPI.getAll().then(data => {
+      const list = data.categories || data || [];
+      setCategories(list.filter(c => c.loai === 'san_pham'));
+    }).catch(() => setCategories([]));
   }, []);
 
   useEffect(() => {

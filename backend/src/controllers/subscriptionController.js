@@ -1,4 +1,5 @@
 const subscriptionModel = require("../models/subscriptionModel");
+const orderModel = require("../models/orderModel");
 const db = require("../config/db");
 const mapStatus = (dbStatus) =>
   dbStatus === "hoan_thanh" ? "hoan_tat" : dbStatus;
@@ -110,10 +111,13 @@ exports.create = async (req, res) => {
 
     const giaBan = Number(product.gia_ban);
     const tongHang = giaBan * soLuong;
-    const tienGiam = soLuong >= 10 ? Math.round(tongHang * 0.05) : 0;
-    const giaDuKien = soLuong >= 10
-      ? giaBan - Math.round(giaBan * 0.05)
+
+    const { tienGiam, mienPhiShip, appliedPromotions } = await orderModel.tinhUuDaiTuDong(tongHang, soLuong, 'dinh_ky');
+
+    const giaDuKien = soLuong > 0
+      ? Math.round((tongHang - tienGiam) / soLuong)
       : giaBan;
+
     const chuKy = ["hang_tuan", "hai_tuan", "hang_thang"].includes(
       tan_suat_giao,
     )
@@ -141,7 +145,8 @@ exports.create = async (req, res) => {
     };
 
     if (isBanking) {
-      const tongTienKy = tongHang - tienGiam;
+      const phiShip = mienPhiShip ? 0 : 30000;
+      const tongTienKy = tongHang - tienGiam + phiShip;
       let tienCoc = 0;
       if (loai_tien_coc === "30") {
         tienCoc = Math.round(tongTienKy * 0.3);
@@ -157,13 +162,21 @@ exports.create = async (req, res) => {
       const subId = subscription.madk;
       const [dhResult] = await db.query(
         `INSERT INTO don_hang
+<<<<<<< HEAD
            (mand, madk, ten_nguoi_nhan, email_nguoi_nhan, sdt_nguoi_nhan,
+=======
+           (mand, tien_giam, ten_nguoi_nhan, email_nguoi_nhan, sdt_nguoi_nhan,
+>>>>>>> 6dec2706c9f690bd20223d67a424aee35d5d1ba7
             loai_don_hang, tong_tien, tong_da_thanh_toan, tien_coc, trang_thai,
             trang_thai_thanh_toan, dia_chi_giao, ghi_chu, ngay_dat, ngay_giao_du_kien)
          VALUES (?, ?, ?, ?, ?, 'dinh_ky', ?, 0, ?, 'cho_xac_nhan', 'chua_thanh_toan', ?, ?, NOW(), ?)`,
         [
           mand,
+<<<<<<< HEAD
           subId,
+=======
+          tienGiam,
+>>>>>>> 6dec2706c9f690bd20223d67a424aee35d5d1ba7
           nd.ho_ten || "",
           nd.email || "",
           nd.sdt || "",
@@ -175,6 +188,8 @@ exports.create = async (req, res) => {
         ],
       );
       const madh = dhResult.insertId;
+      const promotionModel = require("../models/promotionModel");
+      await promotionModel.saveOrderPromotions(madh, appliedPromotions);
 
       await db.query(
         `INSERT INTO chi_tiet_don_hang (madh, masp, so_luong, don_gia, thanh_tien)
@@ -300,3 +315,48 @@ exports.adminDeliver = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+exports.adminGetSummary = async (req, res) => {
+  try {
+    await subscriptionModel.ensureSubscriptionTable();
+    const rows = await subscriptionModel.getSubscriptionSummary();
+    const summary = rows.map(r => ({
+      ngay_giao: r.ngay_giao,
+      masp: r.masp,
+      ten_san_pham: r.ten_san_pham,
+      don_vi: r.don_vi,
+      hinh_san_pham: r.hinh_san_pham || null,
+      tong_so_luong: Number(r.tong_so_luong || 0),
+      so_don: Number(r.so_don || 0),
+    }));
+    res.json({ summary });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.adminGetSummaryDetail = async (req, res) => {
+  try {
+    const { ngay, masp } = req.query;
+    if (!ngay || !masp) {
+      return res.status(400).json({ message: "Thiếu ngày hoặc mã sản phẩm." });
+    }
+    const rows = await subscriptionModel.getSubscriptionSummaryDetail(ngay, masp);
+    const items = rows.map(r => ({
+      ma_dang_ky: r.madk,
+      ten_nguoi_mua: r.ho_ten,
+      so_dien_thoai: r.sdt,
+      dia_chi_giao: r.dia_chi_giao,
+      trang_thai: mapStatus(r.trang_thai),
+      so_luong: r.so_luong,
+      gia_du_kien: Number(r.gia_du_kien || 0),
+      so_ky_giao: r.so_lan_giao,
+      so_ky_da_giao: r.so_lan_da_giao,
+      tan_suat_giao: r.chu_ky,
+    }));
+    res.json({ items });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+

@@ -19,6 +19,8 @@ const dashboardRoutes = require("./dashboard");
 const notificationRoutes = require("./notifications");
 const baiVietRoutes = require("./baiViet");
 const blogRoutes = require("./blog");
+const promotionRoutes = require("./promotions");
+
 
 router.get("/", (req, res) =>
   res.json({ message: "Cho Nong San API dang chay", version: "2.0.0" }),
@@ -41,4 +43,5 @@ router.use("/admin/dashboard", dashboardRoutes);
 router.use("/", notificationRoutes);
 router.use("/articles", baiVietRoutes);
 router.use("/blog", blogRoutes);
+router.use("/", promotionRoutes);
 module.exports = router;
