@@ -162,21 +162,13 @@ exports.create = async (req, res) => {
       const subId = subscription.madk;
       const [dhResult] = await db.query(
         `INSERT INTO don_hang
-<<<<<<< HEAD
            (mand, madk, ten_nguoi_nhan, email_nguoi_nhan, sdt_nguoi_nhan,
-=======
-           (mand, tien_giam, ten_nguoi_nhan, email_nguoi_nhan, sdt_nguoi_nhan,
->>>>>>> 6dec2706c9f690bd20223d67a424aee35d5d1ba7
             loai_don_hang, tong_tien, tong_da_thanh_toan, tien_coc, trang_thai,
             trang_thai_thanh_toan, dia_chi_giao, ghi_chu, ngay_dat, ngay_giao_du_kien)
          VALUES (?, ?, ?, ?, ?, 'dinh_ky', ?, 0, ?, 'cho_xac_nhan', 'chua_thanh_toan', ?, ?, NOW(), ?)`,
         [
           mand,
-<<<<<<< HEAD
           subId,
-=======
-          tienGiam,
->>>>>>> 6dec2706c9f690bd20223d67a424aee35d5d1ba7
           nd.ho_ten || "",
           nd.email || "",
           nd.sdt || "",
