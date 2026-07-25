@@ -11,7 +11,7 @@ async function ensureSubscriptionTable() {
       gia_du_kien     DECIMAL(12,2),
       chu_ky          ENUM('hang_tuan','hai_tuan','hang_thang'),
       dia_chi_giao    TEXT,
-      phuong_thuc_tt  ENUM('tien_mat') NOT NULL DEFAULT 'tien_mat',
+      phuong_thuc_tt  ENUM('tien_mat','banking','vnpay') NOT NULL DEFAULT 'tien_mat',
       ngay_bat_dau    DATETIME,
       ngay_giao_tiep_theo DATETIME,
       ngay_ket_thuc   DATETIME,
@@ -113,7 +113,9 @@ const SELECT_FIELDS = `
   dk.trang_thai, dk.ghi_chu,
   sp.ten_san_pham, sp.gia_ban, sp.don_vi,
   nd.ho_ten, nd.email, nd.sdt,
-  hav.duong_dan AS hinh_chinh
+  hav.duong_dan AS hinh_chinh,
+  dh.madh AS order_id, dh.tong_tien AS order_tong_tien,
+  dh.tien_coc AS order_tien_coc, dh.trang_thai_thanh_toan AS order_trang_thai_tt
 `;
 
 const JOINS = `
@@ -122,6 +124,13 @@ const JOINS = `
   JOIN nguoi_dung nd ON nd.mand = dk.mand
   LEFT JOIN hinh_anh_video hav
     ON hav.masp = sp.masp AND hav.la_chinh = 1 AND hav.loai = 'hinh_anh'
+  LEFT JOIN (
+    SELECT dh1.* FROM don_hang dh1
+    INNER JOIN (
+      SELECT madk, MAX(madh) AS max_madh FROM don_hang
+      WHERE loai_don_hang = 'dinh_ky' GROUP BY madk
+    ) latest ON dh1.madh = latest.max_madh
+  ) dh ON dh.madk = dk.madk
 `;
 
 async function getUserSubscriptions(mand) {

@@ -627,6 +627,7 @@ export function SubscriptionDetail() {
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
   const [canceling, setCanceling] = useState(false);
+  const [polling, setPolling] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -641,6 +642,27 @@ export function SubscriptionDetail() {
       .catch(() => setSubscription(null))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!subscription?.order_id || subscription.order_trang_thai_tt === 'da_tt' || subscription.phuong_thuc_tt !== 'banking') return;
+    setPolling(true);
+    const interval = setInterval(async () => {
+      try {
+        const data = await subscriptionAPI.getAll();
+        const updated = (data.subscriptions || []).find(
+          (item) => String(item.ma_dang_ky) === String(id)
+        );
+        if (updated) {
+          setSubscription(updated);
+          if (updated.order_trang_thai_tt === 'da_tt') {
+            clearInterval(interval);
+            setPolling(false);
+          }
+        }
+      } catch {}
+    }, 5000);
+    return () => { clearInterval(interval); setPolling(false); };
+  }, [subscription?.order_id, subscription?.order_trang_thai_tt, id]);
 
   const handleCancel = async () => {
     if (!subscription || !["dang_hoat_dong", "tam_dung"].includes(subscription.trang_thai)) return;
@@ -806,7 +828,57 @@ export function SubscriptionDetail() {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 pt-2">
+          {subscription.phuong_thuc_tt === "banking" && subscription.order_id && subscription.order_trang_thai_tt === "da_tt" && (
+            <div className="bg-green-50 border border-green-200 rounded-2xl p-6 shadow-sm text-center">
+              <span className="text-3xl">✅</span>
+              <p className="mt-2 text-lg font-bold text-green-700">Đã thanh toán thành công!</p>
+              <p className="text-sm text-green-600 mt-1">Hệ thống đã xác nhận đơn hàng của bạn.</p>
+            </div>
+          )}
+          {subscription.phuong_thuc_tt === "banking" && subscription.order_id && subscription.order_trang_thai_tt !== "da_tt" && (
+            <div className="bg-amber-50/60 border border-amber-200 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-black text-amber-900">⚡ Quét mã QR chuyển khoản nhanh</h3>
+                {polling && <span className="text-xs font-medium text-amber-600 animate-pulse">🔄 Đang chờ xác nhận thanh toán...</span>}
+              </div>
+              <div className="mb-4 bg-white/60 rounded-xl p-3 text-sm text-amber-800 space-y-1">
+                <p>💰 Tổng mỗi kỳ: <strong>{formatCurrency(giaMoiKy)}</strong></p>
+                <p className="font-bold text-amber-900">Cần thanh toán qua QR: {formatCurrency(subscription.banking_info.amount)}</p>
+                {giaMoiKy > subscription.banking_info.amount && (
+                  <p className="text-amber-700">Còn lại ({formatCurrency(giaMoiKy - subscription.banking_info.amount)}) thanh toán khi nhận hàng</p>
+                )}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                <div className="md:col-span-3 flex justify-center shrink-0">
+                  {subscription.banking_info.qr_url && (
+                    <img src={subscription.banking_info.qr_url} alt="QR Chuyển khoản" className="h-48 w-48 rounded-xl border border-amber-200 bg-white p-2 shadow-sm" />
+                  )}
+                </div>
+                <div className="md:col-span-4 flex flex-col gap-2.5 text-base font-semibold text-amber-900">
+                  <p>Ngân hàng: <b className="text-slate-900 font-bold">{subscription.banking_info.bank_name}</b></p>
+                  <p>Số tài khoản: <b className="text-slate-900 font-bold">{subscription.banking_info.account_number}</b></p>
+                  <p>Chủ tài khoản: <b className="text-slate-900 font-bold">{subscription.banking_info.account_holder}</b></p>
+                  <div className="mt-1">
+                    <p className="text-sm font-bold text-amber-700 mb-1">Nội dung chuyển khoản chính xác:</p>
+                    <p className="inline-block bg-amber-100 text-amber-950 font-mono text-lg font-black px-4 py-1 rounded-lg border-2 border-amber-300 shadow-sm">
+                      {subscription.banking_info.noi_dung_chuyen_khoan}
+                    </p>
+                  </div>
+                </div>
+                <div className="md:col-span-5 border-t md:border-t-0 md:border-l border-amber-200 pt-4 md:pt-0 md:pl-8 space-y-3 text-[17px] text-amber-800 self-start">
+                  <h4 className="font-bold text-[18px] text-amber-900 flex items-center gap-2">📌 Hướng dẫn thực hiện</h4>
+                  <ul className="list-disc list-inside space-y-2 font-medium leading-7">
+                    <li>Mở app ngân hàng bất kỳ để quét mã QR.</li>
+                    <li>Hệ thống sẽ tự động điền số tiền và nội dung.</li>
+                    <li>Kiểm tra kỹ tên chủ tài khoản trước khi bấm xác nhận.</li>
+                    <li>Đơn hàng sẽ tự động cập nhật sau khi nhận được tiền (từ 1 - 3 phút).</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row gap-3 pt-2">
           <Link to="/orders" className="flex-1 rounded-xl border border-slate-200 py-3.5 text-center text-base font-semibold text-slate-600 bg-white hover:bg-slate-50 transition">
             ← Quay lại danh sách
           </Link>

@@ -43,6 +43,14 @@ const mapSubscription = (subscription) => ({
   ngay_giao_tiep_theo:
     subscription.ngay_giao_tiep_theo || subscription.ngay_bat_dau,
 
+  order_id: subscription.order_id || null,
+  order_tong_tien: Number(subscription.order_tong_tien || 0),
+  order_tien_coc: Number(subscription.order_tien_coc || 0),
+  order_trang_thai_tt: subscription.order_trang_thai_tt || null,
+  ...(subscription.order_id && subscription.order_trang_thai_tt !== 'da_tt'
+    ? { banking_info: getBankingInfo(Number(subscription.order_tien_coc || 0), subscription.order_id) }
+    : {}),
+
   product: {
     name: subscription.ten_san_pham,
     price: Number(subscription.gia_ban),
@@ -146,14 +154,16 @@ exports.create = async (req, res) => {
       );
       const nd = nguoiDung[0]?.[0] || {};
 
+      const subId = subscription.madk;
       const [dhResult] = await db.query(
         `INSERT INTO don_hang
-           (mand, ten_nguoi_nhan, email_nguoi_nhan, sdt_nguoi_nhan,
+           (mand, madk, ten_nguoi_nhan, email_nguoi_nhan, sdt_nguoi_nhan,
             loai_don_hang, tong_tien, tong_da_thanh_toan, tien_coc, trang_thai,
             trang_thai_thanh_toan, dia_chi_giao, ghi_chu, ngay_dat, ngay_giao_du_kien)
-         VALUES (?, ?, ?, ?, 'dinh_ky', ?, 0, ?, 'cho_xac_nhan', 'chua_thanh_toan', ?, ?, NOW(), ?)`,
+         VALUES (?, ?, ?, ?, ?, 'dinh_ky', ?, 0, ?, 'cho_xac_nhan', 'chua_thanh_toan', ?, ?, NOW(), ?)`,
         [
           mand,
+          subId,
           nd.ho_ten || "",
           nd.email || "",
           nd.sdt || "",
@@ -174,7 +184,7 @@ exports.create = async (req, res) => {
 
       await db.query(
         `INSERT INTO thanh_toan (madh, so_tien, phuong_thuc, trang_thai, ngay_thanh_toan)
-         VALUES (?, ?, 'chuyen_khoan', 'cho_thanh_toan', NOW())`,
+         VALUES (?, ?, 'banking', 'cho_thanh_toan', NOW())`,
         [madh, tienCoc],
       );
 
