@@ -1,7 +1,6 @@
 const chatModel = require('../models/chatModel');
 const productModel = require('../models/productModel');
 
-// --- CÁC HÀM TRỢ GIÚP NỘI BỘ (GIỮ NGUYÊN) ---
 
 function removeDiacritics(str = '') {
     return str
@@ -14,6 +13,11 @@ function removeDiacritics(str = '') {
 const replyCache = new Map();
 const CACHE_MAX = 200;
 const CACHE_TTL = 10 * 60 * 1000;
+
+const GEMINI_API_KEYS = [process.env.GEMINI_API_KEY, process.env.GEMINI_API_KEY_2].filter(Boolean);
+let currentKeyIndex = 0; 
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 function cacheGet(key) {
     const entry = replyCache.get(key);
@@ -113,13 +117,45 @@ function buildFallback(userMessage, products) {
 }
 
 function extractJson(text) {
-    let cleaned = text.replace(/```json|```/g, '').trim();
-    const firstBrace = cleaned.indexOf('{');
-    const lastBrace = cleaned.lastIndexOf('}');
-    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-        cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+    const cleaned = text.replace(/```json|```/g, '').trim();
+    const start = cleaned.indexOf('{');
+    if (start === -1) throw new Error('Không tìm thấy JSON trong phản hồi.');
+
+    let depth = 0;
+    let end = -1;
+    let inString = false;
+    let escape = false;
+    for (let i = start; i < cleaned.length; i++) {
+        const ch = cleaned[i];
+        if (escape) { escape = false; continue; }
+        if (ch === '\\') { escape = true; continue; }
+        if (ch === '"') { inString = !inString; continue; }
+        if (inString) continue;
+        if (ch === '{') depth++;
+        else if (ch === '}') { depth--; if (depth === 0) { end = i; break; } }
     }
-    return JSON.parse(cleaned);
+
+    const jsonStr = end !== -1
+        ? cleaned.slice(start, end + 1)
+        : repairTruncatedJson(cleaned.slice(start));
+
+    return JSON.parse(jsonStr);
+}
+
+function repairTruncatedJson(partial) {
+    let result = partial;
+
+    const quoteCount = (result.match(/(?<!\\)"/g) || []).length;
+    if (quoteCount % 2 !== 0) result += '"';
+
+    result = result.replace(/,\s*$/, ''); 
+
+    const missingBrackets = (result.match(/\[/g) || []).length - (result.match(/\]/g) || []).length;
+    const missingBraces = (result.match(/\{/g) || []).length - (result.match(/\}/g) || []).length;
+    result += ']'.repeat(Math.max(0, missingBrackets));
+    result += '}'.repeat(Math.max(0, missingBraces));
+
+    return result;
 }
 
 async function callGemini(apiKey, systemPrompt, fullPrompt) {
@@ -147,8 +183,7 @@ async function callGemini(apiKey, systemPrompt, fullPrompt) {
 }
 
 async function askAI(userMessage, products, isSeasonMatch = false) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return buildFallback(userMessage, products);
+    if (!GEMINI_API_KEYS.length) return buildFallback(userMessage, products);
 
     const cacheKey = `${userMessage.trim().toLowerCase()}::${products.map((p) => p.masp).sort().join(',')}`;
     const cached = cacheGet(cacheKey);
@@ -180,50 +215,62 @@ Quy tắc:
 
     const fullPrompt = `DANH_SACH:\n${JSON.stringify(danhSachGoc)}${seasonNote}\n\nCâu hỏi khách hàng: "${userMessage}"`;
 
-    for (let attempt = 1; attempt <= 2; attempt++) {
-        try {
-            const { res, data } = await callGemini(apiKey, systemPrompt, fullPrompt);
-            console.log('[askAI] status:', res.status, `(lần ${attempt})`);
+    // Duyệt qua từng key theo thứ tự xoay vòng — key nào hết quota (429) thì chuyển sang key kế tiếp
+    for (let keyOffset = 0; keyOffset < GEMINI_API_KEYS.length; keyOffset++) {
+        const keyPos = (currentKeyIndex + keyOffset) % GEMINI_API_KEYS.length;
+        const apiKey = GEMINI_API_KEYS[keyPos];
+        const isLastKey = keyOffset === GEMINI_API_KEYS.length - 1;
 
-            if (res.status === 429) {
-                console.warn('[askAI] hết quota, dùng fallback');
-                return buildFallback(userMessage, products);
+        for (let attempt = 1; attempt <= 2; attempt++) {
+            try {
+                const { res, data } = await callGemini(apiKey, systemPrompt, fullPrompt);
+                console.log(`[askAI] key #${keyPos + 1}/${GEMINI_API_KEYS.length} - status:`, res.status, `(lần ${attempt})`);
+
+                if (res.status === 429) {
+                    console.warn(`[askAI] key #${keyPos + 1} hết quota.`);
+                    if (isLastKey) {
+                        console.warn('[askAI] tất cả key đều hết quota, dùng fallback');
+                        return buildFallback(userMessage, products);
+                    }
+                    break; // thoát vòng retry của key này, sang key kế tiếp
+                }
+
+                if (res.status === 503 && attempt === 1) {
+                    console.warn('[askAI] server quá tải, thử lại lần 2...');
+                    await sleep(1200);
+                    continue;
+                }
+
+                if (!res.ok) throw new Error(data?.error?.message || `HTTP ${res.status}`);
+
+                const parts = data?.candidates?.[0]?.content?.parts || [];
+                const text = parts.map(p => p.text || '').join('\n');
+
+                console.log('[askAI] raw text nhận được:', text);
+
+                const parsed = extractJson(text);
+
+                const validIds = new Set(products.map((p) => p.masp));
+                const product_ids = (parsed.product_ids || []).filter((id) => validIds.has(id));
+
+                const result = {
+                    reply: parsed.reply || 'Mình đã tìm thấy vài gợi ý cho bạn.',
+                    product_ids,
+                };
+
+                cacheSet(cacheKey, result);
+                currentKeyIndex = keyPos; // lần gọi sau ưu tiên bắt đầu từ key đang dùng tốt này
+                return result;
+            } catch (err) {
+                console.error(`[askAI] key #${keyPos + 1} lỗi (lần ${attempt}):`, err.message);
+                if (attempt === 2 && isLastKey) return buildFallback(userMessage, products);
+                if (attempt === 2) break; // sang key kế tiếp
             }
-
-            if (res.status === 503 && attempt === 1) {
-                console.warn('[askAI] server quá tải, thử lại lần 2...');
-                await new Promise((r) => setTimeout(r, 1200));
-                continue;
-            }
-
-            if (!res.ok) throw new Error(data?.error?.message || `HTTP ${res.status}`);
-
-            const parts = data?.candidates?.[0]?.content?.parts || [];
-            const text = parts.map(p => p.text || '').join('\n');
-
-            console.log('[askAI] raw text nhận được:', text);
-
-            const parsed = extractJson(text);
-
-            const validIds = new Set(products.map((p) => p.masp));
-            const product_ids = (parsed.product_ids || []).filter((id) => validIds.has(id));
-
-            const result = {
-                reply: parsed.reply || 'Mình đã tìm thấy vài gợi ý cho bạn.',
-                product_ids,
-            };
-
-            cacheSet(cacheKey, result);
-            return result;
-        } catch (err) {
-            console.error(`[askAI] lỗi (lần ${attempt}):`, err.message);
-            if (attempt === 2) return buildFallback(userMessage, products);
         }
     }
 
     return buildFallback(userMessage, products);
 }
-
 // --- USER APIS (EXPORT TRỰC TIẾP) ---
 
 exports.getMyMessages = async (req, res) => {
