@@ -217,7 +217,7 @@ async function getOrderById(madh, mand = null) {
   const cond = mand ? "AND dh.mand = ?" : "";
   const params = mand ? [madh, mand] : [madh];
   const [[dh]] = await db.query(
-    `SELECT dh.*, tt.phuong_thuc, tt.trang_thai AS trang_thai_tt, tt.ngay_thanh_toan, tt.hinh_anh_chuyen_khoan, tt.ma_giao_dich
+    `SELECT dh.*, tt.phuong_thuc, tt.trang_thai AS trang_thai_tt, tt.ngay_thanh_toan, tt.ma_giao_dich
      FROM don_hang dh
      LEFT JOIN thanh_toan tt ON tt.madh = dh.madh
      WHERE dh.madh = ? ${cond}`,
@@ -364,7 +364,7 @@ async function getAllOrders({
       dh.madh, dh.loai_don_hang, dh.tong_tien, dh.tien_giam, dh.tong_da_thanh_toan, dh.tien_coc, dh.trang_thai,
       dh.trang_thai_thanh_toan, dh.ngay_dat, dh.ngay_giao_du_kien, dh.ngay_giao_thuc_te,
       dh.dia_chi_giao, dh.ghi_chu, dh.ten_nguoi_nhan, dh.sdt_nguoi_nhan,
-      tt.phuong_thuc, tt.hinh_anh_chuyen_khoan, tt.ma_giao_dich
+      tt.phuong_thuc, tt.ma_giao_dich
     FROM don_hang dh
     LEFT JOIN thanh_toan tt ON tt.madh = dh.madh
     ${cond}
@@ -395,12 +395,11 @@ function mapOrder(row) {
     ten_nguoi_nhan: row.ten_nguoi_nhan,
     sdt_nguoi_nhan: row.sdt_nguoi_nhan,
     phuong_thuc_tt: row.phuong_thuc,
-    hinh_anh_chuyen_khoan: row.hinh_anh_chuyen_khoan || '',
     ma_giao_dich: row.ma_giao_dich || '',
   };
 }
 
-async function updatePaymentSuccess(madh, { ma_giao_dich = '', du_lieu_cong = '' }) {
+async function updatePaymentSuccess(madh, { ma_giao_dich = '' }) {
   const [[dh]] = await db.query(
     'SELECT tien_coc FROM don_hang WHERE madh = ?', [madh]
   );
@@ -414,15 +413,15 @@ async function updatePaymentSuccess(madh, { ma_giao_dich = '', du_lieu_cong = ''
   );
   await db.query(
     `UPDATE thanh_toan SET trang_thai = 'thanh_cong', ma_giao_dich = ?,
-      du_lieu_cong = ?, ngay_thanh_toan = NOW() WHERE madh = ?`,
-    [ma_giao_dich, du_lieu_cong, madh],
+      ngay_thanh_toan = NOW() WHERE madh = ?`,
+    [ma_giao_dich, madh],
   );
 }
 
-async function updateBankingPayment(madh, hinh_anh = '') {
+async function updateBankingPayment(madh) {
   await db.query(
-    `UPDATE thanh_toan SET hinh_anh_chuyen_khoan = ? WHERE madh = ?`,
-    [hinh_anh, madh],
+    `UPDATE thanh_toan SET trang_thai = 'da_thanh_toan', ngay_thanh_toan = NOW() WHERE madh = ?`,
+    [madh],
   );
 }
 

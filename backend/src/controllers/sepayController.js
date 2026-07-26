@@ -53,7 +53,6 @@ exports.webhook = async (req, res) => {
     }
     await orderModel.updatePaymentSuccess(madh, {
       ma_giao_dich: String(id),
-      du_lieu_cong: JSON.stringify(req.body),
     });
     res.json({ success: true });
   } catch (err) {
