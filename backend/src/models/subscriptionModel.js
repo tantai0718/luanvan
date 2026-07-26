@@ -27,7 +27,7 @@ async function ensureSubscriptionTable() {
 
 async function getProductInfo(masp) {
   const [rows] = await db.query(
-    `SELECT masp, gia_ban, don_vi, ten_san_pham, trang_thai
+    `SELECT masp, gia_ban, don_vi, ten_san_pham, trang_thai, han_su_dung
      FROM san_pham WHERE masp = ? LIMIT 1`,
     [masp],
   );

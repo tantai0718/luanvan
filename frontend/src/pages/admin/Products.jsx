@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx';
 
 const emptyForm = {
   ten_san_pham: '', mo_ta: '', gia_ban: 0, don_vi: 'kg', ton_kho: 0, ma_danh_muc: '', hinh_anh: [], video: [],
+  han_su_dung: '', so_ngay_can_han: 3, phan_tram_giam_can_han: 0,
 };
 
 const readFileAsDataUrl = file =>
@@ -51,7 +52,7 @@ function ProductFormModal({ categories, initialData, onClose, onDone }) {
     event.preventDefault();
     setSaving(true); setError('');
     try {
-      const payload = { ...form, hinh_anh: [...form.hinh_anh, ...form.video], gia_ban: Number(form.gia_ban), ton_kho: Number(form.ton_kho), ma_danh_muc: Number(form.ma_danh_muc) };
+      const payload = { ...form, hinh_anh: [...form.hinh_anh, ...form.video], gia_ban: Number(form.gia_ban), ton_kho: Number(form.ton_kho), ma_danh_muc: Number(form.ma_danh_muc), han_su_dung: form.han_su_dung || null, so_ngay_can_han: Number(form.so_ngay_can_han) || 0, phan_tram_giam_can_han: Number(form.phan_tram_giam_can_han) || 0 };
       if (initialData?.ma_san_pham) await productAPI.update(initialData.ma_san_pham, payload);
       else await productAPI.create(payload);
       onDone();
@@ -77,6 +78,11 @@ function ProductFormModal({ categories, initialData, onClose, onDone }) {
           <Input label="Giá bán" type="number" value={form.gia_ban} onChange={e => setForm({ ...form, gia_ban: e.target.value })} />
           <Input label="Đơn vị" value={form.don_vi} onChange={e => setForm({ ...form, don_vi: e.target.value })} />
           <Input label="Tồn kho" type="number" value={form.ton_kho} onChange={e => setForm({ ...form, ton_kho: e.target.value })} />
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          <Input label="Hạn sử dụng" type="date" value={form.han_su_dung ? form.han_su_dung.slice(0, 10) : ''} onChange={e => setForm({ ...form, han_su_dung: e.target.value || null })} />
+          <Input label="Số ngày cảnh báo trước HSD" type="number" min="0" value={form.so_ngay_can_han} onChange={e => setForm({ ...form, so_ngay_can_han: Number(e.target.value) || 0 })} />
+          <Input label="Giảm giá khi gần HSD (%)" type="number" min="0" max="100" value={form.phan_tram_giam_can_han} onChange={e => setForm({ ...form, phan_tram_giam_can_han: Number(e.target.value) || 0 })} />
         </div>
         <div>
           <div className="mb-2 flex items-center justify-between">
@@ -152,6 +158,15 @@ function ProductCard({ product, onEdit, onToggle, onDelete }) {
             <p className="text-label-md font-bold text-on-surface">{product.ton_kho}</p>
           </div>
         </div>
+        {product.han_su_dung && (
+          <div className="mt-2 rounded-xl bg-surface-container-low p-2">
+            <p className="text-label-xs text-on-surface-variant">Hạn sử dụng</p>
+            <div className="flex items-center gap-2">
+              <p className="text-label-md font-bold text-on-surface">{new Date(product.han_su_dung).toLocaleDateString('vi-VN')}</p>
+              <Badge text={product.trang_thai_hsd === 'het_han' ? 'Hết hạn' : product.trang_thai_hsd === 'can_han' ? 'Sắp hết hạn' : 'Còn hạn'} color={product.trang_thai_hsd === 'het_han' ? 'red' : product.trang_thai_hsd === 'can_han' ? 'orange' : 'green'} />
+            </div>
+          </div>
+        )}
 
 
         <div className="mt-4 flex gap-2">
@@ -214,6 +229,8 @@ export default function AdminProducts() {
       'Giá bán': Number(p.gia_ban || 0),
       'Đơn vị': p.don_vi,
       'Tồn kho': p.ton_kho,
+      'Hạn sử dụng': p.han_su_dung ? new Date(p.han_su_dung).toLocaleDateString('vi-VN') : '',
+      'Trạng thái HSD': p.han_su_dung ? (p.trang_thai_hsd === 'het_han' ? 'Hết hạn' : p.trang_thai_hsd === 'can_han' ? 'Sắp hết hạn' : 'Còn hạn') : '',
       'Trạng thái': p.con_hoat_dong ? 'Đang bán' : 'Đã ẩn',
     }));
     const ws = XLSX.utils.json_to_sheet(data);

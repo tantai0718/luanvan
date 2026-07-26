@@ -45,7 +45,7 @@ async function createProduct(req, res) {
     try {
         // Frontend gửi: ten_san_pham, ma_danh_muc, gia_ban, don_vi, ton_kho, hinh_anh[]
         // Model nhận:   ten_san_pham, madm,         gia_ban, don_vi, so_luong_ton, khu_vuc
-        const { ten_san_pham, ma_danh_muc, gia_ban, don_vi, ton_kho, mo_ta, hinh_anh = [] } = req.body;
+        const { ten_san_pham, ma_danh_muc, gia_ban, don_vi, ton_kho, mo_ta, hinh_anh = [], han_su_dung, so_ngay_can_han, phan_tram_giam_can_han } = req.body;
 
         if (!ten_san_pham?.trim()) return res.status(400).json({ message: 'Ten san pham khong duoc de trong.' });
         if (!ma_danh_muc) return res.status(400).json({ message: 'Vui long chon danh muc.' });
@@ -58,6 +58,9 @@ async function createProduct(req, res) {
             don_vi: don_vi || 'kg',
             so_luong_ton: Number(ton_kho || 0), // map ton_kho → so_luong_ton
             khu_vuc: '',
+            han_su_dung: han_su_dung || null,
+            so_ngay_can_han: Number(so_ngay_can_han) || 3,
+            phan_tram_giam_can_han: Number(phan_tram_giam_can_han) || 0,
         });
 
         // Nếu có ảnh → upload từng ảnh base64 vào hinh_anh_video

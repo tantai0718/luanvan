@@ -93,7 +93,7 @@ export default function AdminAccounts() {
       {error && <div className="bg-surface rounded-3xl p-lg border border-outline-variant text-body-md text-on-error-container bg-error-container/20">{error}</div>}
 
       {loading ? <Loading /> : (
-        <Table headers={['#', 'Họ tên', 'Email', 'Số điện thoại', 'Vai trò', 'Trạng thái', 'Ngày tạo', 'Hành động']} empty={{ icon: '👤', text: 'Không tìm thấy tài khoản nào.' }}>
+          <Table headers={['#', 'Họ tên', 'Email', 'Số điện thoại', 'Vai trò', 'Trạng thái', 'Hành động']} empty={{ icon: '👤', text: 'Không tìm thấy tài khoản nào.' }}>
           {accounts.map((account, index) => {
             const roleInfo = roleMap[account.vai_tro] || { label: account.vai_tro, color: 'gray' };
             return (
@@ -112,7 +112,6 @@ export default function AdminAccounts() {
                 <td className="px-4 py-3 text-body-md text-on-surface-variant">{account.so_dien_thoai || 'Chưa cập nhật'}</td>
                 <td className="px-4 py-3"><Badge text={roleInfo.label} color={roleInfo.color} /></td>
                 <td className="px-4 py-3"><Badge text={account.con_hoat_dong ? 'Hoạt động' : 'Đã khóa'} color={account.con_hoat_dong ? 'green' : 'red'} /></td>
-                <td className="px-4 py-3 text-body-md text-on-surface-variant">{account.ngay_tao ? new Date(account.ngay_tao).toLocaleDateString('vi-VN') : 'Chưa rõ'}</td>
                 <td className="px-4 py-3"><Btn size="sm" variant={account.con_hoat_dong ? 'danger' : 'primary'} onClick={() => toggleActive(account.ma_tai_khoan, account.con_hoat_dong)}>{account.con_hoat_dong ? 'Khóa' : 'Mở khóa'}</Btn></td>
               </tr>
             );

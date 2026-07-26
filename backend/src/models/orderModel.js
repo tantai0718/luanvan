@@ -26,7 +26,7 @@ async function createOrder({
   if (!gh) throw new Error("Gio hang trong.");
 
   const [items] = await db.query(
-    `SELECT ctgh.masp, ctgh.so_luong, sp.gia_ban, sp.ten_san_pham, sp.so_luong_ton
+    `SELECT ctgh.masp, ctgh.so_luong, sp.gia_ban, sp.ten_san_pham, sp.so_luong_ton, sp.han_su_dung
      FROM chi_tiet_gio_hang ctgh
      JOIN san_pham sp ON sp.masp = ctgh.masp
      WHERE ctgh.magh = ?`,
@@ -104,9 +104,10 @@ async function createOrder({
     i.so_luong,
     i.gia_ban,
     Number(i.gia_ban) * i.so_luong,
+    i.han_su_dung || null,
   ]);
   await db.query(
-    "INSERT INTO chi_tiet_don_hang (madh, masp, so_luong, don_gia, thanh_tien) VALUES ?",
+    "INSERT INTO chi_tiet_don_hang (madh, masp, so_luong, don_gia, thanh_tien, han_su_dung_luc_ban) VALUES ?",
     [ctValues],
   );
   await db.query(
@@ -141,7 +142,7 @@ async function createPreorder({
   tien_coc = 0,
 }) {
   const [[sp]] = await db.query(
-    "SELECT ten_san_pham FROM san_pham WHERE masp = ? AND trang_thai = 1",
+    "SELECT ten_san_pham, han_su_dung FROM san_pham WHERE masp = ? AND trang_thai = 1",
     [masp],
   );
   if (!sp) throw new Error("Sản phẩm không tồn tại hoặc đã ngừng bán");
@@ -189,8 +190,8 @@ async function createPreorder({
   await promotionModel.saveOrderPromotions(madh, appliedPromotions);
 
   await db.query(
-    "INSERT INTO chi_tiet_don_hang (madh, masp, so_luong, don_gia, thanh_tien) VALUES (?, ?, ?, ?, ?)",
-    [madh, masp, so_luong, gia_ban, tong_hang],
+    "INSERT INTO chi_tiet_don_hang (madh, masp, so_luong, don_gia, thanh_tien, han_su_dung_luc_ban) VALUES (?, ?, ?, ?, ?, ?)",
+    [madh, masp, so_luong, gia_ban, tong_hang, sp.han_su_dung || null],
   );
 
   await db.query(
@@ -224,7 +225,7 @@ async function getOrderById(madh, mand = null) {
   );
   if (!dh) return null;
   const [items] = await db.query(
-    `SELECT ct.mactdh AS ma_chi_tiet, ct.madh, ct.masp, ct.so_luong, ct.don_gia, ct.thanh_tien, sp.ten_san_pham, hav.duong_dan AS hinh_san_pham
+    `SELECT ct.mactdh AS ma_chi_tiet, ct.madh, ct.masp, ct.so_luong, ct.don_gia, ct.thanh_tien, ct.han_su_dung_luc_ban, sp.ten_san_pham, hav.duong_dan AS hinh_san_pham
      FROM chi_tiet_don_hang ct
      JOIN san_pham sp ON sp.masp = ct.masp
      LEFT JOIN hinh_anh_video hav

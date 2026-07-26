@@ -11,7 +11,7 @@ const BANKING_INFO = {
 
 function getBankingInfo(amount, orderId) {
   const addInfo = `TT${orderId}`;
-  const qrUrl = `https://qr.sepay.vn/img?acc=${BANKING_INFO.account_number}&bank=${BANKING_INFO.bank_short_name}&amount=${amount}&des=${encodeURIComponent(addInfo)}`;
+  const qrUrl = `https://vietqr.app/img?bank=MBBank&acc=${BANKING_INFO.account_number}&amount=${amount}&des=${encodeURIComponent(addInfo)}&holder=${encodeURIComponent(BANKING_INFO.account_holder)}&showinfo=true`;
   return { ...BANKING_INFO, qr_url: qrUrl, amount, noi_dung_chuyen_khoan: addInfo };
 }
 

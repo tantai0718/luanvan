@@ -13,7 +13,7 @@ const BANKING_INFO = {
 
 function getBankingInfo(amount, orderId) {
   const addInfo = `TT${orderId}`;
-  const qrUrl = `https://qr.sepay.vn/img?acc=${BANKING_INFO.account_number}&bank=${BANKING_INFO.bank_short_name}&amount=${amount}&des=${encodeURIComponent(addInfo)}`;
+  const qrUrl = `https://vietqr.app/img?bank=MBBank&acc=${BANKING_INFO.account_number}&amount=${amount}&des=${encodeURIComponent(addInfo)}&holder=${encodeURIComponent(BANKING_INFO.account_holder)}&showinfo=true`;
   return { ...BANKING_INFO, qr_url: qrUrl, amount, noi_dung_chuyen_khoan: addInfo };
 }
 
@@ -184,9 +184,9 @@ exports.create = async (req, res) => {
       await promotionModel.saveOrderPromotions(madh, appliedPromotions);
 
       await db.query(
-        `INSERT INTO chi_tiet_don_hang (madh, masp, so_luong, don_gia, thanh_tien)
-         VALUES (?, ?, ?, ?, ?)`,
-        [madh, masp, soLuong, giaBan, tongHang],
+        `INSERT INTO chi_tiet_don_hang (madh, masp, so_luong, don_gia, thanh_tien, han_su_dung_luc_ban)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [madh, masp, soLuong, giaBan, tongHang, product.han_su_dung || null],
       );
 
       await db.query(

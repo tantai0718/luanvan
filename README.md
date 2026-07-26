@@ -1,34 +1,38 @@
-# Cho Nong San
+# Cho Nong San - He thong ban nong san truc tuyen
+
+## Cau truc du an
+
+```
+luanvan/
+├── backend/          # Node.js + Express API
+├── frontend/         # React + Tailwind CSS
+├── cho_nong_san.sql  # Database schema
+└── upload/           # Uploaded images
+```
 
 ## Cach chay voi database moi
 
 ### 1. Import database
-Mo WampServer/phpMyAdmin hoac MySQL Workbench, import file:
 
-```text
+Mo WampServer/hoac MySQL Workbench, import file:
+
+```
 cho_nong_san.sql
 ```
 
 File nay tao database `cho_nong_san`.
 
 ### 2. Cau hinh backend
+
 File `backend/.env` da duoc dat san:
 
-```env
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=
-DB_NAME=cho_nong_san
-```
-
-Neu MySQL cua ban co mat khau, sua `DB_PASSWORD`.
 
 ### 3. Cai thu vien
 
 ```bash
-npm install
-npm run install:all
+cd backend && npm install
+cd ../frontend && npm install
+cd ..
 ```
 
 ### 4. Reset mat khau tai khoan mau
@@ -36,32 +40,48 @@ npm run install:all
 ```bash
 cd backend
 node reset-password.js
-cd ..
 ```
 
-Mat khau mac dinh sau khi reset la `123456`.
+Mat khau mac dinh la `123456`.
 
 ### 5. Chay ung dung
 
 ```bash
+# Terminal 1 - Backend
+cd backend
 npm run dev
+
+# Terminal 2 - Frontend
+cd frontend
+npm start
 ```
 
 Frontend: http://localhost:3000
 Backend: http://localhost:5000
 
-<<<<<<< HEAD
-## 🔑 Tài khoản đăng nhập (sau khi chạy reset-password.js)
-| Vai trò   | Email                   | Mật khẩu   |
-|-----------|-------------------------|------------|
-| Admin     | admin@chonongsan.vn     | 123456     |
-| Người mua | tuan.vo@gmail.com       | 123456     |
-=======
-## Tai khoan mau sau khi reset password
+### 6. Thanh toan QR (Sepay webhook - tuy chon)
 
-| Vai tro | Email | Mat khau |
-|---|---|---|
-| Admin | minhgiau.admin@gmail.com | 123456 |
-| User | thimua.user@gmail.com | 123456 |
-| User | vankhach.user@gmail.com | 123456 |
->>>>>>> codex/update-marketplace-erd
+```bash
+ngrok http 5000
+```
+
+Copy URL public vao dashboard Sepay lam webhook URL:
+```
+https://<ngrok-url>/api/webhook/sepay
+```
+
+## Tai khoan mau
+
+| Vai tro   | Email                     | Mat khau |
+|-----------|---------------------------|----------|
+| Admin     | minhgiau.admin@gmail.com  | 123456   |
+| Nguoi mua | thimua.user@gmail.com     | 123456   |
+| Nguoi mua | vankhach.user@gmail.com   | 123456   |
+
+## Cong nghe
+
+- **Backend**: Node.js, Express, MySQL2, JWT, Socket.IO
+- **Frontend**: React, React Router, Tailwind CSS, Recharts
+- **Database**: MySQL 8.4 (WAMP)
+- **Thanh toan**: Sepay webhook (QR chuyen khoan)
+- **Anh upload**: Base64 / file upload
