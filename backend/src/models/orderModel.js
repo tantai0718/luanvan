@@ -361,7 +361,7 @@ async function getAllOrders({
   const offset = (Number(page) - 1) * Number(limit);
   const [rows] = await db.query(
     `SELECT
-      dh.madh, dh.loai_don_hang, dh.tong_tien, dh.tien_giam, dh.trang_thai,
+      dh.madh, dh.loai_don_hang, dh.tong_tien, dh.tien_giam, dh.tong_da_thanh_toan, dh.tien_coc, dh.trang_thai,
       dh.trang_thai_thanh_toan, dh.ngay_dat, dh.ngay_giao_du_kien, dh.ngay_giao_thuc_te,
       dh.dia_chi_giao, dh.ghi_chu, dh.ten_nguoi_nhan, dh.sdt_nguoi_nhan,
       tt.phuong_thuc, tt.hinh_anh_chuyen_khoan, tt.ma_giao_dich

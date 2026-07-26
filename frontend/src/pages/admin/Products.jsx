@@ -17,6 +17,7 @@ const readFileAsDataUrl = file =>
   });
 
 function ProductFormModal({ categories, initialData, onClose, onDone }) {
+  const isEdit = !!initialData?.ma_san_pham;
   const [form, setForm] = useState({
     ...emptyForm, ...initialData,
     hinh_anh: (initialData?.images || []).filter(img => !img.includes('.mp4') && !img.includes('.webm')),
@@ -52,84 +53,142 @@ function ProductFormModal({ categories, initialData, onClose, onDone }) {
     event.preventDefault();
     setSaving(true); setError('');
     try {
-      const payload = { ...form, hinh_anh: [...form.hinh_anh, ...form.video], gia_ban: Number(form.gia_ban), ton_kho: Number(form.ton_kho), ma_danh_muc: Number(form.ma_danh_muc), han_su_dung: form.han_su_dung || null, so_ngay_can_han: Number(form.so_ngay_can_han) || 0, phan_tram_giam_can_han: Number(form.phan_tram_giam_can_han) || 0 };
-      if (initialData?.ma_san_pham) await productAPI.update(initialData.ma_san_pham, payload);
-      else await productAPI.create(payload);
+      const payload = {
+        ten_san_pham: form.ten_san_pham,
+        mo_ta: form.mo_ta,
+        gia_ban: Number(form.gia_ban),
+        don_vi: form.don_vi,
+        ton_kho: Number(form.ton_kho),
+        ma_danh_muc: Number(form.ma_danh_muc),
+        han_su_dung: form.han_su_dung || null,
+        so_ngay_can_han: Number(form.so_ngay_can_han) || 0,
+        phan_tram_giam_can_han: Number(form.phan_tram_giam_can_han) || 0,
+        hinh_anh: form.hinh_anh,
+        video: form.video,
+      };
+      if (isEdit) await productAPI.update(initialData.ma_san_pham, payload);
+      else await productAPI.create({ ...payload, hinh_anh: [...payload.hinh_anh, ...payload.video] });
       onDone();
     } catch (err) { setError(err.message || 'Không lưu được sản phẩm.'); }
     finally { setSaving(false); }
   };
 
   return (
-    <Modal title={initialData?.ma_san_pham ? 'Cập nhật sản phẩm' : 'Thêm sản phẩm'} onClose={onClose} size="lg">
-      <form onSubmit={handleSave} className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2">
-          <Input label="Tên sản phẩm" value={form.ten_san_pham} onChange={e => setForm({ ...form, ten_san_pham: e.target.value })} />
-          <Select label="Danh mục" value={form.ma_danh_muc} onChange={e => setForm({ ...form, ma_danh_muc: e.target.value })}>
-            <option value="">Chọn danh mục</option>
-            {categories.map(item => <option key={item.id} value={item.id}>{item.icon} {item.name}</option>)}
-          </Select>
+    <Modal title={isEdit ? 'Cập nhật sản phẩm' : 'Thêm sản phẩm mới'} onClose={onClose} size="lg">
+      <form onSubmit={handleSave} className="space-y-6">
+        {error && <div className="rounded-2xl border border-error-container bg-error-container/20 px-4 py-3 text-body-md text-on-error-container">{error}</div>}
+
+        <div className="rounded-2xl border border-outline-variant bg-surface-container-low p-5 space-y-4">
+          <h3 className="text-title-sm font-title-md text-on-surface flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-xl">info</span>
+            Thông tin cơ bản
+          </h3>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Input label="Tên sản phẩm" placeholder="Nhập tên sản phẩm..." value={form.ten_san_pham} onChange={e => setForm({ ...form, ten_san_pham: e.target.value })} />
+            <Select label="Danh mục" value={form.ma_danh_muc} onChange={e => setForm({ ...form, ma_danh_muc: e.target.value })}>
+              <option value="">Chọn danh mục</option>
+              {categories.map(item => <option key={item.id} value={item.id}>{item.icon} {item.name}</option>)}
+            </Select>
+          </div>
+          <div>
+            <label className="mb-2 block text-body-md font-body-md text-on-surface-variant">Mô tả sản phẩm</label>
+            <textarea rows={3} placeholder="Mô tả ngắn gọn về sản phẩm..." value={form.mo_ta} onChange={e => setForm({ ...form, mo_ta: e.target.value })} className="w-full resize-none rounded-2xl border border-outline-variant bg-surface px-4 py-3 text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary-fixed" />
+          </div>
         </div>
-        <div>
-          <label className="mb-2 block text-body-md font-body-md text-on-surface-variant">Mô tả</label>
-          <textarea rows={4} value={form.mo_ta} onChange={e => setForm({ ...form, mo_ta: e.target.value })} className="w-full resize-none rounded-2xl border border-outline-variant bg-surface px-4 py-3 text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary-fixed" />
+
+        <div className="rounded-2xl border border-outline-variant bg-surface-container-low p-5 space-y-4">
+          <h3 className="text-title-sm font-title-md text-on-surface flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-xl">payments</span>
+            Giá bán & Kho hàng
+          </h3>
+          <div className="grid gap-4 md:grid-cols-3">
+            <Input label="Giá bán (VNĐ)" type="number" min="0" placeholder="0" value={form.gia_ban} onChange={e => setForm({ ...form, gia_ban: e.target.value })} />
+            <Input label="Đơn vị tính" placeholder="kg, hộp, chai..." value={form.don_vi} onChange={e => setForm({ ...form, don_vi: e.target.value })} />
+            <Input label="Số lượng tồn kho" type="number" min="0" placeholder="0" value={form.ton_kho} onChange={e => setForm({ ...form, ton_kho: e.target.value })} />
+          </div>
         </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          <Input label="Giá bán" type="number" value={form.gia_ban} onChange={e => setForm({ ...form, gia_ban: e.target.value })} />
-          <Input label="Đơn vị" value={form.don_vi} onChange={e => setForm({ ...form, don_vi: e.target.value })} />
-          <Input label="Tồn kho" type="number" value={form.ton_kho} onChange={e => setForm({ ...form, ton_kho: e.target.value })} />
+
+        <div className="rounded-2xl border border-outline-variant bg-surface-container-low p-5 space-y-4">
+          <h3 className="text-title-sm font-title-md text-on-surface flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-xl">timer</span>
+            Hạn sử dụng & Cảnh báo
+          </h3>
+          <div className="grid gap-4 md:grid-cols-3">
+            <Input label="Hạn sử dụng" type="date" value={form.han_su_dung ? form.han_su_dung.slice(0, 10) : ''} onChange={e => setForm({ ...form, han_su_dung: e.target.value || null })} />
+            <Input label="Cảnh báo trước (số ngày)" type="number" min="0" value={form.so_ngay_can_han} onChange={e => setForm({ ...form, so_ngay_can_han: Number(e.target.value) || 0 })} />
+            <Input label="Giảm giá khi gần hết hạn (%)" type="number" min="0" max="100" value={form.phan_tram_giam_can_han} onChange={e => setForm({ ...form, phan_tram_giam_can_han: Number(e.target.value) || 0 })} />
+          </div>
         </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          <Input label="Hạn sử dụng" type="date" value={form.han_su_dung ? form.han_su_dung.slice(0, 10) : ''} onChange={e => setForm({ ...form, han_su_dung: e.target.value || null })} />
-          <Input label="Số ngày cảnh báo trước HSD" type="number" min="0" value={form.so_ngay_can_han} onChange={e => setForm({ ...form, so_ngay_can_han: Number(e.target.value) || 0 })} />
-          <Input label="Giảm giá khi gần HSD (%)" type="number" min="0" max="100" value={form.phan_tram_giam_can_han} onChange={e => setForm({ ...form, phan_tram_giam_can_han: Number(e.target.value) || 0 })} />
-        </div>
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <label className="text-body-md font-body-md text-on-surface-variant">Hình ảnh sản phẩm</label>
-            <label className="cursor-pointer rounded-full bg-primary-fixed px-4 py-2 text-label-sm font-semibold text-on-primary-fixed-variant hover:bg-primary-fixed-dim">
-              {uploading ? 'Đang tải...' : 'Chọn ảnh từ máy'}
+
+        <div className="rounded-2xl border border-outline-variant bg-surface-container-low p-5 space-y-4">
+          <h3 className="text-title-sm font-title-md text-on-surface flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-xl">photo_library</span>
+            Hình ảnh sản phẩm
+            <span className="text-label-sm text-on-surface-variant font-normal ml-1">({form.hinh_anh.length} ảnh)</span>
+          </h3>
+          <div className="flex items-center justify-end">
+            <label className="cursor-pointer rounded-full bg-primary-fixed px-4 py-2 text-label-sm font-semibold text-on-primary-fixed-variant hover:bg-primary-fixed-dim transition-all">
+              <span className="material-symbols-outlined text-sm align-middle mr-1">add_photo_alternate</span>
+              {uploading ? 'Đang tải...' : 'Thêm ảnh mới'}
               <input type="file" accept="image/*" multiple className="hidden" onChange={handleFiles} />
             </label>
           </div>
           {!form.hinh_anh.length ? (
-            <div className="rounded-2xl border border-dashed border-outline-variant py-8 text-center text-label-sm text-on-surface-variant">Chưa có ảnh nào được chọn.</div>
+            <div className="rounded-2xl border-2 border-dashed border-outline-variant py-10 text-center">
+              <span className="material-symbols-outlined text-4xl text-on-surface-variant/30">image</span>
+              <p className="mt-2 text-label-sm text-on-surface-variant">Chưa có ảnh nào. Nhấn nút "Thêm ảnh mới" để bắt đầu.</p>
+            </div>
           ) : (
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               {form.hinh_anh.map((image, index) => (
-                <div key={`${index}-${image.slice(0, 16)}`} className="relative overflow-hidden rounded-2xl border border-outline-variant">
+                <div key={`${index}-${image.slice(0, 20)}`} className="group relative overflow-hidden rounded-2xl border border-outline-variant">
                   <img src={image.startsWith('/upload/') ? `http://localhost:5000${image}` : image} alt={`Ảnh ${index + 1}`} className="h-28 w-full object-cover" />
-                  <button type="button" onClick={() => setForm(prev => ({ ...prev, hinh_anh: prev.hinh_anh.filter((_, i) => i !== index) }))} className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-surface text-sm font-bold text-error">×</button>
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all" />
+                  <button type="button" onClick={() => setForm(prev => ({ ...prev, hinh_anh: prev.hinh_anh.filter((_, i) => i !== index) }))} className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-surface text-sm font-bold text-error opacity-0 group-hover:opacity-100 transition-opacity shadow-md">×</button>
+                  {index === 0 && <span className="absolute left-2 bottom-2 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-white">Ảnh chính</span>}
                 </div>
               ))}
             </div>
           )}
         </div>
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <label className="text-body-md font-body-md text-on-surface-variant">Video sản phẩm</label>
-            <label className="cursor-pointer rounded-full bg-primary-fixed px-4 py-2 text-label-sm font-semibold text-on-primary-fixed-variant hover:bg-primary-fixed-dim">
-              {uploading ? 'Đang tải...' : 'Chọn video từ máy'}
+
+        <div className="rounded-2xl border border-outline-variant bg-surface-container-low p-5 space-y-4">
+          <h3 className="text-title-sm font-title-md text-on-surface flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-xl">videocam</span>
+            Video sản phẩm
+            <span className="text-label-sm text-on-surface-variant font-normal ml-1">({form.video.length} video)</span>
+          </h3>
+          <div className="flex items-center justify-end">
+            <label className="cursor-pointer rounded-full bg-primary-fixed px-4 py-2 text-label-sm font-semibold text-on-primary-fixed-variant hover:bg-primary-fixed-dim transition-all">
+              <span className="material-symbols-outlined text-sm align-middle mr-1">videocam</span>
+              {uploading ? 'Đang tải...' : 'Thêm video mới'}
               <input type="file" accept="video/*" multiple className="hidden" onChange={handleVideoFiles} />
             </label>
           </div>
           {!form.video.length ? (
-            <div className="rounded-2xl border border-dashed border-outline-variant py-8 text-center text-label-sm text-on-surface-variant">Chưa có video nào được chọn.</div>
+            <div className="rounded-2xl border-2 border-dashed border-outline-variant py-10 text-center">
+              <span className="material-symbols-outlined text-4xl text-on-surface-variant/30">movie</span>
+              <p className="mt-2 text-label-sm text-on-surface-variant">Chưa có video nào.</p>
+            </div>
           ) : (
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
               {form.video.map((video, index) => (
-                <div key={`v-${index}-${video.slice(0, 16)}`} className="relative overflow-hidden rounded-2xl border border-outline-variant">
-                  <video src={video} className="h-28 w-full object-cover" controls />
-                  <button type="button" onClick={() => setForm(prev => ({ ...prev, video: prev.video.filter((_, i) => i !== index) }))} className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-surface text-sm font-bold text-error">×</button>
+                <div key={`v-${index}-${video.slice(0, 20)}`} className="group relative overflow-hidden rounded-2xl border border-outline-variant">
+                  <video src={video.startsWith('/upload/') ? `http://localhost:5000${video}` : video} className="h-28 w-full object-cover" controls />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all" />
+                  <button type="button" onClick={() => setForm(prev => ({ ...prev, video: prev.video.filter((_, i) => i !== index) }))} className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-surface text-sm font-bold text-error opacity-0 group-hover:opacity-100 transition-opacity shadow-md">×</button>
                 </div>
               ))}
             </div>
           )}
         </div>
-        {error && <div className="rounded-2xl border border-error-container bg-error-container/20 px-4 py-3 text-body-md text-on-error-container">{error}</div>}
-        <div className="flex gap-3">
-          <Btn className="flex-1 justify-center" disabled={saving || uploading}>{saving ? 'Đang lưu...' : 'Lưu sản phẩm'}</Btn>
-          <Btn type="button" variant="outline" className="flex-1 justify-center" onClick={onClose}>Đóng</Btn>
+
+        <div className="flex gap-3 pt-2">
+          <Btn className="flex-1 justify-center" disabled={saving || uploading}>
+            <span className="material-symbols-outlined text-sm mr-1">{isEdit ? 'save' : 'add'}</span>
+            {saving ? 'Đang lưu...' : isEdit ? 'Cập nhật sản phẩm' : 'Thêm sản phẩm'}
+          </Btn>
+          <Btn type="button" variant="outline" className="flex-1 justify-center" onClick={onClose}>Hủy</Btn>
         </div>
       </form>
     </Modal>
@@ -210,6 +269,15 @@ export default function AdminProducts() {
     outOfStock: products.filter(item => Number(item.ton_kho) <= 0).length,
   };
 
+  const handleEdit = async product => {
+    try {
+      const data = await productAPI.getById(product.ma_san_pham);
+      setEditingProduct(data.product || product);
+    } catch {
+      setEditingProduct(product);
+    }
+  };
+
   const toggleProduct = async id => {
     await productAPI.toggle(id);
     setProducts(prev => prev.map(item => (item.ma_san_pham === id ? { ...item, con_hoat_dong: !item.con_hoat_dong } : item)));
@@ -275,7 +343,7 @@ export default function AdminProducts() {
       </div>
       {loading ? <Loading /> : products.length ? (
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
-          {products.map(product => <ProductCard key={product.ma_san_pham} product={product} onEdit={setEditingProduct} onToggle={toggleProduct} onDelete={deleteProduct} />)}
+          {products.map(product => <ProductCard key={product.ma_san_pham} product={product} onEdit={handleEdit} onToggle={toggleProduct} onDelete={deleteProduct} />)}
         </div>
       ) : (
         <div className="bg-surface rounded-3xl py-16 text-center border border-dashed border-outline-variant">

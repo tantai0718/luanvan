@@ -99,7 +99,69 @@ async function createProduct(req, res) {
 
 async function updateProduct(req, res) {
     try {
-        await productModel.updateProduct(req.params.id, req.body);
+        const masp = req.params.id;
+        const { hinh_anh = [], video = [], ...fields } = req.body;
+
+        await productModel.updateProduct(masp, fields);
+
+        const allMedia = [...hinh_anh, ...video];
+
+        const oldPaths = allMedia.filter(item => typeof item === 'string' && item.startsWith('/upload/'));
+        const newMedia = allMedia.filter(item => typeof item === 'string' && item.startsWith('data:'));
+
+        const [existingRows] = await db.query(
+            'SELECT duong_dan FROM hinh_anh_video WHERE masp = ?', [masp]
+        );
+        const existingPaths = existingRows.map(r => `/upload/${r.duong_dan}`);
+
+        for (const row of existingRows) {
+            const fullPath = `/upload/${row.duong_dan}`;
+            if (!oldPaths.includes(fullPath)) {
+                const diskPath = path.join(__dirname, '..', '..', 'upload', row.duong_dan);
+                if (fs.existsSync(diskPath)) fs.unlinkSync(diskPath);
+                await db.query('DELETE FROM hinh_anh_video WHERE masp = ? AND duong_dan = ?', [masp, row.duong_dan]);
+            }
+        }
+
+        if (newMedia.length > 0) {
+            const [[existingCount]] = await db.query(
+                'SELECT COUNT(*) AS cnt FROM hinh_anh_video WHERE masp = ? AND la_chinh = 1', [masp]
+            );
+            let hasMain = existingCount.cnt > 0;
+            const [[maxRow]] = await db.query(
+                'SELECT COALESCE(MAX(thu_tu), 0) AS max_tu FROM hinh_anh_video WHERE masp = ?', [masp]
+            );
+            let nextOrder = Number(maxRow.max_tu || 0);
+
+            for (let i = 0; i < newMedia.length; i++) {
+                const base64 = newMedia[i];
+                const isVideo = base64.startsWith('data:video/');
+                const loai = isVideo ? 'video' : 'hinh_anh';
+
+                let ext = '.jpg';
+                if (isVideo) {
+                    ext = base64.includes('webm') ? '.webm' : '.mp4';
+                } else if (base64.startsWith('data:image/png')) {
+                    ext = '.png';
+                }
+
+                const safeName = `${Date.now()}_${i}${ext}`;
+                const uploadDir = path.join(__dirname, '..', '..', 'upload', 'products');
+                if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+                const data = base64.replace(/^data:(image|video)\/\w+;base64,/, '');
+                fs.writeFileSync(path.join(uploadDir, safeName), Buffer.from(data, 'base64'));
+
+                const la_chinh = !isVideo && !hasMain ? 1 : 0;
+                if (la_chinh) hasMain = true;
+
+                await db.query(
+                    `INSERT INTO hinh_anh_video (masp, duong_dan, loai, la_chinh, thu_tu, ngay_tao)
+                     VALUES (?, ?, ?, ?, ?, NOW())`,
+                    [masp, `products/${safeName}`, loai, la_chinh, ++nextOrder]
+                );
+            }
+        }
+
         res.json({ message: 'Cập nhật sản phẩm thành công' });
     } catch (err) {
         res.status(400).json({ message: err.message });
