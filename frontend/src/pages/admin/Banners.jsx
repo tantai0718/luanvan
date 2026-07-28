@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { bannerAPI } from '../../services/api';
+import { Upload, ArrowLeft, ArrowRight, Image as ImageIcon, Eye, EyeOff } from 'lucide-react';
 import { Badge, Btn, Loading, PageHero, StatCard } from '../../components/ui/AdminUI';
 
 const readFileAsDataUrl = file =>
@@ -17,8 +18,8 @@ function formatDate(value) {
 
 function UploadButton({ multiple = false, label, disabled, onFiles }) {
   return (
-    <label className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-body-md font-semibold text-on-primary hover:bg-on-primary-fixed-variant transition-all ${disabled ? 'pointer-events-none opacity-60' : ''}`}>
-      <span className="material-symbols-outlined text-sm">upload</span>
+    <label className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-btn bg-primary px-4 py-2.5 text-body font-semibold text-white hover:bg-primary/80 transition-all ${disabled ? 'pointer-events-none opacity-60' : ''}`}>
+      <Upload size={16} />
       {label}
       <input type="file" accept="image/*" multiple={multiple} disabled={disabled} className="hidden" onChange={e => { onFiles(Array.from(e.target.files || [])); e.target.value = ''; }} />
     </label>
@@ -27,20 +28,20 @@ function UploadButton({ multiple = false, label, disabled, onFiles }) {
 
 function BannerCard({ banner, busy, isFirst, isLast, onReplace, onToggle, onDelete, onMoveUp, onMoveDown }) {
   return (
-    <div className="bg-surface rounded-3xl border border-outline-variant organic-shadow overflow-hidden">
+    <div className="bg-card rounded-card border border-border shadow-card overflow-hidden">
       <div className="relative">
         <img src={banner.image} alt={`Banner ${banner.order}`} className="aspect-[16/7] w-full object-cover" />
         <div className="absolute left-4 top-4"><Badge text={banner.active ? 'Đang chạy' : 'Đã tắt'} color={banner.active ? 'green' : 'gray'} /></div>
       </div>
       <div className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-body-lg font-bold text-on-surface">Banner #{banner.order}</p>
-          <p className="text-label-sm text-on-surface-variant">Ngày tạo: {formatDate(banner.created_at)}</p>
+          <p className="text-body font-bold text-text-primary">Banner #{banner.order}</p>
+          <p className="text-caption text-text-secondary">Ngày tạo: {formatDate(banner.created_at)}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {!isFirst && <Btn size="sm" variant="ghost" disabled={busy} onClick={() => onMoveUp(banner)}><span className="material-symbols-outlined text-sm">arrow_back</span></Btn>}
-          {!isLast && <Btn size="sm" variant="ghost" disabled={busy} onClick={() => onMoveDown(banner)}><span className="material-symbols-outlined text-sm">arrow_forward</span></Btn>}
-          <label className={`inline-flex cursor-pointer items-center justify-center rounded-2xl border border-outline-variant bg-surface px-3 py-2 text-label-sm font-semibold text-on-surface hover:bg-surface-container-high transition-all ${busy ? 'pointer-events-none opacity-60' : ''}`}>
+          {!isFirst && <Btn size="sm" variant="ghost" disabled={busy} onClick={() => onMoveUp(banner)}><ArrowLeft size={16} /></Btn>}
+          {!isLast && <Btn size="sm" variant="ghost" disabled={busy} onClick={() => onMoveDown(banner)}><ArrowRight size={16} /></Btn>}
+          <label className={`inline-flex cursor-pointer items-center justify-center rounded-btn border border-border bg-card px-3 py-2 text-caption font-semibold text-text-primary hover:bg-background transition-all ${busy ? 'pointer-events-none opacity-60' : ''}`}>
             Đổi ảnh
             <input type="file" accept="image/*" disabled={busy} className="hidden" onChange={e => { onReplace(banner, e.target.files?.[0]); e.target.value = ''; }} />
           </label>
@@ -128,12 +129,12 @@ export default function AdminBanners() {
         actions={<UploadButton multiple label={saving ? 'Đang lưu...' : '+ Chọn nhiều ảnh'} disabled={saving} onFiles={addBanners} />} />
 
       <div className="grid gap-4 md:grid-cols-3">
-        <StatCard icon={<span className="material-symbols-outlined">image</span>} label="Tổng banner" value={banners.length} color="green" />
-        <StatCard icon={<span className="material-symbols-outlined">visibility</span>} label="Đang chạy" value={banners.filter(item => item.active).length} color="blue" />
-        <StatCard icon={<span className="material-symbols-outlined">hide_image</span>} label="Đã tắt" value={banners.filter(item => !item.active).length} color="gray" />
+        <StatCard icon={<ImageIcon size={20} />} label="Tổng banner" value={banners.length} color="green" />
+        <StatCard icon={<Eye size={20} />} label="Đang chạy" value={banners.filter(item => item.active).length} color="blue" />
+        <StatCard icon={<EyeOff size={20} />} label="Đã tắt" value={banners.filter(item => !item.active).length} color="gray" />
       </div>
 
-      {error && <div className="rounded-2xl border border-error-container bg-error-container/20 px-4 py-3 text-body-md text-on-error-container">{error}</div>}
+      {error && <div className="rounded-btn border border-red-200 bg-red-50 px-4 py-3 text-body text-red-700">{error}</div>}
 
       {loading ? <Loading /> : banners.length ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -143,9 +144,9 @@ export default function AdminBanners() {
           ))}
         </div>
       ) : (
-        <div className="bg-surface rounded-3xl py-16 text-center border border-dashed border-outline-variant">
-          <span className="material-symbols-outlined text-5xl text-on-surface-variant/40">image</span>
-          <p className="mt-3 text-body-md text-on-surface-variant">Chưa có banner nào.</p>
+        <div className="bg-card rounded-card py-16 text-center border border-dashed border-border">
+          <ImageIcon size={48} className="mx-auto text-text-secondary/30" />
+          <p className="mt-3 text-body text-text-secondary">Chưa có banner nào.</p>
           <div className="mt-5"><UploadButton multiple label="+ Chọn nhiều ảnh" disabled={saving} onFiles={addBanners} /></div>
         </div>
       )}

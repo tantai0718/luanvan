@@ -4,6 +4,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { orderAPI, subscriptionAPI } from '../services/api';
 import { pickProductImage } from '../utils/marketImages';
+import { ShoppingCart, ChevronRight, Info, Plus, Minus, ArrowRight, ShieldCheck, Truck, HeadphonesIcon, CreditCard, Landmark, AlertCircle } from 'lucide-react';
 
 const formatCurrency = value => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
 
@@ -12,29 +13,29 @@ const promotionLabelMap = {
   LOYAL_CUSTOMER: 'Khách hàng mua nhiều lần',
 };
 
-const inputCls = 'bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all';
+const inputCls = 'bg-card border border-border rounded-xl px-4 py-3 text-body focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all';
 
 function PaymentChoice({ checked, icon, title, copy, onChange }) {
   return (
-    <label className={`flex cursor-pointer items-center justify-between gap-4 rounded-2xl border-2 p-4 transition-all ${
-      checked ? 'border-primary bg-primary/5 shadow-md shadow-primary/10' : 'border-outline-variant bg-surface hover:border-primary/30 hover:bg-surface-container-low'
+    <label className={`flex cursor-pointer items-center justify-center gap-4 rounded-2xl border-2 p-4 transition-all ${
+      checked ? 'border-primary bg-primary/5 shadow-md shadow-primary/10' : 'border-border bg-card hover:border-primary/30 hover:bg-background'
     }`}>
       <span className="flex items-center gap-4">
         <input type="radio" checked={checked} onChange={onChange} className="h-5 w-5 accent-primary" />
         <span>
-          <strong className="block text-title-sm font-title-sm">{title}</strong>
-          <small className="mt-0.5 block text-body-sm text-on-surface-variant">{copy}</small>
+          <strong className="block text-h3">{title}</strong>
+          <small className="mt-0.5 block text-body text-text-secondary">{copy}</small>
         </span>
       </span>
-      <span className={`material-symbols-outlined ${checked ? 'text-primary' : 'text-on-surface-variant/40'}`}>{icon}</span>
+      <span className={checked ? 'text-primary' : 'text-text-secondary/40'}>{icon}</span>
     </label>
   );
 }
 
 function StepBadge({ step, color }) {
-  const bg = color === 'secondary' ? 'bg-secondary text-on-secondary' : color === 'tertiary' ? 'bg-tertiary text-on-tertiary' : 'bg-primary text-on-primary';
+  const bg = color === 'secondary' ? 'bg-secondary text-on-secondary' : color === 'tertiary' ? 'bg-tertiary text-on-tertiary' : 'bg-primary text-white';
   return (
-    <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-label-sm font-bold ${bg}`}>
+    <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-[12px] font-bold ${bg}`}>
       {step}
     </span>
   );
@@ -118,11 +119,11 @@ export default function Cart() {
   if (!items.length) {
     return (
       <div className="bg-background min-h-screen flex items-center justify-center py-xl">
-        <div className="bg-surface rounded-3xl p-xl text-center max-w-md w-full mx-margin-mobile border border-outline-variant organic-shadow">
-          <span className="material-symbols-outlined text-6xl text-on-surface-variant/30">shopping_cart</span>
-          <h1 className="text-headline-lg font-headline-lg text-on-surface mt-4">Giỏ hàng đang trống</h1>
-          <p className="text-body-md font-body-md text-on-surface-variant mt-2">Thêm sản phẩm sạch trước khi hoàn tất đơn hàng.</p>
-          <Link to="/products" className="mt-6 inline-flex bg-primary text-on-primary px-6 py-3 rounded-xl font-bold transition-all active:scale-95">Xem sản phẩm</Link>
+        <div className="bg-card rounded-3xl p-xl text-center max-w-md w-full mx-margin-mobile border border-border shadow-card">
+          <ShoppingCart size={48} className="mx-auto text-text-secondary/30" />
+          <h1 className="text-h2 text-text-primary mt-4">Giỏ hàng đang trống</h1>
+          <p className="text-body text-text-secondary mt-2">Thêm sản phẩm sạch trước khi hoàn tất đơn hàng.</p>
+          <Link to="/products" className="mt-6 inline-flex bg-primary text-white px-6 py-3 rounded-xl font-bold transition-all active:scale-95">Xem sản phẩm</Link>
         </div>
       </div>
     );
@@ -136,10 +137,10 @@ export default function Cart() {
 
         {/* Header */}
         <div className="mb-xl">
-          <h1 className="text-display-sm font-display-sm text-on-surface">Hoàn tất đơn hàng</h1>
-          <div className="flex items-center gap-2 text-body-sm font-body-sm text-on-surface-variant mt-2">
+          <h1 className="text-h1 text-text-primary">Hoàn tất đơn hàng</h1>
+          <div className="flex items-center gap-2 text-body text-text-secondary mt-2">
             <Link to="/cart" className="hover:text-primary transition-colors">Giỏ hàng</Link>
-            <span className="material-symbols-outlined text-sm">chevron_right</span>
+            <ChevronRight size={14} />
             <span className="text-primary font-medium">Thanh toán</span>
           </div>
         </div>
@@ -151,84 +152,84 @@ export default function Cart() {
           <div className="space-y-xl lg:col-span-8">
 
             {/* ── Bước 1: Thông tin giao hàng ── */}
-            <section className="bg-surface rounded-3xl border border-outline-variant organic-shadow overflow-hidden">
+            <section className="bg-card rounded-3xl border border-border shadow-card overflow-hidden">
               <div className="flex items-center gap-3 px-xl pt-xl pb-lg">
                 <StepBadge step={1} color="primary" />
-                <h2 className="text-title-lg font-title-lg text-on-surface">Thông tin giao hàng</h2>
+                <h2 className="text-h3 text-text-primary">Thông tin giao hàng</h2>
               </div>
               <div className="grid gap-lg md:grid-cols-2 px-xl pb-xl">
                 <label className="grid gap-2">
-                  <span className="text-label-sm font-label-sm text-on-surface-variant">Họ và tên</span>
-                  <input readOnly value={user?.name || ''} placeholder="Tên người nhận" className={`${inputCls} bg-surface-container-low cursor-not-allowed`} />
+                  <span className="text-[12px] font-medium text-text-secondary">Họ và tên</span>
+                  <input readOnly value={user?.name || ''} placeholder="Tên người nhận" className={`${inputCls} bg-background cursor-not-allowed`} />
                 </label>
                 <label className="grid gap-2">
-                  <span className="text-label-sm font-label-sm text-on-surface-variant">Tài khoản</span>
-                  <input readOnly value={user?.email || user?.role || 'Người mua'} className={`${inputCls} bg-surface-container-low cursor-not-allowed`} />
+                  <span className="text-[12px] font-medium text-text-secondary">Tài khoản</span>
+                  <input readOnly value={user?.email || user?.role || 'Người mua'} className={`${inputCls} bg-background cursor-not-allowed`} />
                 </label>
                 <label className="grid gap-2 md:col-span-2">
-                  <span className="text-label-sm font-label-sm text-on-surface-variant">Địa chỉ giao hàng <span className="text-error">*</span></span>
+                  <span className="text-[12px] font-medium text-text-secondary">Địa chỉ giao hàng <span className="text-danger">*</span></span>
                   <textarea rows={3} value={form.dia_chi_giao} onChange={e => setForm({ ...form, dia_chi_giao: e.target.value })} placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành..." className={`${inputCls} resize-none`} />
                 </label>
                 <label className="grid gap-2 md:col-span-2">
-                  <span className="text-label-sm font-label-sm text-on-surface-variant">Ghi chú thêm</span>
+                  <span className="text-[12px] font-medium text-text-secondary">Ghi chú thêm</span>
                   <textarea rows={3} value={form.ghi_chu} onChange={e => setForm({ ...form, ghi_chu: e.target.value })} placeholder="Thời gian giao, chỉ dẫn địa chỉ..." className={`${inputCls} resize-none`} />
                 </label>
-                <label className="flex items-center gap-3 md:col-span-2 p-3 rounded-xl bg-surface-container-low hover:bg-surface-container-high transition-colors cursor-pointer">
+                <label className="flex items-center gap-3 md:col-span-2 p-3 rounded-xl bg-background hover:bg-background transition-colors cursor-pointer">
                   <input type="checkbox" checked={form.ship_to_other} onChange={e => setForm({ ...form, ship_to_other: e.target.checked })} className="h-5 w-5 accent-primary" />
-                  <span className="text-body-md text-on-surface">Giao hàng cho người khác</span>
+                  <span className="text-body text-text-primary">Giao hàng cho người khác</span>
                 </label>
                 {form.ship_to_other && (
                   <>
                     <label className="grid gap-2">
-                      <span className="text-label-sm font-label-sm text-on-surface-variant">Người nhận <span className="text-error">*</span></span>
+                      <span className="text-[12px] font-medium text-text-secondary">Người nhận <span className="text-danger">*</span></span>
                       <input value={form.ten_nguoi_nhan} onChange={e => setForm({ ...form, ten_nguoi_nhan: e.target.value })} placeholder="Họ tên người nhận" className={inputCls} />
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-label-sm font-label-sm text-on-surface-variant">Số điện thoại <span className="text-error">*</span></span>
+                      <span className="text-[12px] font-medium text-text-secondary">Số điện thoại <span className="text-danger">*</span></span>
                       <input value={form.sdt_nguoi_nhan} onChange={e => setForm({ ...form, sdt_nguoi_nhan: e.target.value })} placeholder="Số điện thoại người nhận" className={inputCls} />
                     </label>
                   </>
                 )}
               </div>
               <div className="mx-xl mb-xl rounded-xl bg-primary/5 border border-primary/10 px-4 py-3 flex items-center gap-3">
-                <span className="material-symbols-outlined text-primary text-lg">info</span>
-                <p className="text-body-sm text-on-surface-variant">Đơn hàng dự kiến giao trong vòng <span className="font-bold text-on-surface">2 ngày</span> kể từ khi đặt hàng thành công.</p>
+                <Info size={18} className="text-primary" />
+                <p className="text-body text-text-secondary">Đơn hàng dự kiến giao trong vòng <span className="font-bold text-text-primary">2 ngày</span> kể từ khi đặt hàng thành công.</p>
               </div>
             </section>
 
             {/* ── Bước 2: Phương thức thanh toán ── */}
-            <section className="bg-surface rounded-3xl border border-outline-variant organic-shadow overflow-hidden">
+            <section className="bg-card rounded-3xl border border-border shadow-card overflow-hidden">
               <div className="flex items-center gap-3 px-xl pt-xl pb-lg">
                 <StepBadge step={2} color="primary" />
-                <h2 className="text-title-lg font-title-lg text-on-surface">Phương thức thanh toán</h2>
+                <h2 className="text-h3 text-text-primary">Phương thức thanh toán</h2>
               </div>
               <div className="space-y-3 px-xl pb-xl">
-                <PaymentChoice checked={form.phuong_thuc_tt === 'tien_mat'} onChange={() => setForm({ ...form, phuong_thuc_tt: 'tien_mat' })} icon="local_atm" title="Thanh toán khi nhận hàng (COD)" copy="Thanh toán bằng tiền mặt khi shipper giao hàng." />
-                <PaymentChoice checked={form.phuong_thuc_tt === 'banking'} onChange={() => setForm({ ...form, phuong_thuc_tt: 'banking' })} icon="account_balance" title="Chuyển khoản ngân hàng" copy="Sau khi đặt hàng, vui lòng chuyển khoản đến tài khoản của shop." />
+                <PaymentChoice checked={form.phuong_thuc_tt === 'tien_mat'} onChange={() => setForm({ ...form, phuong_thuc_tt: 'tien_mat' })} icon={<CreditCard size={24} />} title="Thanh toán khi nhận hàng (COD)" copy="Thanh toán bằng tiền mặt khi shipper giao hàng." />
+                <PaymentChoice checked={form.phuong_thuc_tt === 'banking'} onChange={() => setForm({ ...form, phuong_thuc_tt: 'banking' })} icon={<Landmark size={24} />} title="Chuyển khoản ngân hàng" copy="Sau khi đặt hàng, vui lòng chuyển khoản đến tài khoản của shop." />
               </div>
             </section>
           </div>
 
           {/* ===== RIGHT COLUMN — Order Summary ===== */}
           <aside className="space-y-lg lg:sticky lg:top-28 lg:col-span-4">
-            <section className="bg-surface rounded-3xl border border-outline-variant organic-shadow overflow-hidden">
-              <div className="px-xl pt-xl pb-lg border-b border-outline-variant">
-                <h2 className="text-title-lg font-title-lg text-on-surface">Đơn hàng của bạn</h2>
+            <section className="bg-card rounded-3xl border border-border shadow-card overflow-hidden">
+              <div className="px-xl pt-xl pb-lg border-b border-border">
+                <h2 className="text-h3 text-text-primary">Đơn hàng của bạn</h2>
               </div>
-              <div className="px-xl py-lg space-y-4 border-b border-outline-variant">
+              <div className="px-xl py-lg space-y-4 border-b border-border">
                 {items.map(item => {
                   const product = { ten_san_pham: item.product?.name, ma_danh_muc: item.product?.category_id, images: item.product?.images || [] };
                   return (
                     <div key={item.product_id} className="flex gap-3">
-                      <img src={pickProductImage(product)} alt={item.product?.name} className="w-16 h-16 rounded-xl object-cover flex-shrink-0 border border-outline-variant" />
+                      <img src={pickProductImage(product)} alt={item.product?.name} className="w-16 h-16 rounded-xl object-cover flex-shrink-0 border border-border" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-body-sm font-body-sm text-on-surface line-clamp-2">{item.product?.name}</p>
-                        <p className="text-label-sm text-on-surface-variant mt-0.5">{item.quantity} {item.product?.unit}</p>
+                        <p className="text-body text-text-primary line-clamp-2">{item.product?.name}</p>
+                        <p className="text-[12px] font-medium text-text-secondary mt-0.5">{item.quantity} {item.product?.unit}</p>
                         <div className="flex items-center justify-between mt-1.5">
-                          <span className="text-title-sm font-title-sm text-primary">{formatCurrency(item.quantity * Number(item.product?.price || 0))}</span>
+                          <span className="text-h3 text-primary">{formatCurrency(item.quantity * Number(item.product?.price || 0))}</span>
                           <div className="flex gap-1">
-                            <button onClick={() => updateItem(item.product_id, item.quantity + 1)} className="w-7 h-7 rounded-lg bg-surface-container-high text-on-surface flex items-center justify-center hover:bg-surface-container-highest transition-colors"><span className="material-symbols-outlined text-xs">add</span></button>
-                            <button onClick={() => (item.quantity > 1 ? updateItem(item.product_id, item.quantity - 1) : removeItem(item.product_id))} className="w-7 h-7 rounded-lg bg-surface-container-high text-on-surface flex items-center justify-center hover:bg-surface-container-highest transition-colors"><span className="material-symbols-outlined text-xs">remove</span></button>
+                            <button onClick={() => updateItem(item.product_id, item.quantity + 1)} className="w-7 h-7 rounded-lg bg-background text-text-primary flex items-center justify-center hover:bg-background transition-colors"><Plus size={12} /></button>
+                            <button onClick={() => (item.quantity > 1 ? updateItem(item.product_id, item.quantity - 1) : removeItem(item.product_id))} className="w-7 h-7 rounded-lg bg-background text-text-primary flex items-center justify-center hover:bg-background transition-colors"><Minus size={12} /></button>
                           </div>
                         </div>
                       </div>
@@ -236,31 +237,31 @@ export default function Cart() {
                   );
                 })}
               </div>
-              <div className="px-xl py-lg space-y-3 text-body-sm font-body-sm">
-                <div className="flex justify-between text-on-surface-variant"><span>Tạm tính</span><span>{formatCurrency(totalPrice)}</span></div>
+              <div className="px-xl py-lg space-y-3 text-body">
+                <div className="flex justify-between text-text-secondary"><span>Tạm tính</span><span>{formatCurrency(totalPrice)}</span></div>
                 <div className="flex justify-between text-primary"><span>Khuyến mãi</span><span>{discount ? `-${formatCurrency(discount)}` : formatCurrency(0)}</span></div>
                 {promotions.length ? (
-                  <div className="rounded-xl bg-primary/5 border border-primary/10 p-3 text-label-sm font-label-sm text-on-surface-variant">
+                  <div className="rounded-xl bg-primary/5 border border-primary/10 p-3 text-[12px] font-medium text-text-secondary">
                     {promotions.map(p => <p key={p.code}>{promotionLabelMap[p.code] || p.label}: <span className="text-primary font-bold">-{formatCurrency(p.amount)}</span></p>)}
                   </div>
                 ) : (
-                  <p className="rounded-xl bg-surface-container-low p-3 text-label-sm text-on-surface-variant">
+                  <p className="rounded-xl bg-background p-3 text-[12px] font-medium text-text-secondary">
                     Khuyến mãi sẽ được tự động áp dụng khi đủ điều kiện.
                   </p>
                 )}
-                <div className="flex justify-between text-on-surface-variant"><span>Phí vận chuyển</span><span>{shipping ? formatCurrency(shipping) : <span className="text-primary font-bold">Miễn phí</span>}</span></div>
-                <div className="flex justify-between border-t border-outline-variant pt-4 text-title-lg font-title-lg"><span>Tổng cộng</span><span className="text-secondary">{formatCurrency(total)}</span></div>
+                <div className="flex justify-between text-text-secondary"><span>Phí vận chuyển</span><span>{shipping ? formatCurrency(shipping) : <span className="text-primary font-bold">Miễn phí</span>}</span></div>
+                <div className="flex justify-between border-t border-border pt-4 text-h3"><span>Tổng cộng</span><span className="text-text-secondary">{formatCurrency(total)}</span></div>
               </div>
-              {error && <div className="mx-xl mb-lg rounded-xl bg-error-container p-3 text-label-sm text-on-error-container flex items-center gap-2"><span className="material-symbols-outlined text-base">error</span>{error}</div>}
-              <button onClick={handleOrder} disabled={loading} className="mx-xl mb-xl w-[calc(100%-3rem)] bg-primary text-on-primary py-4 rounded-2xl text-title-sm font-title-sm flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-primary/25 transition-all disabled:opacity-60 active:scale-[0.98]">
+              {error && <div className="mx-xl mb-lg rounded-xl bg-red-50 p-3 text-[12px] font-medium text-danger flex items-center gap-2"><AlertCircle size={16} />{error}</div>}
+              <button onClick={handleOrder} disabled={loading} className="mx-xl mb-xl w-[calc(100%-3rem)] bg-primary text-white py-4 rounded-2xl text-h3 flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-primary/25 transition-all disabled:opacity-60 active:scale-[0.98]">
                 {loading ? 'Đang xử lý...' : 'Đặt hàng ngay'}
-                {!loading && <span className="material-symbols-outlined">arrow_forward</span>}
+                {!loading && <ArrowRight size={20} />}
               </button>
             </section>
-            <div className="flex flex-wrap justify-center gap-5 text-label-sm text-on-surface-variant">
-              <span className="inline-flex items-center gap-1.5"><span className="material-symbols-outlined text-base text-primary">verified_user</span>Bảo mật</span>
-              <span className="inline-flex items-center gap-1.5"><span className="material-symbols-outlined text-base text-primary">local_shipping</span>Giao nhanh</span>
-              <span className="inline-flex items-center gap-1.5"><span className="material-symbols-outlined text-base text-primary">support_agent</span>Hỗ trợ 24/7</span>
+            <div className="flex flex-wrap justify-center gap-5 text-[12px] font-medium text-text-secondary">
+              <span className="inline-flex items-center gap-1.5"><ShieldCheck size={16} className="text-primary" />Bảo mật</span>
+              <span className="inline-flex items-center gap-1.5"><Truck size={16} className="text-primary" />Giao nhanh</span>
+              <span className="inline-flex items-center gap-1.5"><HeadphonesIcon size={16} className="text-primary" />Hỗ trợ 24/7</span>
             </div>
           </aside>
         </div>

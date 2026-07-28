@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, orderAPI, subscriptionAPI } from '../../services/api';
+import { Download, Calendar, Repeat, Banknote, Info, ChevronRight } from 'lucide-react';
 import { Badge, Btn, Loading, Modal, PageHero, Pagination, SearchBar, Table } from '../../components/ui/AdminUI';
 import { pickProductImage } from '../../utils/marketImages';
 import * as XLSX from 'xlsx';
@@ -90,7 +91,7 @@ function OrderDetailModal({ detail, orderId, onClose, onAdvanceStatus, onCancel,
           </div>
         </div>
 
-        {/* ĐÃ THANH TOÁN / CÒN LẠI — cho mọi đơn có cọc hoặc thanh toán một phần */}
+        {/* ĐÃ THANH TOÁN / CÒN LẠI */}
         <div className="my-6 grid grid-cols-3 gap-4">
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center">
             <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Tổng đơn</p>
@@ -113,13 +114,13 @@ function OrderDetailModal({ detail, orderId, onClose, onAdvanceStatus, onCancel,
           <div className="my-8 p-5 rounded-xl border-2 border-dashed border-amber-300 bg-amber-50/50 space-y-4">
             <div className="flex items-center justify-between border-b border-amber-200 pb-3">
               <h4 className="text-base font-black text-amber-950 flex items-center gap-2">
-                <span className="material-symbols-outlined text-lg">account_balance</span> THÔNG TIN CHỜ CHUYỂN KHOẢN
+                <Banknote size={18} /> THÔNG TIN CHỜ CHUYỂN KHOẢN
               </h4>
               <Btn size="sm" onClick={() => onConfirmBankingPayment(orderId)}>Xác nhận đã nhận tiền</Btn>
             </div>
             {(detail.order.tien_coc || 0) > 0 && (
               <div className="text-sm text-amber-900 space-y-1 bg-amber-100/50 rounded-lg p-3">
-                <p>💰 Tổng đơn: <strong>{formatCurrency(detail.order.tong_thanh_toan)}</strong></p>
+                <p>Tổng đơn: <strong>{formatCurrency(detail.order.tong_thanh_toan)}</strong></p>
                 <p className="font-bold text-amber-950">Cần nhận qua QR: {formatCurrency(detail.order.tien_coc)}</p>
                 <p>Còn lại (COD): {formatCurrency(detail.order.tong_thanh_toan - detail.order.tien_coc)}</p>
               </div>
@@ -141,7 +142,7 @@ function OrderDetailModal({ detail, orderId, onClose, onAdvanceStatus, onCancel,
 
         {detail.order.loai_don === 'dat_truoc' && (
           <div className="my-6 p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-3 text-blue-950 text-sm leading-relaxed">
-            <span className="material-symbols-outlined text-blue-600 shrink-0 mt-0.5">info</span>
+            <Info size={18} className="text-blue-600 shrink-0 mt-0.5" />
             <p>Đơn hàng đặt trước nông sản. Dự kiến chuẩn bị và xuất kho vào ngày <span className="font-bold text-base">{detail.order.ngay_giao_du_kien ? new Date(detail.order.ngay_giao_du_kien).toLocaleDateString('vi-VN') : 'chưa xác định'}</span>.</p>
           </div>
         )}
@@ -328,7 +329,7 @@ function SubscriptionDetailModal({ detail, subscriptionId, onClose, onDeliver, i
 }
 
 // ══════════════════════════════════════════════════════════════════
-// MODAL — CHI TIẾT DÒNG TỔNG HỢP ĐẶT TRƯỚC (ai đặt bao nhiêu trong tổng đó)
+// MODAL — CHI TIẾT DÒNG TỔNG HỢP ĐẶT TRƯỚC
 // ══════════════════════════════════════════════════════════════════
 function PreorderSummaryDetailModal({ group, orders, loading, onClose }) {
   return (
@@ -400,7 +401,7 @@ function PreorderSummaryDetailModal({ group, orders, loading, onClose }) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// MODAL — CHI TIẾT DÒNG TỔNG HỢP ĐỊNH KỲ (ai đăng ký bao nhiêu trong tổng đó)
+// MODAL — CHI TIẾT DÒNG TỔNG HỢP ĐỊNH KỲ
 // ══════════════════════════════════════════════════════════════════
 function SubscriptionSummaryDetailModal({ group, items, loading, onClose }) {
   return (
@@ -487,7 +488,7 @@ export default function AdminOrders() {
   const limit = 15;
 
   // --- Tổng hợp đơn đặt trước theo ngày ---
-  const [preorderView, setPreorderView] = useState('list'); // 'list' | 'summary'
+  const [preorderView, setPreorderView] = useState('list');
   const [summary, setSummary] = useState([]);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null);
@@ -736,32 +737,31 @@ const exportExcel = async () => {
   body="Admin có thể xem toàn bộ đơn hàng, chuyển trạng thái xử lý và ghi nhận số kỳ đã giao cho từng đăng ký định kỳ."
   actions={
     <Btn variant="outline" onClick={exportExcel}>
-      <span className="material-symbols-outlined text-sm mr-1">download</span> Xuất Excel
+      <Download size={16} className="mr-1" /> Xuất Excel
     </Btn>
   }
 />
 
-      <div className="bg-surface rounded-3xl p-lg border border-outline-variant organic-shadow">
+      <div className="bg-card rounded-card p-5 border border-border shadow-card">
         <div className="flex gap-3 flex-wrap">
           {['thuong', 'dat_truoc', 'subscription'].map(t => (
-            <button key={t} className={`rounded-xl px-5 py-2 text-body-md font-semibold transition-all ${tab === t ? 'bg-primary text-on-primary' : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'}`}
+            <button key={t} className={`rounded-btn px-5 py-2 text-body font-semibold transition-all ${tab === t ? 'bg-primary text-white' : 'bg-background text-text-secondary hover:bg-border/30'}`}
               onClick={() => { setTab(t); setPage(1); setPreorderView('list'); }}>
-              <span className="material-symbols-outlined text-sm mr-1">{t === 'thuong' ? 'inventory' : t === 'dat_truoc' ? 'schedule' : 'repeat'}</span>
-              {t === 'thuong' ? 'Đơn thường' : t === 'dat_truoc' ? 'Đặt trước' : 'Định kỳ'}
+              {t === 'thuong' ? <><Calendar size={16} className="mr-1 inline" /> Đơn thường</> : t === 'dat_truoc' ? <><Calendar size={16} className="mr-1 inline" /> Đặt trước</> : <><Repeat size={16} className="mr-1 inline" /> Định kỳ</>}
             </button>
           ))}
         </div>
 
         {(tab === 'dat_truoc' || tab === 'subscription') && (
-          <div className="mt-4 flex gap-2 border-t border-outline-variant pt-4">
+          <div className="mt-4 flex gap-2 border-t border-border pt-4">
             <button
-              className={`rounded-lg px-4 py-1.5 text-sm font-semibold transition-all ${preorderView === 'list' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+              className={`rounded-btn px-4 py-1.5 text-sm font-semibold transition-all ${preorderView === 'list' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
               onClick={() => setPreorderView('list')}
             >
                Danh sách đơn
             </button>
             <button
-              className={`rounded-lg px-4 py-1.5 text-sm font-semibold transition-all ${preorderView === 'summary' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+              className={`rounded-btn px-4 py-1.5 text-sm font-semibold transition-all ${preorderView === 'summary' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
               onClick={() => setPreorderView('summary')}
             >
                Tổng hợp theo ngày
@@ -771,25 +771,25 @@ const exportExcel = async () => {
       </div>
 
       {!isSummaryMode && (
-        <div className="bg-surface rounded-3xl p-lg border border-outline-variant organic-shadow">
+        <div className="bg-card rounded-card p-5 border border-border shadow-card">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <SearchBar value={search} onChange={v => { setSearch(v); setPage(1); }} placeholder="Tìm mã đơn hoặc địa chỉ..." />
-            <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }} className="rounded-2xl border border-outline-variant bg-surface px-4 py-3 text-body-md focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-fixed">
+            <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }} className="rounded-btn border border-border bg-card px-4 py-3 text-body focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-light">
               <option value="">Tất cả trạng thái</option>
                   {tab === 'subscription'
                   ? Object.entries(subscriptionStatusMap).map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)
                   : Object.entries(statusMap).map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)
               }
                 </select>
-            <div className="ml-auto text-body-md text-on-surface-variant">{tab === 'subscription' ? 'Tổng đăng ký: ' : 'Tổng đơn hàng: '}<span className="font-bold text-on-surface">{total}</span></div>
+            <div className="ml-auto text-body text-text-secondary">{tab === 'subscription' ? 'Tổng đăng ký: ' : 'Tổng đơn hàng: '}<span className="font-bold text-text-primary">{total}</span></div>
           </div>
         </div>
       )}
 
       {tab === 'dat_truoc' && preorderView === 'summary' ? (
         summaryLoading ? <Loading /> : (
-          <div className="bg-surface rounded-3xl p-lg border border-outline-variant organic-shadow">
-            <h2 className="text-title-md font-title-md text-on-surface mb-lg">Tổng hợp sản phẩm cần chuẩn bị theo ngày giao</h2>
+          <div className="bg-card rounded-card p-5 border border-border shadow-card">
+            <h2 className="text-h3 text-text-primary mb-5">Tổng hợp sản phẩm cần chuẩn bị theo ngày giao</h2>
             {summary.length ? (
               (() => {
                 const byDate = summary.reduce((acc, row) => {
@@ -801,15 +801,15 @@ const exportExcel = async () => {
                 return Object.entries(byDate).map(([ngay, rows]) => (
                   <div key={ngay} className="mb-6 last:mb-0">
                     <div className="mb-3 flex items-center gap-2">
-                      <span className="material-symbols-outlined text-primary">event</span>
-                      <h3 className="text-lg font-bold text-on-surface">Ngày giao: {new Date(ngay + 'T00:00:00').toLocaleDateString('vi-VN')}</h3>
+                      <Calendar size={18} className="text-primary" />
+                      <h3 className="text-lg font-bold text-text-primary">Ngày giao: {new Date(ngay + 'T00:00:00').toLocaleDateString('vi-VN')}</h3>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                       {rows.map(row => (
                         <button
                           key={`${row.ngay_giao}-${row.masp}`}
                           onClick={() => openGroupDetail(row)}
-                          className="flex items-center gap-3 rounded-2xl border border-outline-variant bg-white p-4 text-left transition-all hover:border-primary hover:shadow-md"
+                          className="flex items-center gap-3 rounded-btn border border-border bg-card p-4 text-left transition-all hover:border-primary hover:shadow-md"
                         >
                           <img
                             src={row.hinh_san_pham ? (row.hinh_san_pham.startsWith('/upload/') ? `http://localhost:5000${row.hinh_san_pham}` : `http://localhost:5000/upload/${row.hinh_san_pham}`) : 'https://placehold.co/60x60/e2e8f0/475569?text=NS'}
@@ -821,7 +821,7 @@ const exportExcel = async () => {
                             <p className="text-lg font-black text-primary">{row.tong_so_luong} {row.don_vi}</p>
                             <p className="text-xs text-slate-400">{row.so_don} đơn hàng</p>
                           </div>
-                          <span className="material-symbols-outlined text-slate-300">chevron_right</span>
+                          <ChevronRight size={20} className="text-slate-300" />
                         </button>
                       ))}
                     </div>
@@ -829,14 +829,14 @@ const exportExcel = async () => {
                 ));
               })()
             ) : (
-              <p className="py-8 text-center text-body-md text-on-surface-variant">Chưa có đơn đặt trước nào.</p>
+              <p className="py-8 text-center text-body text-text-secondary">Chưa có đơn đặt trước nào.</p>
             )}
           </div>
         )
       ) : tab === 'subscription' && preorderView === 'summary' ? (
         subSummaryLoading ? <Loading /> : (
-          <div className="bg-surface rounded-3xl p-lg border border-outline-variant organic-shadow">
-            <h2 className="text-title-md font-title-md text-on-surface mb-lg">Tổng hợp sản phẩm cần chuẩn bị theo kỳ giao</h2>
+          <div className="bg-card rounded-card p-5 border border-border shadow-card">
+            <h2 className="text-h3 text-text-primary mb-5">Tổng hợp sản phẩm cần chuẩn bị theo kỳ giao</h2>
             {subSummary.length ? (
               (() => {
                 const byDate = subSummary.reduce((acc, row) => {
@@ -848,15 +848,15 @@ const exportExcel = async () => {
                 return Object.entries(byDate).map(([ngay, rows]) => (
                   <div key={ngay} className="mb-6 last:mb-0">
                     <div className="mb-3 flex items-center gap-2">
-                      <span className="material-symbols-outlined text-primary">event</span>
-                      <h3 className="text-lg font-bold text-on-surface">Kỳ giao: {new Date(ngay + 'T00:00:00').toLocaleDateString('vi-VN')}</h3>
+                      <Calendar size={18} className="text-primary" />
+                      <h3 className="text-lg font-bold text-text-primary">Kỳ giao: {new Date(ngay + 'T00:00:00').toLocaleDateString('vi-VN')}</h3>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                       {rows.map(row => (
                         <button
                           key={`${row.ngay_giao}-${row.masp}`}
                           onClick={() => openSubGroupDetail(row)}
-                          className="flex items-center gap-3 rounded-2xl border border-outline-variant bg-white p-4 text-left transition-all hover:border-primary hover:shadow-md"
+                          className="flex items-center gap-3 rounded-btn border border-border bg-card p-4 text-left transition-all hover:border-primary hover:shadow-md"
                         >
                           <img
                             src={row.hinh_san_pham ? (row.hinh_san_pham.startsWith('/upload/') ? `http://localhost:5000${row.hinh_san_pham}` : `http://localhost:5000/upload/${row.hinh_san_pham}`) : 'https://placehold.co/60x60/e2e8f0/475569?text=NS'}
@@ -868,7 +868,7 @@ const exportExcel = async () => {
                             <p className="text-lg font-black text-primary">{row.tong_so_luong} {row.don_vi}</p>
                             <p className="text-xs text-slate-400">{row.so_don} đăng ký</p>
                           </div>
-                          <span className="material-symbols-outlined text-slate-300">chevron_right</span>
+                          <ChevronRight size={20} className="text-slate-300" />
                         </button>
                       ))}
                     </div>
@@ -876,32 +876,32 @@ const exportExcel = async () => {
                 ));
               })()
             ) : (
-              <p className="py-8 text-center text-body-md text-on-surface-variant">Chưa có đăng ký định kỳ nào sắp tới kỳ giao.</p>
+              <p className="py-8 text-center text-body text-text-secondary">Chưa có đăng ký định kỳ nào sắp tới kỳ giao.</p>
             )}
           </div>
         )
       ) : loading ? <Loading /> : (
         <>
           {tab === 'subscription' ? (
-            <div className="bg-surface rounded-3xl p-lg border border-outline-variant organic-shadow">
-              <h2 className="text-title-md font-title-md text-on-surface mb-lg">Đăng ký giao định kỳ</h2>
+            <div className="bg-card rounded-card p-5 border border-border shadow-card">
+              <h2 className="text-h3 text-text-primary mb-5">Đăng ký giao định kỳ</h2>
               {(subscriptions || []).length ? (
                 <div className="space-y-3">
                   {subscriptions.map(subscription => {
                     const subStatus = subscriptionStatusMap[subscription.trang_thai] || subscriptionStatusMap.hoan_tat;
                     return (
 
-                      <div key={subscription.ma_dang_ky} onClick={() => setSelectedSub(subscription)} className="rounded-2xl border border-outline-variant bg-surface p-4 cursor-pointer hover:border-primary hover:shadow-md transition-all">
+                      <div key={subscription.ma_dang_ky} onClick={() => setSelectedSub(subscription)} className="rounded-btn border border-border bg-card p-4 cursor-pointer hover:border-primary hover:shadow-md transition-all">
                         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                           <div>
                             <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-title-md font-title-md text-on-surface">#{subscription.ma_dang_ky} - {subscription.ten_san_pham}</p>
+                              <p className="text-body font-semibold text-text-primary">#{subscription.ma_dang_ky} - {subscription.ten_san_pham}</p>
                               <Badge text={subStatus.label} color={subStatus.color} />
                             </div>
-                            <p className="mt-2 text-body-md text-on-surface-variant">{subscription.ten_nguoi_mua} · {subscription.so_luong} {subscription.don_vi} / kỳ · {frequencyMap[subscription.tan_suat_giao] || subscription.tan_suat_giao}</p>
-                            <p className="mt-1 text-body-md font-bold text-primary">{formatCurrency(subscription.gia_tam_tinh * subscription.so_luong)} / kỳ{subscription.so_luong >= 10 && <span className="ml-2 text-label-sm font-normal text-on-surface-variant line-through">{formatCurrency(subscription.product?.price * subscription.so_luong)}</span>}</p>
-                            <p className="mt-1 text-body-md font-bold text-primary">Đã giao {Number(subscription.so_ky_da_giao || 0)} / {Number(subscription.so_ky_giao || 0)} kỳ</p>
-                            <p className="mt-1 text-body-md text-on-surface-variant">Kỳ tiếp theo: {new Date(subscription.ngay_giao_tiep_theo).toLocaleDateString('vi-VN')}</p>
+                            <p className="mt-2 text-body text-text-secondary">{subscription.ten_nguoi_mua} · {subscription.so_luong} {subscription.don_vi} / kỳ · {frequencyMap[subscription.tan_suat_giao] || subscription.tan_suat_giao}</p>
+                            <p className="mt-1 text-body font-bold text-primary">{formatCurrency(subscription.gia_tam_tinh * subscription.so_luong)} / kỳ{subscription.so_luong >= 10 && <span className="ml-2 text-caption font-normal text-text-secondary line-through">{formatCurrency(subscription.product?.price * subscription.so_luong)}</span>}</p>
+                            <p className="mt-1 text-body font-bold text-primary">Đã giao {Number(subscription.so_ky_da_giao || 0)} / {Number(subscription.so_ky_giao || 0)} kỳ</p>
+                            <p className="mt-1 text-body text-text-secondary">Kỳ tiếp theo: {new Date(subscription.ngay_giao_tiep_theo).toLocaleDateString('vi-VN')}</p>
                           </div>
                           <div className="flex flex-col items-start gap-3 lg:items-end" onClick={e => e.stopPropagation()}>
 
@@ -916,7 +916,7 @@ const exportExcel = async () => {
                     );
                   })}
                 </div>
-              ) : <p className="py-8 text-center text-body-md text-on-surface-variant">Chưa có đăng ký giao định kỳ nào.</p>}
+              ) : <p className="py-8 text-center text-body text-text-secondary">Chưa có đăng ký giao định kỳ nào.</p>}
             </div>
           ) : (
             <Table headers={['Mã đơn', 'Loại đơn', 'Người mua', 'Điện thoại', 'Thanh toán', 'Tổng tiền', 'Trạng thái', 'Ngày tạo', 'Thao tác']}
@@ -925,15 +925,15 @@ const exportExcel = async () => {
                 const orderStatus = statusMap[order.trang_thai] || { label: order.trang_thai, color: 'gray' };
                 const orderType = orderTypeMap[order.loai_don || 'thuong'] || orderTypeMap.thuong;
                 return (
-                  <tr key={order.ma_don_hang} className="hover:bg-surface-container-low">
-                    <td className="px-4 py-3 text-body-md font-bold text-on-surface">#{order.ma_don_hang}</td>
+                  <tr key={order.ma_don_hang} className="hover:bg-background">
+                    <td className="px-4 py-3 text-body font-bold text-text-primary">#{order.ma_don_hang}</td>
                     <td className="px-4 py-3"><Badge text={orderType.label} color={orderType.color} /></td>
-                    <td className="px-4 py-3 text-body-md text-on-surface">{order.ten_nguoi_nhan || order.ho_ten || 'Khách hàng'}</td>
-                    <td className="px-4 py-3 text-body-md text-on-surface-variant">{order.sdt_nguoi_nhan || 'Chưa cập nhật'}</td>
+                    <td className="px-4 py-3 text-body text-text-primary">{order.ten_nguoi_nhan || order.ho_ten || 'Khách hàng'}</td>
+                    <td className="px-4 py-3 text-body text-text-secondary">{order.sdt_nguoi_nhan || 'Chưa cập nhật'}</td>
                     <td className="px-4 py-3">{(() => { const pm = paymentMethodLabel(order.phuong_thuc_tt); return <Badge text={pm.label} color={pm.color} />; })()}</td>
-                    <td className="px-4 py-3 text-body-md font-bold text-primary">{formatCurrency(order.tong_thanh_toan)}</td>
+                    <td className="px-4 py-3 text-body font-bold text-primary">{formatCurrency(order.tong_thanh_toan)}</td>
                     <td className="px-4 py-3"><Badge text={orderStatus.label} color={orderStatus.color} /></td>
-                    <td className="px-4 py-3 text-body-md text-on-surface-variant">{new Date(order.ngay_tao).toLocaleDateString('vi-VN')}</td>
+                    <td className="px-4 py-3 text-body text-text-secondary">{new Date(order.ngay_tao).toLocaleDateString('vi-VN')}</td>
                     <td className="px-4 py-3"><Btn size="sm" variant="outline" onClick={() => openDetail(order.ma_don_hang)}>Xem</Btn></td>
                   </tr>
                 );

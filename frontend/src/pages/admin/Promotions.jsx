@@ -105,7 +105,7 @@ export default function AdminPromotions() {
       />
 
       {error && (
-        <div className="bg-surface rounded-3xl p-lg border border-outline-variant text-body-md text-on-error-container bg-error-container/20">
+        <div className="bg-card rounded-card p-5 border border-border text-body text-red-700 bg-red-50">
           {error}
         </div>
       )}
@@ -118,16 +118,16 @@ export default function AdminPromotions() {
           empty={{ icon: '🏷️', text: 'Chưa có chương trình khuyến mãi nào.' }}
         >
           {promotions.map((promo, index) => (
-            <tr key={promo.makm} className="hover:bg-surface-container-low">
-              <td className="px-4 py-3 text-label-sm text-on-surface-variant">{index + 1}</td>
-              <td className="px-4 py-3 font-semibold text-on-surface">{promo.ten_km}</td>
+            <tr key={promo.makm} className="hover:bg-background">
+              <td className="px-4 py-3 text-caption text-text-secondary">{index + 1}</td>
+              <td className="px-4 py-3 font-semibold text-text-primary">{promo.ten_km}</td>
               <td className="px-4 py-3">
                 <Badge
                   text={promo.loai_uu_dai === 'giam_theo_so_luong' ? 'Giảm theo số lượng' : 'Miễn phí vận chuyển'}
                   color={promo.loai_uu_dai === 'giam_theo_so_luong' ? 'green' : 'blue'}
                 />
               </td>
-              <td className="px-4 py-3 text-body-md text-on-surface-variant">
+              <td className="px-4 py-3 text-body text-text-secondary">
                 {promo.loai_uu_dai === 'giam_theo_so_luong'
                   ? `Từ ${Number(promo.dieu_kien_toi_thieu)} sản phẩm`
                   : `Đơn từ ${Number(promo.dieu_kien_toi_thieu).toLocaleString('vi-VN')}đ`}
@@ -137,7 +137,7 @@ export default function AdminPromotions() {
                   ? `${promo.phan_tram_giam}%`
                   : 'Freeship (30.000đ)'}
               </td>
-              <td className="px-4 py-3 text-body-md text-on-surface-variant">
+              <td className="px-4 py-3 text-body text-text-secondary">
                 {formatTarget(promo.ap_dung_cho)}
               </td>
               <td className="px-4 py-3">
@@ -179,11 +179,11 @@ export default function AdminPromotions() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
-                <label className="text-label-sm font-bold text-on-surface-variant">Loại ưu đãi</label>
+                <label className="text-caption font-bold text-text-secondary">Loại ưu đãi</label>
                 <select
                   value={form.loai_uu_dai}
                   onChange={e => setForm({ ...form, loai_uu_dai: e.target.value })}
-                  className="bg-surface border border-outline-variant rounded-xl px-4 py-2.5 text-body-md focus:ring-2 focus:ring-primary outline-none"
+                  className="bg-card border border-border rounded-btn px-4 py-2.5 text-body focus:ring-2 focus:ring-primary outline-none"
                 >
                   <option value="giam_theo_so_luong">Giảm theo số lượng (% discount)</option>
                   <option value="mien_phi_ship">Miễn phí vận chuyển (Freeship)</option>
@@ -191,11 +191,11 @@ export default function AdminPromotions() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-label-sm font-bold text-on-surface-variant">Áp dụng cho</label>
+                <label className="text-caption font-bold text-text-secondary">Áp dụng cho</label>
                 <select
                   value={form.ap_dung_cho}
                   onChange={e => setForm({ ...form, ap_dung_cho: e.target.value })}
-                  className="bg-surface border border-outline-variant rounded-xl px-4 py-2.5 text-body-md focus:ring-2 focus:ring-primary outline-none"
+                  className="bg-card border border-border rounded-btn px-4 py-2.5 text-body focus:ring-2 focus:ring-primary outline-none"
                 >
                   <option value="thuong_va_dat_truoc">Đơn thường & Đặt trước</option>
                   <option value="dinh_ky">Đăng ký giao định kỳ</option>
@@ -234,7 +234,7 @@ export default function AdminPromotions() {
               />
             )}
 
-            <label className="flex items-center gap-2 text-body-md text-on-surface-variant">
+            <label className="flex items-center gap-2 text-body text-text-secondary">
               <input
                 type="checkbox"
                 checked={!!form.trang_thai}

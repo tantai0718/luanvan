@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { chatAPI } from '../services/api';
+import { Send, X, MessageCircle } from 'lucide-react';
 
 const BACKEND = 'http://localhost:5000';
 const formatCurrency = v => `${Number(v || 0).toLocaleString('vi-VN')}đ`;
@@ -10,12 +11,12 @@ function ProductCard({ product, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-lg border border-gray-200 bg-white p-2 text-left transition hover:border-emerald-500 hover:shadow"
+      className="flex w-full items-center gap-3 rounded-lg border border-border bg-white p-2 text-left transition hover:border-primary hover:shadow"
     >
       <img src={img} alt={product.ten_san_pham} className="h-12 w-12 flex-shrink-0 rounded-md object-cover" />
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-gray-800">{product.ten_san_pham}</p>
-        <p className="text-sm font-semibold text-emerald-700">{formatCurrency(product.gia_ban)}</p>
+        <p className="truncate text-sm font-medium text-text-primary">{product.ten_san_pham}</p>
+        <p className="text-sm font-semibold text-primary">{formatCurrency(product.gia_ban)}</p>
       </div>
     </button>
   );
@@ -82,14 +83,16 @@ export default function ChatBox() {
     <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end">
       {open && (
         <div className="mb-3 flex h-[600px] w-[400px] flex-col overflow-hidden rounded-xl bg-white shadow-xl">
-          <div className="bg-emerald-700 px-4 py-3 font-medium text-white">Trợ lý mua sắm</div>
+          <div className="bg-primary px-4 py-3 font-medium text-white flex items-center justify-between">
+            <span>Trợ lý mua sắm</span>
+          </div>
 
           <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-3">
             {messages.map((m, idx) => (
               <div key={m.matnc || idx} className={`max-w-[92%] ${m.vai_tro === 'user' ? 'self-end' : 'self-start'}`}>
                 <div
                   className={`rounded-lg px-3 py-2 text-sm ${
-                    m.vai_tro === 'user' ? 'bg-emerald-700 text-white' : 'bg-gray-100 text-gray-800'
+                    m.vai_tro === 'user' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-800'
                   }`}
                 >
                   {m.noi_dung}
@@ -104,23 +107,23 @@ export default function ChatBox() {
                 )}
               </div>
             ))}
-            {loading && <div className="text-xs text-gray-400">Đang tìm sản phẩm...</div>}
+            {loading && <div className="text-xs text-text-secondary">Đang tìm sản phẩm...</div>}
             <div ref={bottomRef} />
           </div>
 
-          <div className="flex border-t border-gray-200">
+          <div className="flex border-t border-border">
             <input
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Nhập câu hỏi... vd: tìm xoài"
-              className="flex-1 px-3 py-2.5 text-sm outline-none placeholder:text-gray-400"
+              className="flex-1 px-3 py-2.5 text-sm outline-none placeholder:text-text-secondary"
             />
             <button
               onClick={sendMessage}
-              className="bg-emerald-700 px-4 text-sm font-medium text-white transition hover:bg-emerald-800"
+              className="bg-primary px-4 text-sm font-medium text-white transition hover:bg-primary/90"
             >
-              Gửi
+              <Send size={16} />
             </button>
           </div>
         </div>
@@ -129,9 +132,9 @@ export default function ChatBox() {
       <button
         onClick={() => setOpen(v => !v)}
         aria-label={open ? 'Đóng hộp trò chuyện' : 'Mở hộp trò chuyện'}
-        className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-700 text-2xl text-white shadow-lg transition hover:bg-emerald-800"
+        className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg transition hover:bg-primary/90"
       >
-        {open ? '✕' : '💬'}
+        {open ? <X size={24} /> : <MessageCircle size={24} />}
       </button>
     </div>
   );

@@ -6,12 +6,12 @@ const orderStatusMap = {
   cho_xac_nhan: { label: "Chờ xác nhận", color: "bg-amber-50 text-amber-700 border border-amber-200" },
   da_xac_nhan: { label: "Đã xác nhận", color: "bg-blue-50 text-blue-700 border border-blue-200" },
   dang_giao: { label: "Đang giao", color: "bg-purple-50 text-purple-700 border border-purple-200" },
-  da_giao: { label: "Đã giao", color: "bg-[#e8f5ee] text-[#1a7a4a] border border-[#b8e0c6]" },
+  da_giao: { label: "Đã giao", color: "bg-[#e8f5ee] text-[#16A34A] border border-[#b8e0c6]" },
   da_huy: { label: "Đã hủy", color: "bg-rose-50 text-rose-700 border border-rose-200" },
 };
 
 const subscriptionStatusMap = {
-  dang_hoat_dong: { label: "Đang hoạt động", color: "bg-[#e8f5ee] text-[#1a7a4a] border border-[#b8e0c6]" },
+  dang_hoat_dong: { label: "Đang hoạt động", color: "bg-[#e8f5ee] text-[#16A34A] border border-[#b8e0c6]" },
   tam_dung: { label: "Tạm dừng", color: "bg-amber-50 text-amber-700 border border-amber-200" },
   da_huy: { label: "Đã hủy", color: "bg-rose-50 text-rose-700 border border-rose-200" },
   hoan_tat: { label: "Hoàn tất", color: "bg-slate-100 text-slate-700 border border-slate-200" },
@@ -96,24 +96,24 @@ export function OrderList() {
   };
 
   return (
-    <div className="bg-slate-50 min-h-screen pb-16">
+    <div className="bg-background min-h-screen pb-16">
       <div className="max-w-7xl mx-auto px-4 pt-8 space-y-6">
 
-        <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
-          <span className="text-sm font-semibold uppercase tracking-wider text-[#1a7a4a]">
+        <div className="bg-white rounded-2xl border border-border p-6 shadow-sm">
+          <span className="text-sm font-semibold uppercase tracking-wider text-primary">
             Trang cá nhân
           </span>
-          <h1 className="mt-1 text-3xl font-semibold text-slate-900">
+          <h1 className="mt-1 text-3xl font-semibold text-text-primary">
             Quản lý lịch trình mua sắm
           </h1>
         </div>
 
-        <div className="flex border-b border-slate-200 bg-white rounded-xl p-1.5 shadow-sm">
+        <div className="flex border-b border-border bg-white rounded-xl p-1.5 shadow-sm">
           <button
             onClick={() => setActiveTab("orders")}
             className={`flex-1 py-4 text-base font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 ${activeTab === "orders"
-              ? "bg-[#1a7a4a] text-white shadow-sm"
-              : "text-slate-600 hover:bg-slate-50"
+              ? "bg-primary text-white shadow-sm"
+              : "text-text-secondary hover:bg-background"
               }`}
           >
             <span>📦</span> Đơn hàng của bạn ({orders.length})
@@ -121,8 +121,8 @@ export function OrderList() {
           <button
             onClick={() => setActiveTab("subscriptions")}
             className={`flex-1 py-4 text-base font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 ${activeTab === "subscriptions"
-              ? "bg-[#1a7a4a] text-white shadow-sm"
-              : "text-slate-600 hover:bg-slate-50"
+              ? "bg-primary text-white shadow-sm"
+              : "text-text-secondary hover:bg-background"
               }`}
           >
             <span>🔄</span> Đăng ký giao định kỳ ({subscriptions.length})
@@ -147,15 +147,15 @@ export function OrderList() {
                       <Link
                         key={order.ma_don_hang}
                         to={`/orders/${order.ma_don_hang}`}
-                        className="block bg-white rounded-2xl border border-slate-100 p-5 shadow-sm hover:border-[#1a7a4a]/30 hover:shadow-md transition duration-200"
+                        className="block bg-white rounded-2xl border border-border p-5 shadow-sm hover:border-primary/30 hover:shadow-md transition duration-200"
                       >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border">
                           <div className="flex items-center gap-2.5">
-                            <span className="text-lg font-semibold text-slate-900">Đơn #{order.ma_don_hang}</span>
+                            <span className="text-lg font-semibold text-text-primary">Đơn #{order.ma_don_hang}</span>
                             <span className={`rounded-full px-2 py-0.5 text-sm font-medium ${orderType.color}`}>{orderType.label}</span>
                             <span className={`rounded-full px-2 py-0.5 text-sm font-medium ${status.color}`}>{status.label}</span>
                           </div>
-                          <span className="text-sm font-normal text-slate-400">{new Date(order.ngay_tao).toLocaleString("vi-VN")}</span>
+                          <span className="text-sm font-normal text-text-secondary">{new Date(order.ngay_tao).toLocaleString("vi-VN")}</span>
                         </div>
 
                         <div className="mt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -165,17 +165,17 @@ export function OrderList() {
                                 ⏳ Hàng đặt trước · Dự kiến giao: {order.ngay_giao_du_kien ? new Date(order.ngay_giao_du_kien).toLocaleDateString("vi-VN") : "Chưa rõ"}
                               </p>
                             ) : order.ngay_giao_du_kien ? (
-                              <p className="text-base text-slate-600">
-                                🚚 Ngày giao dự kiến: <span className="font-semibold text-slate-800">{new Date(order.ngay_giao_du_kien).toLocaleDateString("vi-VN")}</span>
+                              <p className="text-base text-text-secondary">
+                                🚚 Ngày giao dự kiến: <span className="font-semibold text-text-primary">{new Date(order.ngay_giao_du_kien).toLocaleDateString("vi-VN")}</span>
                               </p>
                             ) : null}
-                            <p className="text-sm font-normal text-slate-400">Nhấn để xem lộ trình chi tiết và sản phẩm</p>
+                            <p className="text-sm font-normal text-text-secondary">Nhấn để xem lộ trình chi tiết và sản phẩm</p>
                           </div>
 
                           <div className="flex items-center justify-between md:justify-end gap-6 border-t md:border-none pt-3 md:pt-0">
                             <div className="text-left md:text-right">
-                              <span className="text-sm font-normal text-slate-400 block">Tổng thanh toán</span>
-                              <span className="text-2xl font-semibold text-[#1a7a4a]">{formatCurrency(order.tong_thanh_toan)}</span>
+                              <span className="text-sm font-normal text-text-secondary block">Tổng thanh toán</span>
+                              <span className="text-2xl font-semibold text-primary">{formatCurrency(order.tong_thanh_toan)}</span>
                             </div>
                             {canCancelOrder(order.trang_thai) && (
                               <button
@@ -192,9 +192,9 @@ export function OrderList() {
                     );
                   })
                 ) : (
-                  <div className="bg-white rounded-2xl border border-slate-100 py-16 text-center shadow-sm">
+                  <div className="bg-white rounded-2xl border border-border py-16 text-center shadow-sm">
                     <span className="text-4xl block mb-2">🍃</span>
-                    <p className="text-slate-400 text-sm">Bạn chưa có đơn hàng truyền thống nào.</p>
+                    <p className="text-text-secondary text-sm">Bạn chưa có đơn hàng truyền thống nào.</p>
                   </div>
                 )}
               </div>
@@ -209,28 +209,28 @@ export function OrderList() {
                       <Link
                         key={subscription.ma_dang_ky}
                         to={`/subscriptions/${subscription.ma_dang_ky}`}
-                        className="block bg-white rounded-2xl border border-slate-100 p-5 shadow-sm flex flex-col justify-between hover:border-[#1a7a4a]/30 hover:shadow-md transition duration-200"
+                        className="block bg-white rounded-2xl border border-border p-5 shadow-sm flex flex-col justify-between hover:border-primary/30 hover:shadow-md transition duration-200"
                       >
                         <div>
                           <div className="flex items-start justify-between gap-2">
-                            <h3 className="font-semibold text-slate-900 text-lg line-clamp-1">{subscription.ten_san_pham}</h3>
+                            <h3 className="font-semibold text-text-primary text-lg line-clamp-1">{subscription.ten_san_pham}</h3>
                             <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-sm font-medium ${status.color}`}>
                               {status.label}
                             </span>
                           </div>
-                          <div className="mt-3 space-y-1.5 text-base text-slate-600">
-                            <p>📦 Số lượng: <span className="font-semibold text-slate-800">{subscription.so_luong} {subscription.don_vi} / mỗi kỳ</span></p>
-                            <p>📅 Tần suất: <span className="font-semibold text-slate-800">{frequencyMap[subscription.tan_suat_giao] || subscription.tan_suat_giao}</span></p>
-                            <p>🔄 Tiến độ: <span className="font-semibold text-[#1a7a4a]">Đã nhận {subscription.so_ky_da_giao || 0}/{subscription.so_ky_giao || 0} lần giao</span></p>
-                            <p className="text-sm font-normal text-slate-400">Kỳ giao tiếp theo: {new Date(subscription.ngay_giao_tiep_theo).toLocaleDateString("vi-VN")}</p>
+                          <div className="mt-3 space-y-1.5 text-base text-text-secondary">
+                            <p>📦 Số lượng: <span className="font-semibold text-text-primary">{subscription.so_luong} {subscription.don_vi} / mỗi kỳ</span></p>
+                            <p>📅 Tần suất: <span className="font-semibold text-text-primary">{frequencyMap[subscription.tan_suat_giao] || subscription.tan_suat_giao}</span></p>
+                            <p>🔄 Tiến độ: <span className="font-semibold text-primary">Đã nhận {subscription.so_ky_da_giao || 0}/{subscription.so_ky_giao || 0} lần giao</span></p>
+                            <p className="text-sm font-normal text-text-secondary">Kỳ giao tiếp theo: {new Date(subscription.ngay_giao_tiep_theo).toLocaleDateString("vi-VN")}</p>
                           </div>
-                          <p className="mt-2 text-sm font-normal text-slate-400">Nhấn để xem chi tiết đăng ký</p>
+                          <p className="mt-2 text-sm font-normal text-text-secondary">Nhấn để xem chi tiết đăng ký</p>
                         </div>
 
-                        <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+                        <div className="mt-5 pt-4 border-t border-border flex items-center justify-between">
                           <div>
-                            <span className="text-sm font-normal text-slate-400 block">Giá mỗi kỳ</span>
-                            <span className="text-2xl font-semibold text-[#1a7a4a]">{formatCurrency(subscription.gia_tam_tinh * subscription.so_luong)}</span>
+                            <span className="text-sm font-normal text-text-secondary block">Giá mỗi kỳ</span>
+                            <span className="text-2xl font-semibold text-primary">{formatCurrency(subscription.gia_tam_tinh * subscription.so_luong)}</span>
                           </div>
                           {["dang_hoat_dong", "tam_dung"].includes(subscription.trang_thai) && (
                             <button
@@ -246,9 +246,9 @@ export function OrderList() {
                     );
                   })
                 ) : (
-                  <div className="col-span-full bg-white rounded-2xl border border-slate-100 py-16 text-center shadow-sm">
+                  <div className="col-span-full bg-white rounded-2xl border border-border py-16 text-center shadow-sm">
                     <span className="text-4xl block mb-2">🔄</span>
-                    <p className="text-slate-400 text-sm">Bạn chưa đăng ký gói nhận nông sản định kỳ nào.</p>
+                    <p className="text-text-secondary text-sm">Bạn chưa đăng ký gói nhận nông sản định kỳ nào.</p>
                   </div>
                 )}
               </div>
@@ -313,15 +313,15 @@ export function OrderDetail() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="h-8 w-8 animate-spin rounded-full border-3 border-[#1a7a4a] border-t-transparent" />
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-3 border-primary border-t-transparent" />
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-slate-500 bg-slate-50">
+      <div className="flex min-h-screen items-center justify-center text-text-secondary bg-background">
         ⚠️ Không tìm thấy thông tin đơn hàng này.
       </div>
     );
@@ -340,41 +340,41 @@ export function OrderDetail() {
   const currentStepIndex = statusSteps.indexOf(order.trang_thai);
 
   return (
-    <div className="bg-slate-50 min-h-screen pb-16">
+    <div className="bg-background min-h-screen pb-16">
       <div className="max-w-7xl mx-auto px-4 pt-6 space-y-5">
 
         {success && (
           <div className="bg-[#e8f5ee] border border-[#b8e0c6] rounded-2xl p-4 flex items-center gap-3 shadow-sm">
             <span className="text-2xl">🎉</span>
             <div>
-              <h3 className="font-semibold text-[#1a7a4a] text-base">Đặt hàng thành công!</h3>
+              <h3 className="font-semibold text-[#16A34A] text-base">Đặt hàng thành công!</h3>
               <p className="text-sm text-[#236845] font-normal">Hệ thống đã nhận đơn hàng #{order.ma_don_hang} của bạn.</p>
             </div>
           </div>
         )}
 
-        <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-100">
+        <div className="bg-white rounded-2xl border border-border p-6 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-border">
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-bold text-slate-900">Mã đơn hàng: #{order.ma_don_hang}</h1>
+                <h1 className="text-2xl font-bold text-text-primary">Mã đơn hàng: #{order.ma_don_hang}</h1>
                 <span className={`rounded-full px-2.5 py-0.5 text-sm font-medium ${orderType.color}`}>{orderType.label}</span>
                 <span className={`rounded-full px-2.5 py-0.5 text-sm font-medium ${status.color}`}>{status.label}</span>
               </div>
-              <p className="text-sm font-normal text-slate-400 mt-1.5">Thời gian đặt: {new Date(order.ngay_tao).toLocaleString("vi-VN")}</p>
+              <p className="text-sm font-normal text-text-secondary mt-1.5">Thời gian đặt: {new Date(order.ngay_tao).toLocaleString("vi-VN")}</p>
             </div>
             <div className="text-left sm:text-right shrink-0">
-              <span className="text-sm font-normal text-slate-400 block">Tổng thanh toán</span>
-              <span className="text-3xl font-semibold text-[#1a7a4a]">{formatCurrency(order.tong_thanh_toan)}</span>
+              <span className="text-sm font-normal text-text-secondary block">Tổng thanh toán</span>
+              <span className="text-3xl font-semibold text-primary">{formatCurrency(order.tong_thanh_toan)}</span>
             </div>
           </div>
 
           {order.trang_thai !== "da_huy" && (
             <div className="py-2 px-1">
               <div className="relative flex items-center justify-between w-full">
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-slate-100 w-full rounded-full z-0" />
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-border w-full rounded-full z-0" />
                 <div
-                  className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-[#1a7a4a] transition-all duration-500 z-0"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-primary transition-all duration-500 z-0"
                   style={{ width: `${(Math.max(0, currentStepIndex) / (statusSteps.length - 1)) * 100}%` }}
                 />
 
@@ -384,11 +384,11 @@ export function OrderDetail() {
                   const isCurrent = idx === currentStepIndex;
                   return (
                     <div key={stepKey} className="relative z-10 flex flex-col items-center">
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${isCompleted ? "bg-[#1a7a4a] text-white ring-4 ring-green-50" : "bg-slate-200 text-slate-500"
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${isCompleted ? "bg-primary text-white ring-4 ring-green-50" : "bg-slate-200 text-slate-500"
                         }`}>
                         {isCompleted && !isCurrent ? "✓" : idx + 1}
                       </div>
-                      <span className={`text-xs font-semibold mt-2.5 whitespace-nowrap hidden sm:block ${isCurrent ? "text-[#1a7a4a] font-semibold" : "text-slate-500"}`}>
+                      <span className={`text-xs font-semibold mt-2.5 whitespace-nowrap hidden sm:block ${isCurrent ? "text-primary font-semibold" : "text-slate-500"}`}>
                         {stepMap?.label}
                       </span>
                     </div>
@@ -399,9 +399,9 @@ export function OrderDetail() {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm space-y-4">
-          <h2 className="text-base font-bold uppercase tracking-wide text-slate-500">Danh sách nông sản</h2>
-          <div className="divide-y divide-slate-100">
+        <div className="bg-white rounded-2xl border border-border p-6 shadow-sm space-y-4">
+          <h2 className="text-base font-bold uppercase tracking-wide text-text-secondary">Danh sách nông sản</h2>
+          <div className="divide-y divide-border">
             {items.map((item) => (
               <div key={item.mactdh} className="flex items-center gap-4 py-3 first:pt-0 last:pb-0">
                 <img
@@ -410,26 +410,26 @@ export function OrderDetail() {
                       ? item.hinh_san_pham.startsWith("/upload/")
                         ? `http://localhost:5000${item.hinh_san_pham}`
                         : `http://localhost:5000/upload/${item.hinh_san_pham}`
-                      : "https://placehold.co/80x80/e8f5ee/1a7a4a?text=RauQuả"
+                      : "https://placehold.co/80x80/e8f5ee/16A34A?text=RauQuả"
                   }
                   alt={item.ten_san_pham}
-                  className="h-16 w-16 rounded-xl object-cover bg-slate-50 border border-slate-100 shrink-0"
+                  className="h-16 w-16 rounded-xl object-cover bg-background border border-border shrink-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-slate-900 text-base sm:text-lg truncate">{item.ten_san_pham}</h4>
-                  <p className="text-sm sm:text-base text-slate-500 mt-1">
-                    {item.so_luong} × <span className="text-slate-800 font-semibold">{formatCurrency(item.don_gia)}</span>
+                  <h4 className="font-semibold text-text-primary text-base sm:text-lg truncate">{item.ten_san_pham}</h4>
+                  <p className="text-sm sm:text-base text-text-secondary mt-1">
+                    {item.so_luong} × <span className="text-text-primary font-semibold">{formatCurrency(item.don_gia)}</span>
                   </p>
                 </div>
-                <span className="font-semibold text-slate-900 text-base sm:text-lg shrink-0">{formatCurrency(item.thanh_tien)}</span>
+                <span className="font-semibold text-text-primary text-base sm:text-lg shrink-0">{formatCurrency(item.thanh_tien)}</span>
               </div>
             ))}
           </div>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm space-y-4 text-[17px]">
-          <div className="flex justify-between text-slate-500">
-            <span className="font-semibold text-slate-600">Tiền tạm tính</span>
-            <span className="font-medium text-slate-900">{formatCurrency(subtotal)}</span>
+        <div className="bg-white rounded-2xl border border-border p-5 shadow-sm space-y-4 text-[17px]">
+          <div className="flex justify-between text-text-secondary">
+            <span className="font-semibold text-text-secondary">Tiền tạm tính</span>
+            <span className="font-medium text-text-primary">{formatCurrency(subtotal)}</span>
           </div>
           {giamGia > 0 && (
             <div className="flex justify-between text-rose-600">
@@ -437,15 +437,15 @@ export function OrderDetail() {
               <span className="font-medium">-{formatCurrency(giamGia)}</span>
             </div>
           )}
-          <div className="flex justify-between text-slate-500">
-            <span className="font-semibold text-slate-600">Phí vận chuyển</span>
-            <span className="font-medium text-slate-900">
+          <div className="flex justify-between text-text-secondary">
+            <span className="font-semibold text-text-secondary">Phí vận chuyển</span>
+            <span className="font-medium text-text-primary">
               {shippingFee > 0 ? formatCurrency(shippingFee) : "Miễn phí"}
             </span>
           </div>
-          <div className="flex justify-between border-t border-slate-100 pt-4 text-[18px]">
-            <span className="font-bold text-slate-900">Tổng tiền thanh toán</span>
-            <span className="text-2xl text-[#1a7a4a] font-bold">{formatCurrency(order.tong_thanh_toan)}</span>
+          <div className="flex justify-between border-t border-border pt-4 text-[18px]">
+            <span className="font-bold text-text-primary">Tổng tiền thanh toán</span>
+            <span className="text-2xl text-primary font-bold">{formatCurrency(order.tong_thanh_toan)}</span>
           </div>
           {hasDeposit(order) && order.phuong_thuc_tt === 'banking' && (
             <>
@@ -454,8 +454,8 @@ export function OrderDetail() {
                 <span className="font-bold">{formatCurrency(order.tien_coc)}</span>
               </div>
               {order.tong_thanh_toan > order.tien_coc && (
-                <div className="flex justify-between text-slate-500">
-                  <span className="font-semibold text-slate-600">Còn lại (COD khi nhận hàng)</span>
+                <div className="flex justify-between text-text-secondary">
+                  <span className="font-semibold text-text-secondary">Còn lại (COD khi nhận hàng)</span>
                   <span className="font-medium text-rose-600">{formatCurrency(order.tong_thanh_toan - order.tien_coc)}</span>
                 </div>
               )}
@@ -464,49 +464,49 @@ export function OrderDetail() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
-            <h3 className="text-base font-bold uppercase tracking-wide text-slate-500">
+          <div className="bg-white rounded-2xl border border-border p-5 shadow-sm">
+            <h3 className="text-base font-bold uppercase tracking-wide text-text-secondary">
               🏡 ĐỊA CHỈ NHẬN HÀNG
             </h3>
 
             <div className="mt-4 space-y-4 text-[17px]">
 
               <div className="grid grid-cols-[130px_1fr]">
-                <span className="font-semibold text-slate-600">
+                <span className="font-semibold text-text-secondary">
                   Họ và tên:
                 </span>
 
-                <span className="font-medium text-slate-900">
+                <span className="font-medium text-text-primary">
                   {order.ten_nguoi_nhan}
                 </span>
               </div>
 
               <div className="grid grid-cols-[130px_1fr]">
-                <span className="font-semibold text-slate-600">
+                <span className="font-semibold text-text-secondary">
                   Số điện thoại:
                 </span>
 
-                <span className="font-medium text-slate-900">
+                <span className="font-medium text-text-primary">
                   {order.sdt_nguoi_nhan}
                 </span>
               </div>
 
               <div className="grid grid-cols-[130px_1fr]">
-                <span className="font-semibold text-slate-600">
+                <span className="font-semibold text-text-secondary">
                   Địa chỉ:
                 </span>
 
-                <span className="font-medium text-slate-900 leading-7">
+                <span className="font-medium text-text-primary leading-7">
                   {order.dia_chi_giao}
                 </span>
               </div>
 
               <div className="grid grid-cols-[130px_1fr]">
-                <span className="font-semibold text-slate-600">
+                <span className="font-semibold text-text-secondary">
                   Ghi chú:
                 </span>
 
-                <span className="font-medium text-slate-900">
+                <span className="font-medium text-text-primary">
                   {order.ghi_chu || "Không có"}
                 </span>
               </div>
@@ -514,25 +514,25 @@ export function OrderDetail() {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
-            <h3 className="text-base font-bold uppercase tracking-wide text-slate-500">
+          <div className="bg-white rounded-2xl border border-border p-5 shadow-sm">
+            <h3 className="text-base font-bold uppercase tracking-wide text-text-secondary">
               💳 PHƯƠNG THỨC THANH TOÁN
             </h3>
             <div className="mt-4 space-y-4 text-[17px]">
               <div className="grid grid-cols-[130px_1fr]">
-                <span className="font-semibold text-slate-600">
+                <span className="font-semibold text-text-secondary">
                   Phương thức:
                 </span>
-                <span className="font-medium text-slate-900">
+                <span className="font-medium text-text-primary">
                   {order.phuong_thuc_tt === "tien_mat" ? "💵 Tiền mặt khi nhận hàng (COD)" : order.phuong_thuc_tt === "banking" ? "🏦 Chuyển khoản qua ngân hàng" : order.phuong_thuc_tt}
                 </span>
               </div>
               <div className="grid grid-cols-[130px_1fr]">
-                <span className="font-semibold text-slate-600">
+                <span className="font-semibold text-text-secondary">
                   Trạng thái:
                 </span>
                 <div>
-                  <span className={`inline-block text-[15px] font-semibold px-2.5 py-0.5 rounded-full ${order.trang_thai_tt === "da_tt" ? "bg-green-50 text-[#1a7a4a] border border-green-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
+                  <span className={`inline-block text-[15px] font-semibold px-2.5 py-0.5 rounded-full ${order.trang_thai_tt === "da_tt" ? "bg-green-50 text-[#16A34A] border border-green-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
                     {order.trang_thai_tt === "da_tt" ? "Đã tất toán" : "Chưa thanh toán"}
                   </span>
                 </div>
@@ -572,9 +572,9 @@ export function OrderDetail() {
               </div>
 
               <div className="md:col-span-4 flex flex-col gap-2.5 text-base font-semibold text-amber-900">
-                <p>Ngân hàng: <b className="text-slate-900 font-bold">{order.banking_info?.bank_name}</b></p>
-                <p>Số tài khoản: <b className="text-slate-900 font-bold">{order.banking_info?.account_number}</b></p>
-                <p>Chủ tài khoản: <b className="text-slate-900 font-bold">{order.banking_info?.account_holder}</b></p>
+                <p>Ngân hàng: <b className="text-text-primary font-bold">{order.banking_info?.bank_name}</b></p>
+                <p>Số tài khoản: <b className="text-text-primary font-bold">{order.banking_info?.account_number}</b></p>
+                <p>Chủ tài khoản: <b className="text-text-primary font-bold">{order.banking_info?.account_holder}</b></p>
 
                 <div className="mt-1">
                   <p className="text-sm font-bold text-amber-700 mb-1">Nội dung chuyển khoản chính xác:</p>
@@ -602,7 +602,7 @@ export function OrderDetail() {
         )}
 
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
-          <Link to="/orders" className="flex-1 rounded-xl border border-slate-200 py-3.5 text-center text-base font-semibold text-slate-600 bg-white hover:bg-slate-50 transition">
+          <Link to="/orders" className="flex-1 rounded-xl border border-border py-3.5 text-center text-base font-semibold text-text-secondary bg-white hover:bg-background transition">
             ← Quay lại danh sách
           </Link>
           {canCancelOrder(order.trang_thai) ? (
@@ -610,7 +610,7 @@ export function OrderDetail() {
               {canceling ? "Đang hủy..." : "Hủy đơn hàng"}
             </button>
           ) : (
-            <Link to="/products" className="flex-1 rounded-xl bg-[#1a7a4a] hover:bg-[#14633b] py-3.5 text-center text-base font-semibold text-white transition">
+            <Link to="/products" className="flex-1 rounded-xl bg-primary hover:bg-primary/90 py-3.5 text-center text-base font-semibold text-white transition">
               Tiếp tục mua hàng 🛒
             </Link>
           )}
@@ -678,15 +678,15 @@ export function SubscriptionDetail() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="h-8 w-8 animate-spin rounded-full border-3 border-[#1a7a4a] border-t-transparent" />
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-3 border-primary border-t-transparent" />
       </div>
     );
   }
 
   if (!subscription) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-slate-500 bg-slate-50">
+      <div className="flex min-h-screen items-center justify-center text-text-secondary bg-background">
         ⚠️ Không tìm thấy đăng ký giao định kỳ này.
       </div>
     );
@@ -703,126 +703,126 @@ export function SubscriptionDetail() {
     ? subscription.hinh_san_pham.startsWith("/upload/")
       ? `http://localhost:5000${subscription.hinh_san_pham}`
       : `http://localhost:5000/upload/${subscription.hinh_san_pham}`
-    : "https://placehold.co/80x80/e8f5ee/1a7a4a?text=RauQuả";
+    : "https://placehold.co/80x80/e8f5ee/16A34A?text=RauQuả";
 
   return (
-    <div className="bg-slate-50 min-h-screen pb-16">
+    <div className="bg-background min-h-screen pb-16">
       <div className="max-w-7xl mx-auto px-4 pt-6 space-y-5">
 
-        <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-100">
+        <div className="bg-white rounded-2xl border border-border p-6 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-border">
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-bold text-slate-900">Mã đăng ký: #{subscription.ma_dang_ky}</h1>
+                <h1 className="text-2xl font-bold text-text-primary">Mã đăng ký: #{subscription.ma_dang_ky}</h1>
                 <span className="rounded-full px-2.5 py-0.5 text-sm font-medium bg-slate-100 text-slate-700">🔄 Giao định kỳ</span>
                 <span className={`rounded-full px-2.5 py-0.5 text-sm font-medium ${status.color}`}>{status.label}</span>
               </div>
-              <p className="text-sm font-normal text-slate-400 mt-1.5">
+              <p className="text-sm font-normal text-text-secondary mt-1.5">
                 Ngày bắt đầu: {subscription.start_date ? new Date(subscription.start_date).toLocaleString("vi-VN") : "Chưa xác định"}
               </p>
             </div>
             <div className="text-left sm:text-right shrink-0">
-              <span className="text-sm font-normal text-slate-400 block">Giá mỗi kỳ</span>
-              <span className="text-3xl font-semibold text-[#1a7a4a]">{formatCurrency(giaMoiKy)}</span>
+              <span className="text-sm font-normal text-text-secondary block">Giá mỗi kỳ</span>
+              <span className="text-3xl font-semibold text-primary">{formatCurrency(giaMoiKy)}</span>
             </div>
           </div>
 
           {subscription.trang_thai !== "da_huy" && (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="font-semibold text-slate-600">Tiến độ giao hàng</span>
-                <span className="font-semibold text-[#1a7a4a]">{soKyDaGiao}/{soKyGiao} kỳ</span>
+                <span className="font-semibold text-text-secondary">Tiến độ giao hàng</span>
+                <span className="font-semibold text-primary">{soKyDaGiao}/{soKyGiao} kỳ</span>
               </div>
-              <div className="h-2.5 w-full rounded-full bg-slate-100">
+              <div className="h-2.5 w-full rounded-full bg-border">
                 <div
-                  className="h-2.5 rounded-full bg-[#1a7a4a] transition-all duration-500"
+                  className="h-2.5 rounded-full bg-primary transition-all duration-500"
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-text-secondary">
                 Kỳ tiếp theo: {subscription.ngay_giao_tiep_theo ? new Date(subscription.ngay_giao_tiep_theo).toLocaleDateString("vi-VN") : "Chưa xác định"}
               </p>
             </div>
           )}
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm space-y-4">
-          <h2 className="text-base font-bold uppercase tracking-wide text-slate-500">Sản phẩm đăng ký</h2>
+        <div className="bg-white rounded-2xl border border-border p-6 shadow-sm space-y-4">
+          <h2 className="text-base font-bold uppercase tracking-wide text-text-secondary">Sản phẩm đăng ký</h2>
           <div className="flex items-center gap-4">
             <img
               src={imageUrl}
               alt={subscription.ten_san_pham}
-              className="h-20 w-20 rounded-xl object-cover bg-slate-50 border border-slate-100 shrink-0"
+              className="h-20 w-20 rounded-xl object-cover bg-background border border-border shrink-0"
             />
             <div className="flex-1 min-w-0">
-              <h4 className="font-semibold text-slate-900 text-lg truncate">{subscription.ten_san_pham}</h4>
-              <p className="text-base text-slate-500 mt-1">
+              <h4 className="font-semibold text-text-primary text-lg truncate">{subscription.ten_san_pham}</h4>
+              <p className="text-base text-text-secondary mt-1">
                 {subscription.so_luong} {subscription.don_vi} / kỳ ×{" "}
-                <span className="text-slate-800 font-semibold">
+                <span className="text-text-primary font-semibold">
                   {formatCurrency(subscription.gia_tam_tinh)}
                 </span>
               </p>
-              <p className="mt-1 text-sm text-slate-500">
-                Tần suất giao: <span className="font-semibold text-slate-800">
+              <p className="mt-1 text-sm text-text-secondary">
+                Tần suất giao: <span className="font-semibold text-text-primary">
                   {frequencyMap[subscription.tan_suat_giao] || subscription.tan_suat_giao}
                 </span>
               </p>
             </div>
-            <span className="font-semibold text-slate-900 text-lg shrink-0">{formatCurrency(giaMoiKy)}</span>
+            <span className="font-semibold text-text-primary text-lg shrink-0">{formatCurrency(giaMoiKy)}</span>
           </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
-            <h3 className="text-base font-bold uppercase tracking-wide text-slate-500">
+          <div className="bg-white rounded-2xl border border-border p-5 shadow-sm">
+            <h3 className="text-base font-bold uppercase tracking-wide text-text-secondary">
               🏡 ĐỊA CHỈ NHẬN HÀNG
             </h3>
 
             <div className="mt-4 space-y-4 text-[17px]">
               <div className="grid grid-cols-[130px_1fr]">
-                <span className="font-semibold text-slate-600">Họ và tên:</span>
-                <span className="font-medium text-slate-900">
+                <span className="font-semibold text-text-secondary">Họ và tên:</span>
+                <span className="font-medium text-text-primary">
                   {subscription.ten_nguoi_mua || "Chưa cập nhật"}
                 </span>
               </div>
 
               <div className="grid grid-cols-[130px_1fr]">
-                <span className="font-semibold text-slate-600">Số điện thoại:</span>
-                <span className="font-medium text-slate-900">
+                <span className="font-semibold text-text-secondary">Số điện thoại:</span>
+                <span className="font-medium text-text-primary">
                   {subscription.so_dien_thoai || "Chưa cập nhật"}
                 </span>
               </div>
 
               <div className="grid grid-cols-[130px_1fr]">
-                <span className="font-semibold text-slate-600">Địa chỉ:</span>
-                <span className="font-medium text-slate-900 leading-7">
+                <span className="font-semibold text-text-secondary">Địa chỉ:</span>
+                <span className="font-medium text-text-primary leading-7">
                   {subscription.dia_chi_giao || "Chưa cập nhật"}
                 </span>
               </div>
 
               <div className="grid grid-cols-[130px_1fr]">
-                <span className="font-semibold text-slate-600">Ghi chú:</span>
-                <span className="font-medium text-slate-900">
+                <span className="font-semibold text-text-secondary">Ghi chú:</span>
+                <span className="font-medium text-text-primary">
                   {subscription.ghi_chu || "Không có"}
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
-            <h3 className="text-base font-bold uppercase tracking-wide text-slate-500">
+          <div className="bg-white rounded-2xl border border-border p-5 shadow-sm">
+            <h3 className="text-base font-bold uppercase tracking-wide text-text-secondary">
               💳 PHƯƠNG THỨC THANH TOÁN
             </h3>
             <div className="mt-4 space-y-4 text-[17px]">
               <div className="grid grid-cols-[130px_1fr]">
-                <span className="font-semibold text-slate-600">Phương thức:</span>
-                <span className="font-medium text-slate-900">
+                <span className="font-semibold text-text-secondary">Phương thức:</span>
+                <span className="font-medium text-text-primary">
                   {paymentLabelMap[subscription.phuong_thuc_tt] || subscription.phuong_thuc_tt || "Chưa cập nhật"}
                 </span>
               </div>
               <div className="grid grid-cols-[130px_1fr]">
-                <span className="font-semibold text-slate-600">Tổng số kỳ:</span>
-                <span className="font-medium text-slate-900">{soKyGiao} kỳ</span>
+                <span className="font-semibold text-text-secondary">Tổng số kỳ:</span>
+                <span className="font-medium text-text-primary">{soKyGiao} kỳ</span>
               </div>
             </div>
           </div>
@@ -855,9 +855,9 @@ export function SubscriptionDetail() {
                   )}
                 </div>
                 <div className="md:col-span-4 flex flex-col gap-2.5 text-base font-semibold text-amber-900">
-                  <p>Ngân hàng: <b className="text-slate-900 font-bold">{subscription.banking_info.bank_name}</b></p>
-                  <p>Số tài khoản: <b className="text-slate-900 font-bold">{subscription.banking_info.account_number}</b></p>
-                  <p>Chủ tài khoản: <b className="text-slate-900 font-bold">{subscription.banking_info.account_holder}</b></p>
+                  <p>Ngân hàng: <b className="text-text-primary font-bold">{subscription.banking_info.bank_name}</b></p>
+                  <p>Số tài khoản: <b className="text-text-primary font-bold">{subscription.banking_info.account_number}</b></p>
+                  <p>Chủ tài khoản: <b className="text-text-primary font-bold">{subscription.banking_info.account_holder}</b></p>
                   <div className="mt-1">
                     <p className="text-sm font-bold text-amber-700 mb-1">Nội dung chuyển khoản chính xác:</p>
                     <p className="inline-block bg-amber-100 text-amber-950 font-mono text-lg font-black px-4 py-1 rounded-lg border-2 border-amber-300 shadow-sm">
@@ -879,7 +879,7 @@ export function SubscriptionDetail() {
           )}
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
-          <Link to="/orders" className="flex-1 rounded-xl border border-slate-200 py-3.5 text-center text-base font-semibold text-slate-600 bg-white hover:bg-slate-50 transition">
+          <Link to="/orders" className="flex-1 rounded-xl border border-border py-3.5 text-center text-base font-semibold text-text-secondary bg-white hover:bg-background transition">
             ← Quay lại danh sách
           </Link>
           {canCancel ? (
@@ -887,7 +887,7 @@ export function SubscriptionDetail() {
               {canceling ? "Đang hủy..." : "Hủy đăng ký"}
             </button>
           ) : (
-            <Link to="/products" className="flex-1 rounded-xl bg-[#1a7a4a] hover:bg-[#14633b] py-3.5 text-center text-base font-semibold text-white transition">
+            <Link to="/products" className="flex-1 rounded-xl bg-primary hover:bg-primary/90 py-3.5 text-center text-base font-semibold text-white transition">
               Tiếp tục mua hàng 🛒
             </Link>
           )}

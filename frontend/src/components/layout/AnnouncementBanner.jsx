@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { notificationAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { X } from 'lucide-react';
 
 const DISMISSED_KEY = 'dismissed_global_notifications';
 const LAST_USER_KEY  = 'global_notif_last_user';
@@ -78,24 +79,23 @@ export default function AnnouncementBanner() {
     >
       <div
         className="relative w-full overflow-hidden rounded-2xl bg-white shadow-2xl transition-all"
-        style={{ maxWidth: hasImg ? 580 : 440 }} /* TĂNG NỔI BẬT: Nâng độ rộng tối đa từ 460 lên 580px */
+        style={{ maxWidth: hasImg ? 580 : 440 }}
         onClick={e => e.stopPropagation()}
       >
         <button
           onClick={handleDismiss}
           className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/30 text-white transition-all hover:bg-black/50"
           aria-label="Đóng">
-          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
+          <X size={20} />
         </button>
 
         {hasImg ? (
           <>
-            {/* TĂNG CHIỀU CAO TỐI ĐA: Nâng maxHeight lên 450px để hình hiển thị to và rõ chi tiết */}
             <img
               src={imgSrc}
               alt={current.tieu_de}
               className="w-full object-cover"
-              style={{ maxHeight: 450 }} 
+              style={{ maxHeight: 450 }}
             />
 
             <div className="px-6 pt-4">
@@ -103,19 +103,19 @@ export default function AnnouncementBanner() {
                 {meta.label}
               </div>
               {current.tieu_de && (
-                <h3 className="text-xl font-bold text-on-surface leading-tight">{current.tieu_de}</h3>
+                <h3 className="text-xl font-bold text-text-primary leading-tight">{current.tieu_de}</h3>
               )}
             </div>
 
             {current.noi_dung && (
               <div className="px-6 pt-2 pb-4">
-                <p className="text-sm text-on-surface-variant leading-relaxed whitespace-pre-line">{current.noi_dung}</p>
+                <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-line">{current.noi_dung}</p>
               </div>
             )}
 
-            <div className="flex items-center justify-between border-t border-outline-variant/40 px-6 py-3.5">
+            <div className="flex items-center justify-between border-t border-border/40 px-6 py-3.5">
               {queue.length > 1 && (
-                <p className="text-xs text-on-surface-variant">Còn {queue.length - 1} thông báo khác</p>
+                <p className="text-xs text-text-secondary">Còn {queue.length - 1} thông báo khác</p>
               )}
               <button
                 onClick={handleDismiss}
@@ -130,13 +130,13 @@ export default function AnnouncementBanner() {
               <span className="h-2 w-2 rounded-full bg-green-600" />
               {meta.label}
             </div>
-            <h3 className="text-lg font-bold text-on-surface">{current.tieu_de}</h3>
+            <h3 className="text-lg font-bold text-text-primary">{current.tieu_de}</h3>
             {current.noi_dung && (
-              <p className="mt-2 text-sm text-on-surface-variant leading-relaxed whitespace-pre-line">{current.noi_dung}</p>
+              <p className="mt-2 text-sm text-text-secondary leading-relaxed whitespace-pre-line">{current.noi_dung}</p>
             )}
             <div className="mt-5 flex items-center justify-between">
               {queue.length > 1 && (
-                <p className="text-xs text-on-surface-variant">Còn {queue.length - 1} thông báo khác</p>
+                <p className="text-xs text-text-secondary">Còn {queue.length - 1} thông báo khác</p>
               )}
               <button
                 onClick={handleDismiss}

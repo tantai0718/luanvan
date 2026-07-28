@@ -1,5 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { baiVietAPI, categoryAPI } from '../../services/api';
+import { Plus, FileText, CheckCircle, Edit3, Eye, Edit, Trash2, X, ImagePlus, Upload, Save, Loader2, Bold, List, Image as ImageIcon, Type, Search } from 'lucide-react';
+import { Btn, Loading } from '../../components/ui/AdminUI';
 
 const emptyForm = { tieu_de: '', tom_tat: '', noi_dung: '', hinh_anh: '', madm: 4, trang_thai: 1 };
 
@@ -98,61 +100,60 @@ export default function AdminArticles() {
   return (
     <div className="space-y-7">
       {/* ── Page Title ── */}
-      <div className="relative overflow-hidden rounded-3xl border border-primary/15 bg-gradient-to-br from-white via-white to-primary-fixed/30 p-6 shadow-sm md:flex md:items-center md:justify-between md:p-8">
+      <div className="bg-card rounded-card border border-border p-6 shadow-card md:flex md:items-center md:justify-between md:p-8">
         <div>
-          <h2 className="font-h2 text-h2 text-on-surface">Quản lý tin tức</h2>
-          <p className="font-body-md text-body-md text-on-surface-variant">Cập nhật và điều hành nội dung tin tức nông nghiệp hàng ngày.</p>
+          <h2 className="text-h2 text-text-primary">Quản lý tin tức</h2>
+          <p className="text-body text-text-secondary">Cập nhật và điều hành nội dung tin tức nông nghiệp hàng ngày.</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setEditing({ ...emptyForm })}
-            className="bg-primary text-on-primary px-5 py-3 rounded-xl font-bold flex items-center gap-2 shadow-sm hover:shadow-md transition-all">
-            <span className="material-symbols-outlined text-base">add_circle</span>Thêm bài viết mới
-          </button>
+          <Btn onClick={() => setEditing({ ...emptyForm })}>
+            <Plus size={16} /> Thêm bài viết mới
+          </Btn>
         </div>
       </div>
 
       {/* ── Stats Bar ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="glass-card p-5 rounded-xl flex flex-col gap-1 shadow-sm">
-          <span className="text-on-surface-variant font-label-caps text-label-caps uppercase">Tổng bài viết</span>
+        <div className="bg-card p-5 rounded-card flex flex-col gap-1 shadow-card border border-border">
+          <span className="text-text-secondary text-[12px] font-semibold uppercase tracking-wider">Tổng bài viết</span>
           <div className="flex items-end justify-between">
-            <span className="font-h2 text-h2 text-primary">{total}</span>
-            <span className="material-symbols-outlined text-primary-container">article</span>
+            <span className="text-h1 text-primary">{total}</span>
+            <FileText size={20} className="text-primary/40" />
           </div>
         </div>
-        <div className="glass-card p-5 rounded-xl flex flex-col gap-1 shadow-sm">
-          <span className="text-on-surface-variant font-label-caps text-label-caps uppercase">Đã xuất bản</span>
+        <div className="bg-card p-5 rounded-card flex flex-col gap-1 shadow-card border border-border">
+          <span className="text-text-secondary text-[12px] font-semibold uppercase tracking-wider">Đã xuất bản</span>
           <div className="flex items-end justify-between">
-            <span className="font-h2 text-h2 text-primary">{published}</span>
-            <span className="material-symbols-outlined text-primary-container">check_circle</span>
+            <span className="text-h1 text-primary">{published}</span>
+            <CheckCircle size={20} className="text-primary/40" />
           </div>
         </div>
-        <div className="glass-card p-5 rounded-xl flex flex-col gap-1 shadow-sm">
-          <span className="text-on-surface-variant font-label-caps text-label-caps uppercase">Bản nháp</span>
+        <div className="bg-card p-5 rounded-card flex flex-col gap-1 shadow-card border border-border">
+          <span className="text-text-secondary text-[12px] font-semibold uppercase tracking-wider">Bản nháp</span>
           <div className="flex items-end justify-between">
-            <span className="font-h2 text-h2 text-on-surface-variant">{drafts}</span>
-            <span className="material-symbols-outlined text-outline">edit_note</span>
+            <span className="text-h1 text-text-secondary">{drafts}</span>
+            <Edit3 size={20} className="text-text-secondary/40" />
           </div>
         </div>
-        <div className="glass-card p-5 rounded-xl flex flex-col gap-1 shadow-sm">
-          <span className="text-on-surface-variant font-label-caps text-label-caps uppercase">Lượt xem tổng</span>
+        <div className="bg-card p-5 rounded-card flex flex-col gap-1 shadow-card border border-border">
+          <span className="text-text-secondary text-[12px] font-semibold uppercase tracking-wider">Lượt xem tổng</span>
           <div className="flex items-end justify-between">
-            <span className="font-h2 text-h2 text-secondary">{items.reduce((s, i) => s + (i.luot_xem || 0), 0)}</span>
-            <span className="material-symbols-outlined text-secondary">visibility</span>
+            <span className="text-h1 text-amber-600">{items.reduce((s, i) => s + (i.luot_xem || 0), 0)}</span>
+            <Eye size={20} className="text-amber-600/40" />
           </div>
         </div>
       </div>
 
       {/* ── Filter & Search ── */}
-      <div className="bg-surface-container-lowest p-4 rounded-xl shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between border border-outline-variant/30">
+      <div className="bg-card p-4 rounded-card shadow-card flex flex-col md:flex-row gap-4 items-center justify-between border border-border">
         <div className="flex items-center gap-3 w-full md:w-auto">
           <div className="relative flex-1 md:w-64">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm kiếm bài viết..."
-              className="w-full pl-10 pr-4 py-2.5 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-body-sm" />
+              className="w-full pl-10 pr-4 py-2.5 border border-border rounded-btn focus:ring-2 focus:ring-primary focus:border-primary text-caption" />
           </div>
           <select value={filterDm} onChange={e => setFilterDm(e.target.value)}
-            className="border border-outline-variant rounded-lg py-2.5 pl-3 pr-8 text-body-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary">
+            className="border border-border rounded-btn py-2.5 pl-3 pr-8 text-caption bg-card focus:ring-2 focus:ring-primary focus:border-primary">
             <option value="">Tất cả chuyên mục</option>
             {categories.map(c => <option key={c.madm} value={c.madm}>{c.ten_danh_muc}</option>)}
           </select>
@@ -160,58 +161,58 @@ export default function AdminArticles() {
       </div>
 
       {/* ── News Table ── */}
-      <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 overflow-hidden">
-        {loading ? <div className="py-16 text-center"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></div> : items.length ? (
+      <div className="bg-card rounded-card shadow-card border border-border overflow-hidden">
+        {loading ? <Loading /> : items.length ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
-              <thead className="bg-surface-container-low border-b border-outline-variant">
+              <thead className="bg-background border-b border-border">
                 <tr>
-                  <th className="p-5 font-label-caps text-label-caps text-on-surface-variant uppercase">Hình ảnh</th>
-                  <th className="p-5 font-label-caps text-label-caps text-on-surface-variant uppercase">Tiêu đề</th>
-                  <th className="p-5 font-label-caps text-label-caps text-on-surface-variant uppercase">Chuyên mục</th>
-                  <th className="p-5 font-label-caps text-label-caps text-on-surface-variant uppercase">Ngày đăng</th>
-                  <th className="p-5 font-label-caps text-label-caps text-on-surface-variant uppercase">Trạng thái</th>
-                  <th className="p-5 font-label-caps text-label-caps text-on-surface-variant uppercase text-right">Thao tác</th>
+                  <th className="p-5 text-[12px] font-semibold uppercase tracking-wider text-text-secondary">Hình ảnh</th>
+                  <th className="p-5 text-[12px] font-semibold uppercase tracking-wider text-text-secondary">Tiêu đề</th>
+                  <th className="p-5 text-[12px] font-semibold uppercase tracking-wider text-text-secondary">Chuyên mục</th>
+                  <th className="p-5 text-[12px] font-semibold uppercase tracking-wider text-text-secondary">Ngày đăng</th>
+                  <th className="p-5 text-[12px] font-semibold uppercase tracking-wider text-text-secondary">Trạng thái</th>
+                  <th className="p-5 text-[12px] font-semibold uppercase tracking-wider text-text-secondary text-right">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-outline-variant">
+              <tbody className="divide-y divide-border">
                 {items.map(item => (
-                  <tr key={item.ma_bai_viet} className="hover:bg-surface-container-lowest transition-colors group">
+                  <tr key={item.ma_bai_viet} className="hover:bg-background transition-colors group">
                     <td className="p-5">
                       {item.hinh_anh ? (
                         <img src={item.hinh_anh} alt={item.tieu_de} className="w-16 h-12 rounded-lg object-cover shadow-sm" />
                       ) : (
                         <div className="w-16 h-12 rounded-lg bg-emerald-50 flex items-center justify-center">
-                          <span className="material-symbols-outlined text-xl text-emerald-300">article</span>
+                          <FileText size={20} className="text-emerald-300" />
                         </div>
                       )}
                     </td>
                     <td className="p-5">
                       <div className="max-w-xs">
-                        <p className="font-body-md text-body-md text-on-surface font-semibold line-clamp-2">{item.tieu_de}</p>
-                        {item.tom_tat && <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-1 mt-0.5">{item.tom_tat}</p>}
+                        <p className="text-body text-text-primary font-semibold line-clamp-2">{item.tieu_de}</p>
+                        {item.tom_tat && <p className="text-caption text-text-secondary line-clamp-1 mt-0.5">{item.tom_tat}</p>}
                       </div>
                     </td>
                     <td className="p-5">
-                      {item.ten_danh_muc && <span className="px-3 py-1 bg-primary/10 text-primary text-label-caps rounded-full font-bold">{item.ten_danh_muc}</span>}
+                      {item.ten_danh_muc && <span className="px-3 py-1 bg-primary/10 text-primary text-[12px] font-semibold uppercase tracking-wider rounded-full">{item.ten_danh_muc}</span>}
                     </td>
                     <td className="p-5">
-                      <p className="font-body-sm text-body-sm text-on-surface-variant">{fmtDate(item.ngay_tao)}</p>
+                      <p className="text-caption text-text-secondary">{fmtDate(item.ngay_tao)}</p>
                     </td>
                     <td className="p-5">
                       <button onClick={() => handleToggle(item.ma_bai_viet)}
-                        className={`flex items-center gap-1.5 font-bold text-body-sm ${item.trang_thai ? 'text-primary' : 'text-on-surface-variant'}`}>
-                        <span className={`w-2 h-2 rounded-full ${item.trang_thai ? 'bg-primary' : 'bg-outline-variant'}`} />
+                        className={`flex items-center gap-1.5 font-bold text-caption ${item.trang_thai ? 'text-primary' : 'text-text-secondary'}`}>
+                        <span className={`w-2 h-2 rounded-full ${item.trang_thai ? 'bg-primary' : 'bg-border'}`} />
                         {item.trang_thai ? 'Đã xuất bản' : 'Bản nháp'}
                       </button>
                     </td>
                     <td className="p-5 text-right">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => setEditing(item)} className="p-2 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-lg transition-all" title="Sửa">
-                          <span className="material-symbols-outlined">edit</span>
+                        <button onClick={() => setEditing(item)} className="p-2 text-text-secondary hover:text-primary hover:bg-primary/10 rounded-btn transition-all" title="Sửa">
+                          <Edit size={18} />
                         </button>
-                        <button onClick={() => handleDelete(item.ma_bai_viet)} className="p-2 text-on-surface-variant hover:text-error hover:bg-error/10 rounded-lg transition-all" title="Xóa">
-                          <span className="material-symbols-outlined">delete</span>
+                        <button onClick={() => handleDelete(item.ma_bai_viet)} className="p-2 text-text-secondary hover:text-danger hover:bg-danger/10 rounded-btn transition-all" title="Xóa">
+                          <Trash2 size={18} />
                         </button>
                       </div>
                     </td>
@@ -222,11 +223,11 @@ export default function AdminArticles() {
           </div>
         ) : (
           <div className="py-16 text-center">
-            <span className="material-symbols-outlined text-6xl text-on-surface-variant/15">article</span>
-            <p className="text-body-md text-on-surface-variant mt-3">Chưa có bài viết nào.</p>
-            <button onClick={() => setEditing({ ...emptyForm })} className="mt-4 bg-primary text-on-primary px-5 py-2.5 rounded-xl font-bold text-sm inline-flex items-center gap-2">
-              <span className="material-symbols-outlined text-base">add</span>Thêm bài viết mới
-            </button>
+            <FileText size={48} className="mx-auto text-text-secondary/15" />
+            <p className="text-body text-text-secondary mt-3">Chưa có bài viết nào.</p>
+            <Btn onClick={() => setEditing({ ...emptyForm })} className="mt-4">
+              <Plus size={16} /> Thêm bài viết mới
+            </Btn>
           </div>
         )}
       </div>
@@ -234,64 +235,64 @@ export default function AdminArticles() {
       {/* ── Editor Modal ── */}
       {editing && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center pt-8 px-4 overflow-y-auto pb-8" onClick={() => setEditing(null)}>
-          <div className="bg-surface rounded-2xl w-full max-w-3xl organic-shadow border border-outline-variant overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="px-8 py-5 border-b border-outline-variant flex items-center justify-between">
+          <div className="bg-card rounded-btn w-full max-w-3xl shadow-xl border border-border overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-8 py-5 border-b border-border flex items-center justify-between">
               <div>
-                <h2 className="font-h3 text-h3 text-on-surface">{editing.ma_bai_viet ? 'Chỉnh sửa bài viết' : 'Thêm bài viết mới'}</h2>
-                <p className="text-body-sm text-on-surface-variant mt-0.5">{editing.ma_bai_viet ? `ID: ${editing.ma_bai_viet}` : 'Tạo bài viết mới'}</p>
+                <h2 className="text-h3 text-text-primary">{editing.ma_bai_viet ? 'Chỉnh sửa bài viết' : 'Thêm bài viết mới'}</h2>
+                <p className="text-caption text-text-secondary mt-0.5">{editing.ma_bai_viet ? `ID: ${editing.ma_bai_viet}` : 'Tạo bài viết mới'}</p>
               </div>
-              <button onClick={() => setEditing(null)} className="w-9 h-9 rounded-full hover:bg-surface-container-high flex items-center justify-center transition-colors">
-                <span className="material-symbols-outlined text-lg">close</span>
+              <button onClick={() => setEditing(null)} className="w-9 h-9 rounded-full hover:bg-background flex items-center justify-center transition-colors">
+                <X size={20} className="text-text-secondary" />
               </button>
             </div>
 
             <div className="p-8 space-y-5 max-h-[70vh] overflow-y-auto">
               <label className="grid gap-2">
-                <span className="text-label-sm font-bold text-on-surface-variant">Tiêu đề <span className="text-error">*</span></span>
+                <span className="text-caption font-bold text-text-secondary">Tiêu đề <span className="text-danger">*</span></span>
                 <input value={editing.tieu_de} onChange={e => setEditing({ ...editing, tieu_de: e.target.value })}
                   placeholder="Nhập tiêu đề bài viết..."
-                  className="bg-white border border-outline-variant rounded-lg px-4 py-3 text-body-md focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+                  className="bg-card border border-border rounded-btn px-4 py-3 text-body focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
               </label>
               <label className="grid gap-2">
-                <span className="text-label-sm font-bold text-on-surface-variant">Tóm tắt</span>
+                <span className="text-caption font-bold text-text-secondary">Tóm tắt</span>
                 <textarea rows={2} value={editing.tom_tat || ''} onChange={e => setEditing({ ...editing, tom_tat: e.target.value })}
                   placeholder="Mô tả ngắn gọn..."
-                  className="bg-white border border-outline-variant rounded-lg px-4 py-3 text-body-md resize-none focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+                  className="bg-card border border-border rounded-btn px-4 py-3 text-body resize-none focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
               </label>
               <label className="grid gap-2">
-                <span className="text-label-sm font-bold text-on-surface-variant">Trạng thái</span>
+                <span className="text-caption font-bold text-text-secondary">Trạng thái</span>
                 <select value={editing.trang_thai} onChange={e => setEditing({ ...editing, trang_thai: Number(e.target.value) })}
-                  className="bg-white border border-outline-variant rounded-lg px-4 py-3 text-body-md outline-none">
+                  className="bg-card border border-border rounded-btn px-4 py-3 text-body outline-none">
                   <option value={1}>Đã xuất bản</option>
                   <option value={0}>Bản nháp</option>
                 </select>
               </label>
               <label className="grid gap-2">
-                <span className="text-label-sm font-bold text-on-surface-variant">Chuyên mục</span>
+                <span className="text-caption font-bold text-text-secondary">Chuyên mục</span>
                 <select value={editing.madm || ''} onChange={e => setEditing({ ...editing, madm: Number(e.target.value) })}
-                  className="bg-white border border-outline-variant rounded-lg px-4 py-3 text-body-md outline-none">
+                  className="bg-card border border-border rounded-btn px-4 py-3 text-body outline-none">
                   <option value="">Chọn chuyên mục</option>
                   {categories.map(c => <option key={c.madm} value={c.madm}>{c.ten_danh_muc}</option>)}
                 </select>
               </label>
               <div className="grid gap-2">
-                <span className="text-label-sm font-bold text-on-surface-variant">Hình ảnh bìa</span>
+                <span className="text-caption font-bold text-text-secondary">Hình ảnh bìa</span>
                 {editing.hinh_anh ? (
-                  <div className="relative rounded-lg overflow-hidden border border-outline-variant">
+                  <div className="relative rounded-btn overflow-hidden border border-border">
                     <img src={editing.hinh_anh.startsWith('/upload/') ? `http://localhost:5000${editing.hinh_anh}` : editing.hinh_anh} alt="Ảnh bìa" className="w-full h-48 object-cover" />
                     <button type="button" onClick={() => setEditing(prev => ({ ...prev, hinh_anh: '' }))}
                       className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors">
-                      <span className="material-symbols-outlined text-base">close</span>
+                      <X size={16} />
                     </button>
                   </div>
                 ) : (
-                  <label className="flex flex-col items-center justify-center h-40 border-2 border-dashed border-outline-variant rounded-lg cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
+                  <label className="flex flex-col items-center justify-center h-40 border-2 border-dashed border-border rounded-btn cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
                     {uploading ? (
-                      <span className="material-symbols-outlined animate-spin text-3xl text-primary">progress_activity</span>
+                      <Loader2 size={32} className="animate-spin text-primary" />
                     ) : (
                       <>
-                        <span className="material-symbols-outlined text-4xl text-on-surface-variant/40">add_photo_alternate</span>
-                        <span className="text-body-sm text-on-surface-variant mt-1">Chọn ảnh từ máy</span>
+                        <ImagePlus size={40} className="text-text-secondary/30" />
+                        <span className="text-caption text-text-secondary mt-1">Chọn ảnh từ máy</span>
                       </>
                     )}
                     <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
@@ -299,29 +300,28 @@ export default function AdminArticles() {
                 )}
               </div>
               <label className="grid gap-2">
-                <span className="text-label-sm font-bold text-on-surface-variant">Nội dung (HTML) <span className="text-error">*</span></span>
-                <div className="flex flex-wrap gap-1 p-2 bg-surface-container-low border border-outline-variant border-b-0 rounded-t-lg">
-                  {[{ tag: 'p', icon: 'notes', lbl: 'Paragraph' }, { tag: 'h2', icon: 'format_h2', lbl: 'H2' }, { tag: 'h3', icon: 'format_h3', lbl: 'H3' }, { tag: 'bold', icon: 'format_bold', lbl: 'Bold' }, { tag: 'ul', icon: 'format_list_bulleted', lbl: 'List' }, { tag: 'img', icon: 'image', lbl: 'Image' }].map(b => (
+                <span className="text-caption font-bold text-text-secondary">Nội dung (HTML) <span className="text-danger">*</span></span>
+                <div className="flex flex-wrap gap-1 p-2 bg-background border border-border border-b-0 rounded-t-btn">
+                  {[{ tag: 'p', icon: <Type size={16} />, lbl: 'Paragraph' }, { tag: 'h2', icon: <Type size={16} />, lbl: 'H2' }, { tag: 'h3', icon: <Type size={16} />, lbl: 'H3' }, { tag: 'bold', icon: <Bold size={16} />, lbl: 'Bold' }, { tag: 'ul', icon: <List size={16} />, lbl: 'List' }, { tag: 'img', icon: <ImageIcon size={16} />, lbl: 'Image' }].map(b => (
                     <button key={b.tag} onClick={() => handleInsertTag(b.tag)} title={b.lbl}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-primary/10 hover:text-primary transition-colors">
-                      <span className="material-symbols-outlined text-base">{b.icon}</span>
+                      className="w-8 h-8 rounded-btn flex items-center justify-center text-text-secondary hover:bg-primary/10 hover:text-primary transition-colors">
+                      {b.icon}
                     </button>
                   ))}
                 </div>
                 <textarea ref={editorRef} rows={12} value={editing.noi_dung} onChange={e => setEditing({ ...editing, noi_dung: e.target.value })}
                   placeholder="<h2>Tiêu đề mục</h2>&#10;<p>Nội dung bài viết...</p>"
-                  className="bg-white border border-outline-variant rounded-b-lg resize-none px-4 py-3 text-body-md font-mono leading-relaxed focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+                  className="bg-card border border-border rounded-b-btn resize-none px-4 py-3 text-body font-mono leading-relaxed focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
               </label>
             </div>
 
-            <div className="px-8 py-5 border-t border-outline-variant bg-surface-container-low flex justify-between items-center">
-              <p className="text-body-sm">{msg && <span className="text-error">{msg}</span>}</p>
+            <div className="px-8 py-5 border-t border-border bg-background flex justify-between items-center">
+              <p className="text-caption">{msg && <span className="text-danger">{msg}</span>}</p>
               <div className="flex gap-3">
-                <button onClick={() => setEditing(null)} className="px-5 py-2.5 rounded-xl border border-outline-variant font-bold text-body-sm hover:bg-surface-container transition-colors">Hủy</button>
-                <button onClick={handleSave} disabled={saving}
-                  className="bg-primary text-on-primary px-6 py-2.5 rounded-xl font-bold text-body-sm flex items-center gap-2 shadow-sm hover:shadow-md transition-all disabled:opacity-50">
-                  {saving ? <><span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>Đang lưu...</> : <><span className="material-symbols-outlined text-base">save</span>{editing.ma_bai_viet ? 'Cập nhật' : 'Xuất bản'}</>}
-                </button>
+                <button onClick={() => setEditing(null)} className="px-5 py-2.5 rounded-btn border border-border font-bold text-caption hover:bg-card transition-colors">Hủy</button>
+                <Btn onClick={handleSave} disabled={saving}>
+                  {saving ? <><Loader2 size={16} className="animate-spin" /> Đang lưu...</> : <><Save size={16} /> {editing.ma_bai_viet ? 'Cập nhật' : 'Xuất bản'}</>}
+                </Btn>
               </div>
             </div>
           </div>

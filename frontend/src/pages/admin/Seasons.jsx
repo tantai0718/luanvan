@@ -12,13 +12,13 @@ function SeasonProductsModal({ season, products, allProducts, loading, form, set
   return (
     <Modal title={`Sản phẩm trong mùa: ${season?.ten_mua || ''}`} onClose={onClose} size="xl">
       <div className="space-y-6">
-        <div className="bg-surface-container-low rounded-2xl p-4 space-y-3">
-          <p className="text-title-md font-title-md text-on-surface">Gắn sản phẩm mới vào mùa này</p>
+        <div className="bg-background rounded-btn p-4 space-y-3">
+          <p className="text-body font-semibold text-text-primary">Gắn sản phẩm mới vào mùa này</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <select
               value={form.masp}
               onChange={e => setForm({ ...form, masp: e.target.value })}
-              className="bg-surface border border-outline-variant rounded-xl px-4 py-2.5 text-body-md focus:ring-2 focus:ring-primary outline-none"
+              className="bg-card border border-border rounded-btn px-4 py-2.5 text-body focus:ring-2 focus:ring-primary outline-none"
             >
               <option value="">-- Chọn sản phẩm --</option>
               {selectableProducts.map(p => (
@@ -36,19 +36,19 @@ function SeasonProductsModal({ season, products, allProducts, loading, form, set
         {loading ? <Loading /> : (
           <Table headers={['#', 'Sản phẩm', 'Giá bán', 'Giá dự kiến mùa', 'SL dự kiến', 'HSD điều chỉnh', 'Ghi chú', 'Thao tác']} empty={{ icon: '🌱', text: 'Mùa này chưa có sản phẩm nào.' }}>
             {products.map((product, index) => (
-              <tr key={product.maspmv} className="hover:bg-surface-container-low">
-                <td className="px-4 py-3 text-label-sm text-on-surface-variant">{index + 1}</td>
+              <tr key={product.maspmv} className="hover:bg-background">
+                <td className="px-4 py-3 text-caption text-text-secondary">{index + 1}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <img src={product.hinh_anh ? `http://localhost:5000${product.hinh_anh}` : 'https://placehold.co/48x48/b1f0ce/0f5238?text=NS'} alt={product.ten_san_pham} className="h-12 w-12 rounded-xl object-cover" />
-                    <p className="text-title-md font-title-md text-on-surface">{product.ten_san_pham}</p>
+                    <p className="text-body font-semibold text-text-primary">{product.ten_san_pham}</p>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-body-md text-on-surface-variant">{Number(product.gia_ban).toLocaleString('vi-VN')}đ/{product.don_vi}</td>
-                <td className="px-4 py-3 text-body-md font-bold text-primary">{product.gia_du_kien ? `${product.gia_du_kien.toLocaleString('vi-VN')}đ` : '—'}</td>
-                <td className="px-4 py-3 text-body-md text-on-surface-variant">{product.so_luong_du_kien ?? '—'}</td>
-                <td className="px-4 py-3 text-body-md text-on-surface-variant">{product.han_su_dung_dieu_chinh ? new Date(product.han_su_dung_dieu_chinh).toLocaleDateString('vi-VN') : '—'}</td>
-                <td className="px-4 py-3 text-body-md text-on-surface-variant">{product.ghi_chu || '—'}</td>
+                <td className="px-4 py-3 text-body text-text-secondary">{Number(product.gia_ban).toLocaleString('vi-VN')}đ/{product.don_vi}</td>
+                <td className="px-4 py-3 text-body font-bold text-primary">{product.gia_du_kien ? `${product.gia_du_kien.toLocaleString('vi-VN')}đ` : '—'}</td>
+                <td className="px-4 py-3 text-body text-text-secondary">{product.so_luong_du_kien ?? '—'}</td>
+                <td className="px-4 py-3 text-body text-text-secondary">{product.han_su_dung_dieu_chinh ? new Date(product.han_su_dung_dieu_chinh).toLocaleDateString('vi-VN') : '—'}</td>
+                <td className="px-4 py-3 text-body text-text-secondary">{product.ghi_chu || '—'}</td>
                 <td className="px-4 py-3">
                   <Btn size="sm" variant="danger" onClick={() => onRemove(product.masp)}>Gỡ</Btn>
                 </td>
@@ -154,19 +154,19 @@ export default function AdminSeasons() {
         body="Khai báo các mùa trong năm và gắn sản phẩm phù hợp để chatbot AI gợi ý đúng theo mùa."
         actions={<Btn onClick={openAdd}>+ Thêm mùa vụ</Btn>}
       />
-      {error && <div className="bg-surface rounded-3xl p-lg border border-outline-variant text-body-md text-on-error-container bg-error-container/20">{error}</div>}
+      {error && <div className="bg-card rounded-card p-5 border border-border text-body text-red-700 bg-red-50">{error}</div>}
 
       {loading ? <Loading /> : (
         <Table headers={['#', 'Tên mùa vụ', 'Khoảng thời gian', 'Số sản phẩm', 'Trạng thái', 'Hành động']} empty={{ icon: '🌾', text: 'Chưa có mùa vụ nào.' }}>
           {seasons.map((season, index) => (
-            <tr key={season.mamv} className="hover:bg-surface-container-low">
-              <td className="px-4 py-3 text-label-sm text-on-surface-variant">{index + 1}</td>
+            <tr key={season.mamv} className="hover:bg-background">
+              <td className="px-4 py-3 text-caption text-text-secondary">{index + 1}</td>
               <td className="px-4 py-3">
-                <button onClick={() => openProducts(season)} className="text-left text-title-md font-title-md text-on-surface hover:text-primary">{season.ten_mua}</button>
-                <p className="mt-1 text-label-sm text-on-surface-variant">Bấm để quản lý sản phẩm thuộc mùa này</p>
+                <button onClick={() => openProducts(season)} className="text-left text-body font-semibold text-text-primary hover:text-primary">{season.ten_mua}</button>
+                <p className="mt-1 text-caption text-text-secondary">Bấm để quản lý sản phẩm thuộc mùa này</p>
               </td>
-              <td className="px-4 py-3 text-body-md text-on-surface-variant">{monthLabel(season.thang_bat_dau, season.thang_ket_thuc, season.qua_nam)}</td>
-              <td className="px-4 py-3 text-body-md text-on-surface-variant">{season.so_san_pham}</td>
+              <td className="px-4 py-3 text-body text-text-secondary">{monthLabel(season.thang_bat_dau, season.thang_ket_thuc, season.qua_nam)}</td>
+              <td className="px-4 py-3 text-body text-text-secondary">{season.so_san_pham}</td>
               <td className="px-4 py-3"><Badge text={season.trang_thai ? 'Đang áp dụng' : 'Đã tắt'} color={season.trang_thai ? 'green' : 'gray'} /></td>
               <td className="px-4 py-3">
                 <div className="flex flex-wrap gap-2">
@@ -189,7 +189,7 @@ export default function AdminSeasons() {
               <Input label="Tháng bắt đầu (1-12)" type="number" min="1" max="12" value={form.thang_bat_dau} onChange={e => setForm({ ...form, thang_bat_dau: e.target.value })} />
               <Input label="Tháng kết thúc (1-12)" type="number" min="1" max="12" value={form.thang_ket_thuc} onChange={e => setForm({ ...form, thang_ket_thuc: e.target.value })} />
             </div>
-            <label className="flex items-center gap-2 text-body-md text-on-surface-variant">
+            <label className="flex items-center gap-2 text-body text-text-secondary">
               <input type="checkbox" checked={!!form.qua_nam} onChange={e => setForm({ ...form, qua_nam: e.target.checked ? 1 : 0 })} />
               Mùa vụ vắt qua năm (ví dụ tháng 11 → tháng 3 năm sau)
             </label>

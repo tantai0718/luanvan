@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { reviewAPI } from "../../services/api";
+import { Star, MessageSquare, Clock } from "lucide-react";
 import {
   Badge,
   Btn,
@@ -35,21 +36,21 @@ function ReplyModal({ review, onClose, onDone }) {
 
   return (
     <Modal title="Phản hồi đánh giá" onClose={onClose}>
-      <div className="mb-4 flex gap-3 rounded-2xl bg-surface-container-low p-4">
+      <div className="mb-4 flex gap-3 rounded-btn bg-background p-4">
         <img
           src={productImg}
           alt={review.ten_san_pham}
-          className="h-14 w-14 shrink-0 rounded-xl object-cover border border-outline-variant"
+          className="h-14 w-14 shrink-0 rounded-xl object-cover border border-border"
         />
         <div className="min-w-0">
-          <p className="text-label-sm font-bold text-on-surface truncate">
+          <p className="text-caption font-bold text-text-primary truncate">
             {review.ten_nguoi_mua || "Khách hàng"} — {review.ten_san_pham}
           </p>
-          <p className="mt-1 text-secondary text-sm">
+          <p className="mt-1 text-amber-500 text-sm">
             {"★".repeat(review.so_sao)}
             {"☆".repeat(5 - review.so_sao)}
           </p>
-          <p className="mt-2 text-body-md text-on-surface-variant">
+          <p className="mt-2 text-body text-text-secondary">
             {review.noi_dung || "Không có nhận xét."}
           </p>
         </div>
@@ -60,10 +61,10 @@ function ReplyModal({ review, onClose, onDone }) {
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="Nhập phản hồi gửi tới khách hàng..."
-          className="w-full resize-none rounded-2xl border border-outline-variant bg-surface px-4 py-3 text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary-fixed"
+          className="w-full resize-none rounded-btn border border-border bg-card px-4 py-3 text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
         />
         {error && (
-          <div className="rounded-2xl border border-error-container bg-error-container/20 px-4 py-3 text-body-md text-on-error-container">
+          <div className="rounded-btn border border-red-200 bg-red-50 px-4 py-3 text-body text-red-700">
             {error}
           </div>
         )}
@@ -91,20 +92,20 @@ function ReviewRow({ review, onReply }) {
     : "https://placehold.co/100x100/b1f0ce/0f5238?text=NS";
 
   return (
-    <div className="bg-surface rounded-3xl p-lg border border-outline-variant organic-shadow">
+    <div className="bg-card rounded-card p-5 border border-border shadow-card">
       <div className="flex items-start gap-3">
         <img
           src={productImg}
           alt={review.ten_san_pham}
-          className="h-14 w-14 shrink-0 rounded-xl object-cover border border-outline-variant"
+          className="h-14 w-14 shrink-0 rounded-xl object-cover border border-border"
         />
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-title-md font-title-md text-on-surface">
+              <p className="text-body font-semibold text-text-primary">
                 {review.ten_nguoi_mua || "Khách hàng"}
               </p>
-              <p className="text-label-sm text-on-surface-variant truncate">
+              <p className="text-caption text-text-secondary truncate">
                 {review.ten_san_pham}
               </p>
             </div>
@@ -113,25 +114,25 @@ function ReviewRow({ review, onReply }) {
               color={review.phan_hoi ? "green" : "orange"}
             />
           </div>
-          <p className="mt-2 text-secondary text-sm">
+          <p className="mt-2 text-amber-500 text-sm">
             {"★".repeat(review.so_sao)}
             {"☆".repeat(5 - review.so_sao)}
           </p>
-          <p className="mt-2 text-body-md text-on-surface-variant">
+          <p className="mt-2 text-body text-text-secondary">
             {review.noi_dung || "Không có nhận xét."}
           </p>
-          <p className="mt-1 text-label-xs text-on-surface-variant">
+          <p className="mt-1 text-[12px] font-medium text-text-secondary">
             {review.ngay_tao
               ? new Date(review.ngay_tao).toLocaleDateString("vi-VN")
               : ""}
           </p>
 
           {review.phan_hoi && (
-            <div className="mt-3 rounded-2xl bg-primary-fixed/40 p-3">
-              <p className="text-label-xs font-bold text-primary">
+            <div className="mt-3 rounded-btn bg-primary-light/40 p-3">
+              <p className="text-[12px] font-bold text-primary">
                 Phản hồi của cửa hàng
               </p>
-              <p className="mt-1 text-body-md text-on-surface">
+              <p className="mt-1 text-body text-text-primary">
                 {review.phan_hoi}
               </p>
             </div>
@@ -193,7 +194,7 @@ export default function AdminReviews() {
         body="Xem và phản hồi các đánh giá sản phẩm từ khách hàng."
       />
 
-      <div className="bg-surface rounded-3xl p-lg border border-outline-variant organic-shadow">
+      <div className="bg-card rounded-card p-5 border border-border shadow-card">
         <div className="grid gap-3 md:grid-cols-[1fr_auto_auto]">
           <SearchBar
             value={search}
@@ -218,19 +219,19 @@ export default function AdminReviews() {
 
       <div className="grid gap-4 md:grid-cols-3">
         <StatCard
-          icon={<span className="material-symbols-outlined">reviews</span>}
+          icon={<Star size={20} />}
           label="Tổng đánh giá"
           value={summary.total}
           color="green"
         />
         <StatCard
-          icon={<span className="material-symbols-outlined">check_circle</span>}
+          icon={<MessageSquare size={20} />}
           label="Đã phản hồi"
           value={summary.replied}
           color="blue"
         />
         <StatCard
-          icon={<span className="material-symbols-outlined">pending</span>}
+          icon={<Clock size={20} />}
           label="Chưa phản hồi"
           value={summary.pending}
           color="orange"
@@ -250,11 +251,9 @@ export default function AdminReviews() {
           ))}
         </div>
       ) : (
-        <div className="bg-surface rounded-3xl py-16 text-center border border-dashed border-outline-variant">
-          <span className="material-symbols-outlined text-5xl text-on-surface-variant/40">
-            reviews
-          </span>
-          <p className="mt-3 text-body-md text-on-surface-variant">
+        <div className="bg-card rounded-card py-16 text-center border border-dashed border-border">
+          <Star size={48} className="mx-auto text-text-secondary/30" />
+          <p className="mt-3 text-body text-text-secondary">
             Chưa có đánh giá nào.
           </p>
         </div>

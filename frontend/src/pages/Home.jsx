@@ -4,6 +4,7 @@ import { bannerAPI, categoryAPI, productAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { pickCategoryImage, pickProductImage } from '../utils/marketImages';
+import { ShoppingCart, Check, ArrowRight, Truck, Leaf, CreditCard, ShieldCheck } from 'lucide-react';
 
 const formatCurrency = v => `${Number(v || 0).toLocaleString('vi-VN')}đ`;
 
@@ -44,7 +45,7 @@ function ProductCard({ product }) {
   };
 
   return (
-    <div className="bg-surface rounded-3xl p-4 border border-outline-variant organic-shadow flex flex-col group h-full">
+    <div className="bg-card rounded-3xl p-4 border border-border shadow-card flex flex-col group h-full">
       <div className="relative aspect-square rounded-2xl overflow-hidden mb-4">
         <Link to={`/products/${product.ma_san_pham}`}>
           <img
@@ -54,24 +55,24 @@ function ProductCard({ product }) {
           />
         </Link>
         {stock > 0 && (
-          <div className="absolute top-2 left-2 px-3 py-1 bg-secondary text-white rounded-full font-label-sm text-label-sm">Nổi bật</div>
+          <div className="absolute top-2 left-2 px-3 py-1 bg-secondary text-white rounded-full text-caption">Nổi bật</div>
         )}
       </div>
       <div className="flex-grow">
         <Link to={`/products/${product.ma_san_pham}`}>
-          <span className="text-primary font-label-sm text-label-sm uppercase tracking-wider">{product.ten_danh_muc || 'Nông sản'}</span>
-          <h4 className="text-title-md font-title-md mt-1 mb-2">{product.ten_san_pham}</h4>
+          <span className="text-primary text-caption uppercase tracking-wider">{product.ten_danh_muc || 'Nông sản'}</span>
+          <h4 className="text-h3 mt-1 mb-2">{product.ten_san_pham}</h4>
           <div className="flex items-center gap-2 mb-4">
-            <span className="text-secondary font-bold text-lg">{formatCurrency(product.gia_ban)}</span>
-            <span className="text-on-surface-variant/50 text-sm">/{product.don_vi}</span>
+            <span className="text-text-secondary font-bold text-lg">{formatCurrency(product.gia_ban)}</span>
+            <span className="text-text-secondary/50 text-sm">/{product.don_vi}</span>
           </div>
         </Link>
       </div>
       <button
         onClick={handleAdd}
-        className="w-full py-3 bg-primary text-on-primary rounded-xl flex items-center justify-center gap-2 hover:bg-on-primary-fixed-variant transition-colors active:scale-95"
+        className="w-full py-3 bg-primary text-white rounded-xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors active:scale-95"
       >
-        <span className="material-symbols-outlined text-sm">{added ? 'check' : 'shopping_cart'}</span>
+        {added ? <Check size={16} /> : <ShoppingCart size={16} />}
         {added ? 'Đã thêm' : 'Thêm vào giỏ'}
       </button>
     </div>
@@ -133,25 +134,25 @@ export default function Home() {
         <div className="relative z-20 flex h-full min-h-[480px] items-center">
           <div className="max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop w-full py-16 md:py-0">
             <div className="max-w-xl">
-              <span className="inline-block px-4 py-1.5 rounded-full bg-white/15 backdrop-blur-sm ring-1 ring-white/25 text-white font-label-sm text-label-sm mb-6">
+              <span className="inline-block px-4 py-1.5 rounded-full bg-white/15 backdrop-blur-sm ring-1 ring-white/25 text-white text-caption mb-6">
                 Trực tiếp từ nhà vườn tới bàn ăn
               </span>
-              <h1 className="font-display-lg text-display-lg text-white mb-6 drop-shadow-sm">
+              <h1 className="text-h1 text-white mb-6 drop-shadow-sm">
                 Kết nối <span className="text-[#8FD9A8] italic">Tinh hoa</span> Nông sản Việt
               </h1>
-              <p className="text-body-lg font-body-lg text-white/85 mb-10 max-w-lg">
+              <p className="text-body-lg text-white/85 mb-10 max-w-lg">
                 Trải nghiệm sự tươi ngon thuần khiết với các sản phẩm được chọn lọc kỹ lưỡng, đảm bảo tiêu chuẩn VietGAP và an toàn thực phẩm tuyệt đối.
               </p>
               <div className="flex flex-wrap gap-4">
                 <button
                   onClick={() => navigate('/products')}
-                  className="px-8 py-4 bg-primary text-on-primary rounded-xl font-title-md text-title-md hover:bg-on-primary-fixed-variant transition-all shadow-lg active:scale-95"
+                  className="px-8 py-4 bg-primary text-white rounded-xl text-h3 hover:bg-primary/90 transition-all shadow-lg active:scale-95"
                 >
                   Mua sắm ngay
                 </button>
                 <button
                   onClick={() => navigate('/about')}
-                  className="px-8 py-4 bg-white/10 backdrop-blur-sm ring-1 ring-white/40 text-white rounded-xl font-title-md text-title-md hover:bg-white/20 transition-all active:scale-95"
+                  className="px-8 py-4 bg-white/10 backdrop-blur-sm ring-1 ring-white/40 text-white rounded-xl text-h3 hover:bg-white/20 transition-all active:scale-95"
                 >
                   Tìm hiểu thêm
                 </button>
@@ -175,15 +176,15 @@ export default function Home() {
       <section className="py-xl max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop">
         <div className="flex justify-between items-end mb-10">
           <div>
-            <h2 className="font-headline-lg text-headline-lg text-on-surface">Danh mục nổi bật</h2>
-            <p className="text-on-surface-variant mt-2 font-body-md text-body-md">Khám phá thế giới nông sản phong phú</p>
+            <h2 className="text-h2 text-text-primary">Danh mục nổi bật</h2>
+            <p className="text-text-secondary mt-2 text-body">Khám phá thế giới nông sản phong phú</p>
           </div>
-          <Link to="/products" className="text-primary font-label-sm flex items-center gap-1 group">
-            Xem tất cả <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+          <Link to="/products" className="text-primary text-caption flex items-center gap-1 group">
+            Xem tất cả <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 h-auto md:h-[500px]">
-          <div className="md:col-span-2 md:row-span-2 relative rounded-3xl overflow-hidden group organic-shadow cursor-pointer bg-surface-container-high">
+          <div className="md:col-span-2 md:row-span-2 relative rounded-3xl overflow-hidden group shadow-card cursor-pointer bg-background">
             <img
               src={categories[0] ? pickCategoryImage(categories[0]) : '/images/raucu.webp'}
               alt="Rau củ"
@@ -191,11 +192,11 @@ export default function Home() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
             <div className="absolute bottom-0 left-0 p-8">
-              <h3 className="text-white font-headline-lg text-headline-lg">Rau củ</h3>
-              <p className="text-white/80 font-body-md text-body-md">Tươi sạch mỗi ngày</p>
+              <h3 className="text-white text-h2">Rau củ</h3>
+              <p className="text-white/80 text-body">Tươi sạch mỗi ngày</p>
             </div>
           </div>
-          <div className="relative rounded-3xl overflow-hidden group organic-shadow cursor-pointer bg-surface-container-high">
+          <div className="relative rounded-3xl overflow-hidden group shadow-card cursor-pointer bg-background">
             <img
               src={categories[1] ? pickCategoryImage(categories[1]) : '/images/trai_cay.webp'}
               alt="Trái cây"
@@ -203,10 +204,10 @@ export default function Home() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
             <div className="absolute bottom-0 left-0 p-6">
-              <h3 className="text-white font-title-md text-title-md">Trái cây</h3>
+              <h3 className="text-white text-h3">Trái cây</h3>
             </div>
           </div>
-          <div className="relative rounded-3xl overflow-hidden group organic-shadow cursor-pointer bg-surface-container-high">
+          <div className="relative rounded-3xl overflow-hidden group shadow-card cursor-pointer bg-background">
             <img
               src="/images/gia_vi.jpg"
               alt="Thịt trứng"
@@ -214,10 +215,10 @@ export default function Home() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
             <div className="absolute bottom-0 left-0 p-6">
-              <h3 className="text-white font-title-md text-title-md">Thịt trứng</h3>
+              <h3 className="text-white text-h3">Thịt trứng</h3>
             </div>
           </div>
-          <div className="md:col-span-2 relative rounded-3xl overflow-hidden group organic-shadow cursor-pointer bg-surface-container-high">
+          <div className="md:col-span-2 relative rounded-3xl overflow-hidden group shadow-card cursor-pointer bg-background">
             <img
               src="/images/ngucoc.jpg"
               alt="Gạo & Đỗ"
@@ -225,27 +226,27 @@ export default function Home() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
             <div className="absolute bottom-0 left-0 p-8">
-              <h3 className="text-white font-title-md text-title-md">Gạo & Đỗ</h3>
+              <h3 className="text-white text-h3">Gạo & Đỗ</h3>
             </div>
           </div>
         </div>
       </section>
 
       {/* Featured Products */}
-      <section className="py-xl bg-surface-container-low">
+      <section className="py-xl bg-background">
         <div className="max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop">
           <div className="text-center mb-12">
-            <h2 className="font-headline-lg text-headline-lg text-on-surface">Sản phẩm nổi bật</h2>
-            <p className="text-on-surface-variant font-body-md text-body-md">Được yêu thích nhất trong tuần qua</p>
+            <h2 className="text-h2 text-text-primary">Sản phẩm nổi bật</h2>
+            <p className="text-text-secondary text-body">Được yêu thích nhất trong tuần qua</p>
           </div>
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="bg-surface rounded-3xl p-4 border border-outline-variant animate-pulse">
-                  <div className="aspect-square rounded-2xl bg-surface-container-high mb-4" />
-                  <div className="h-4 bg-surface-container-high rounded w-1/3 mb-2" />
-                  <div className="h-5 bg-surface-container-high rounded w-2/3 mb-2" />
-                  <div className="h-4 bg-surface-container-high rounded w-1/2" />
+                <div key={i} className="bg-card rounded-3xl p-4 border border-border animate-pulse">
+                  <div className="aspect-square rounded-2xl bg-background mb-4" />
+                  <div className="h-4 bg-background rounded w-1/3 mb-2" />
+                  <div className="h-5 bg-background rounded w-2/3 mb-2" />
+                  <div className="h-4 bg-background rounded w-1/2" />
                 </div>
               ))}
             </div>
@@ -261,8 +262,8 @@ export default function Home() {
       <section className="py-xl overflow-hidden">
         <div className="max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <div className="relative">
-            <div className="absolute -top-10 -left-10 w-40 h-40 bg-primary-fixed-dim rounded-full blur-3xl opacity-30"></div>
-            <div className="relative rounded-3xl overflow-hidden organic-shadow aspect-video">
+            <div className="absolute -top-10 -left-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl opacity-30"></div>
+            <div className="relative rounded-3xl overflow-hidden shadow-card aspect-video">
               <img
                 src="/images/farm2table-ecology.png"
                 alt="Nông trại"
@@ -271,33 +272,33 @@ export default function Home() {
             </div>
           </div>
           <div>
-            <h2 className="font-display-lg text-display-lg text-on-surface mb-6">Chợ Nông Sản - Vì Sức Khỏe Cộng Đồng</h2>
-            <p className="text-body-lg font-body-lg text-on-surface-variant mb-8">
+            <h2 className="text-h1 text-text-primary mb-6">Chợ Nông Sản - Vì Sức Khỏe Cộng Đồng</h2>
+            <p className="text-body-lg text-text-secondary mb-8">
               Chúng tôi ra đời với sứ mệnh xóa bỏ khoảng cách giữa người nông dân và người tiêu dùng. Bằng cách ứng dụng công nghệ vào chuỗi cung ứng, Chợ Nông Sản mang đến giải pháp mua sắm tiện lợi, minh bạch và an toàn nhất.
             </p>
             <ul className="space-y-4 mb-10">
               <li className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-primary">verified_user</span>
+                  <ShieldCheck size={20} className="text-primary" />
                 </div>
-                <span className="font-body-md text-body-md text-on-surface">Nguồn gốc xuất xứ rõ ràng (QR Code)</span>
+                <span className="text-body text-text-primary">Nguồn gốc xuất xứ rõ ràng (QR Code)</span>
               </li>
               <li className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-primary">local_shipping</span>
+                  <Truck size={20} className="text-primary" />
                 </div>
-                <span className="font-body-md text-body-md text-on-surface">Giao hàng nhanh trong vòng 2 giờ</span>
+                <span className="text-body text-text-primary">Giao hàng nhanh trong vòng 2 giờ</span>
               </li>
               <li className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-primary">payments</span>
+                  <CreditCard size={20} className="text-primary" />
                 </div>
-                <span className="font-body-md text-body-md text-on-surface">Giá cả cạnh tranh, không qua trung gian</span>
+                <span className="text-body text-text-primary">Giá cả cạnh tranh, không qua trung gian</span>
               </li>
             </ul>
             <button
               onClick={() => navigate('/about')}
-              className="px-8 py-4 bg-tertiary text-on-tertiary rounded-xl font-title-md text-title-md hover:opacity-90 transition-all active:scale-95"
+              className="px-8 py-4 bg-tertiary text-on-tertiary rounded-xl text-h3 hover:opacity-90 transition-all active:scale-95"
             >
               Khám phá câu chuyện của chúng tôi
             </button>
@@ -306,20 +307,20 @@ export default function Home() {
       </section>
 
       {/* Commitment Banners */}
-      <section className="bg-surface-container-low py-xl">
+      <section className="bg-background py-xl">
         <div className="max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop grid md:grid-cols-3 gap-lg">
           {[
-            { icon: 'verified_user', title: 'Nguồn gốc rõ ràng', desc: 'Quét mã theo dõi nguồn gốc sản phẩm.' },
-            { icon: 'eco', title: 'Canh tác bền vững', desc: 'Ưu tiên nông sản an toàn và theo mùa.' },
-            { icon: 'local_shipping', title: 'Giao hàng nhanh', desc: 'Miễn phí ship cho đơn hàng từ 500k.' },
+            { icon: <ShieldCheck size={24} />, title: 'Nguồn gốc rõ ràng', desc: 'Quét mã theo dõi nguồn gốc sản phẩm.' },
+            { icon: <Leaf size={24} />, title: 'Canh tác bền vững', desc: 'Ưu tiên nông sản an toàn và theo mùa.' },
+            { icon: <Truck size={24} />, title: 'Giao hàng nhanh', desc: 'Miễn phí ship cho đơn hàng từ 500k.' },
           ].map(item => (
-            <div key={item.title} className="flex items-start gap-4 bg-surface p-6 rounded-2xl organic-shadow border border-outline-variant/30">
-              <div className="w-12 h-12 rounded-xl bg-primary-fixed flex items-center justify-center text-primary flex-shrink-0">
-                <span className="material-symbols-outlined text-[24px]">{item.icon}</span>
+            <div key={item.title} className="flex items-start gap-4 bg-card p-6 rounded-2xl shadow-card border border-border/30">
+              <div className="w-12 h-12 rounded-xl bg-primary-light flex items-center justify-center text-primary flex-shrink-0">
+                {item.icon}
               </div>
               <div>
-                <h4 className="text-on-surface font-semibold text-title-md">{item.title}</h4>
-                <p className="text-on-surface-variant font-body-md text-body-md mt-1">{item.desc}</p>
+                <h4 className="text-text-primary font-semibold text-h3">{item.title}</h4>
+                <p className="text-text-secondary text-body mt-1">{item.desc}</p>
               </div>
             </div>
           ))}

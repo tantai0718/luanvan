@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../services/api';
+import { Download } from 'lucide-react';
 import { Badge, Btn, Loading, PageHero, Pagination, SearchBar, Table } from '../../components/ui/AdminUI';
 import * as XLSX from 'xlsx';
 
@@ -73,43 +74,43 @@ export default function AdminAccounts() {
     <div className="space-y-6">
       <PageHero eyebrow="Tài khoản" title="Quản lý tài khoản người dùng" body="Theo dõi tài khoản hiện có trên hệ thống, lọc theo vai trò và khóa hoặc mở khóa khi cần." />
 
-      <div className="bg-surface rounded-3xl p-lg border border-outline-variant organic-shadow">
+      <div className="bg-card rounded-card p-5 border border-border shadow-card">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <SearchBar value={search} onChange={v => { setSearch(v); setPage(1); }} placeholder="Tìm tên hoặc email..." />
-          <select value={role} onChange={e => { setRole(e.target.value); setPage(1); }} className="rounded-2xl border border-outline-variant bg-surface px-4 py-3 text-body-md focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-fixed">
+          <select value={role} onChange={e => { setRole(e.target.value); setPage(1); }} className="rounded-btn border border-border bg-card px-4 py-3 text-body focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-light">
             <option value="">Tất cả vai trò</option>
             <option value="quan_tri">Admin</option>
             <option value="nguoi_mua">Người mua</option>
           </select>
           <div className="ml-auto flex items-center gap-3">
             <Btn variant="outline" onClick={exportExcel} disabled={!accounts.length}>
-              <span className="material-symbols-outlined text-sm mr-1">download</span> Xuất Excel
+              <Download size={16} className="mr-1" /> Xuất Excel
             </Btn>
-            <span className="text-body-md text-on-surface-variant">Tổng tài khoản: <span className="font-bold text-on-surface">{total}</span></span>
+            <span className="text-body text-text-secondary">Tổng tài khoản: <span className="font-bold text-text-primary">{total}</span></span>
           </div>
         </div>
       </div>
 
-      {error && <div className="bg-surface rounded-3xl p-lg border border-outline-variant text-body-md text-on-error-container bg-error-container/20">{error}</div>}
+      {error && <div className="bg-card rounded-card p-5 border border-border text-body text-red-700 bg-red-50">{error}</div>}
 
       {loading ? <Loading /> : (
           <Table headers={['#', 'Họ tên', 'Email', 'Số điện thoại', 'Vai trò', 'Trạng thái', 'Hành động']} empty={{ icon: '👤', text: 'Không tìm thấy tài khoản nào.' }}>
           {accounts.map((account, index) => {
             const roleInfo = roleMap[account.vai_tro] || { label: account.vai_tro, color: 'gray' };
             return (
-              <tr key={account.ma_tai_khoan} className="hover:bg-surface-container-low">
-                <td className="px-4 py-3 text-label-sm text-on-surface-variant">{(page - 1) * limit + index + 1}</td>
+              <tr key={account.ma_tai_khoan} className="hover:bg-background">
+                <td className="px-4 py-3 text-caption text-text-secondary">{(page - 1) * limit + index + 1}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-fixed text-title-md font-bold text-on-primary-fixed-variant">{account.ho_ten?.charAt(0) || 'U'}</div>
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-light text-h3 font-bold text-primary">{account.ho_ten?.charAt(0) || 'U'}</div>
                     <div>
-                      <p className="text-title-md font-title-md text-on-surface">{account.ho_ten}</p>
-                      <p className="text-label-sm text-on-surface-variant">ID {account.ma_tai_khoan}</p>
+                      <p className="text-body font-semibold text-text-primary">{account.ho_ten}</p>
+                      <p className="text-caption text-text-secondary">ID {account.ma_tai_khoan}</p>
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-body-md text-on-surface-variant">{account.email}</td>
-                <td className="px-4 py-3 text-body-md text-on-surface-variant">{account.so_dien_thoai || 'Chưa cập nhật'}</td>
+                <td className="px-4 py-3 text-body text-text-secondary">{account.email}</td>
+                <td className="px-4 py-3 text-body text-text-secondary">{account.so_dien_thoai || 'Chưa cập nhật'}</td>
                 <td className="px-4 py-3"><Badge text={roleInfo.label} color={roleInfo.color} /></td>
                 <td className="px-4 py-3"><Badge text={account.con_hoat_dong ? 'Hoạt động' : 'Đã khóa'} color={account.con_hoat_dong ? 'green' : 'red'} /></td>
                 <td className="px-4 py-3"><Btn size="sm" variant={account.con_hoat_dong ? 'danger' : 'primary'} onClick={() => toggleActive(account.ma_tai_khoan, account.con_hoat_dong)}>{account.con_hoat_dong ? 'Khóa' : 'Mở khóa'}</Btn></td>

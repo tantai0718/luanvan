@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { notificationAPI } from '../../services/api';
+import { X, ImagePlus, Search } from 'lucide-react';
 import { Badge, Btn, Loading, Modal, PageHero, Table } from '../../components/ui/AdminUI';
 
 const SERVER = 'http://localhost:5000';
@@ -19,7 +20,7 @@ const formatDateTime = (value) => {
 };
 
 const LOAI_OPTIONS = [
-  { value: 'khuyen_mai', label: 'Khuyến mãi', color: 'amber' },
+  { value: 'khuyen_mai', label: 'Khuyến mãi', color: 'orange' },
   { value: 'he_thong', label: 'Hệ thống', color: 'gray' },
 ];
 
@@ -34,7 +35,6 @@ function resolveImage(hinh_anh) {
   return `${SERVER}${hinh_anh.startsWith('/') ? '' : '/upload/'}${hinh_anh}`;
 }
 
-// ── Modal thêm/sửa thông báo — chỉ còn Phân loại + Ảnh ──────────────
 function NotifFormModal({ initial, onSave, onClose, saving }) {
   const [tieuDe, setTieuDe] = useState(initial?.tieu_de || '');
   const [noiDung, setNoiDung] = useState(initial?.noi_dung || '');
@@ -71,28 +71,28 @@ function NotifFormModal({ initial, onSave, onClose, saving }) {
     <Modal title={initial ? 'Chỉnh sửa thông báo' : 'Thêm thông báo mới'} onClose={onClose}>
       <div className="space-y-4">
         <div>
-          <label className="mb-2 block text-body-md font-body-md text-on-surface-variant">Tiêu đề *</label>
+          <label className="mb-2 block text-body text-text-secondary">Tiêu đề *</label>
           <input
             value={tieuDe}
             onChange={e => setTieuDe(e.target.value)}
             placeholder="VD: Siêu ưu đãi tháng 7"
-            className="w-full rounded-2xl border border-outline-variant bg-surface px-4 py-3 text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary-fixed"
+            className="w-full rounded-btn border border-border bg-card px-4 py-3 text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
           />
         </div>
 
         <div>
-          <label className="mb-2 block text-body-md font-body-md text-on-surface-variant">Phân loại</label>
+          <label className="mb-2 block text-body text-text-secondary">Phân loại</label>
           <select
             value={loai}
             onChange={e => setLoai(e.target.value)}
-            className="w-full rounded-2xl border border-outline-variant bg-surface px-4 py-3 text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary-fixed"
+            className="w-full rounded-btn border border-border bg-card px-4 py-3 text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
           >
             {LOAI_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
 
         <div>
-          <label className="mb-2 block text-body-md font-body-md text-on-surface-variant">
+          <label className="mb-2 block text-body text-text-secondary">
             Nội dung <span className="font-normal">(tuỳ chọn)</span>
           </label>
           <textarea
@@ -100,40 +100,40 @@ function NotifFormModal({ initial, onSave, onClose, saving }) {
             value={noiDung}
             onChange={e => setNoiDung(e.target.value)}
             placeholder="Mô tả ngắn về chương trình khuyến mãi..."
-            className="w-full resize-none rounded-2xl border border-outline-variant bg-surface px-4 py-3 text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary-fixed"
+            className="w-full resize-none rounded-btn border border-border bg-card px-4 py-3 text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
           />
         </div>
 
         <div>
-          <label className="mb-2 block text-body-md font-body-md text-on-surface-variant">
+          <label className="mb-2 block text-body text-text-secondary">
             Ảnh thông báo <span className="font-normal">(tuỳ chọn)</span>
           </label>
           {preview ? (
-            <div className="relative overflow-hidden rounded-2xl border border-outline-variant">
+            <div className="relative overflow-hidden rounded-btn border border-border">
               <img src={preview} alt="preview" className="w-full object-cover" style={{ maxHeight: 260 }} />
               <button
                 type="button"
                 onClick={removeImage}
                 className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
               >
-                <span className="material-symbols-outlined text-base">close</span>
+                <X size={16} />
               </button>
             </div>
           ) : (
             <div
               onClick={() => fileRef.current?.click()}
-              className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-outline-variant bg-surface-container-low py-10 text-on-surface-variant transition-colors hover:border-primary hover:bg-primary-fixed/20"
+              className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-btn border-2 border-dashed border-border bg-background py-10 text-text-secondary transition-colors hover:border-primary hover:bg-primary-light/20"
             >
-              <span className="material-symbols-outlined text-4xl">add_photo_alternate</span>
-              <p className="text-body-md font-bold">Nhấn để chọn ảnh</p>
-              <p className="text-label-sm">PNG, JPG, WEBP — tối đa 5MB</p>
+              <ImagePlus size={32} className="text-text-secondary/40" />
+              <p className="text-body font-bold">Nhấn để chọn ảnh</p>
+              <p className="text-caption">PNG, JPG, WEBP — tối đa 5MB</p>
             </div>
           )}
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
         </div>
 
         {error && (
-          <div className="rounded-2xl border border-error-container bg-error-container/20 px-4 py-3 text-body-md text-on-error-container">
+          <div className="rounded-btn border border-red-200 bg-red-50 px-4 py-3 text-body text-red-700">
             {error}
           </div>
         )}
@@ -229,25 +229,25 @@ export default function AdminNotifications() {
           {globals.map((n) => {
             const img = resolveImage(n.hinh_anh);
             return (
-              <tr key={n.matb} className="hover:bg-surface-container-low">
-                <td className="px-4 py-3 text-title-md font-title-md text-on-surface max-w-[180px] truncate">
+              <tr key={n.matb} className="hover:bg-background">
+                <td className="px-4 py-3 text-body font-semibold text-text-primary max-w-[180px] truncate">
                   {n.tieu_de}
                 </td>
                 <td className="px-4 py-3">
                   {img ? (
-                    <img src={img} alt="thumb" className="h-14 w-20 rounded-xl object-cover border border-outline-variant" />
+                    <img src={img} alt="thumb" className="h-14 w-20 rounded-xl object-cover border border-border" />
                   ) : (
-                    <span className="text-label-sm text-on-surface-variant/50">Không có ảnh</span>
+                    <span className="text-caption text-text-secondary/50">Không có ảnh</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-body-md text-on-surface-variant max-w-[220px] truncate">
+                <td className="px-4 py-3 text-body text-text-secondary max-w-[220px] truncate">
                   {n.noi_dung || '—'}
                 </td>
                 <td className="px-4 py-3">{renderLoaiBadge(n.loai)}</td>
                 <td className="px-4 py-3">
                   <Badge text={n.kich_hoat ? 'Đang chạy' : 'Đã tắt'} color={n.kich_hoat ? 'green' : 'gray'} />
                 </td>
-               <td className="px-4 py-3 text-body-md text-on-surface-variant whitespace-nowrap">
+               <td className="px-4 py-3 text-body text-text-secondary whitespace-nowrap">
                     {formatDateTime(n.ngay_tao)}
                 </td> 
                 <td className="px-4 py-3">
@@ -268,14 +268,17 @@ export default function AdminNotifications() {
       {/* ── LỊCH SỬ THÔNG BÁO ĐƠN HÀNG ── */}
       <div className="space-y-3">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-1">
-          <p className="text-title-md font-title-md text-on-surface">Lịch sử thông báo tiến trình đơn hàng</p>
+          <p className="text-h3 text-text-primary">Lịch sử thông báo tiến trình đơn hàng</p>
           <div className="w-full sm:w-72">
-            <input
-              value={histQ}
-              onChange={(e) => { setHistQ(e.target.value); setHistPage(1); }}
-              placeholder="Tìm theo tiêu đề, tên, email..."
-              className="w-full bg-surface border border-outline-variant rounded-xl px-4 py-2 text-body-md focus:ring-2 focus:ring-primary outline-none"
-            />
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={18} />
+              <input
+                value={histQ}
+                onChange={(e) => { setHistQ(e.target.value); setHistPage(1); }}
+                placeholder="Tìm theo tiêu đề, tên, email..."
+                className="w-full bg-card border border-border rounded-btn pl-10 pr-4 py-2 text-body focus:ring-2 focus:ring-primary outline-none"
+              />
+            </div>
           </div>
         </div>
 
@@ -285,20 +288,20 @@ export default function AdminNotifications() {
             empty={{ icon: '📋', text: 'Không tìm thấy lịch sử thông báo phù hợp.' }}
           >
             {history.map((n) => (
-              <tr key={n.matb} className="hover:bg-surface-container-low">
+              <tr key={n.matb} className="hover:bg-background">
                 <td className="px-4 py-3">
-                  <p className="text-title-md font-title-md text-on-surface">{n.ho_ten}</p>
-                  <p className="text-label-sm text-on-surface-variant mt-0.5">{n.email}</p>
+                  <p className="text-body font-semibold text-text-primary">{n.ho_ten}</p>
+                  <p className="text-caption text-text-secondary mt-0.5">{n.email}</p>
                 </td>
                 <td className="px-4 py-3 max-w-[320px]">
-                  <p className="text-body-md font-bold text-on-surface truncate">{n.tieu_de}</p>
-                  <p className="text-body-md text-on-surface-variant truncate mt-0.5">{n.noi_dung}</p>
+                  <p className="text-body font-bold text-text-primary truncate">{n.tieu_de}</p>
+                  <p className="text-body text-text-secondary truncate mt-0.5">{n.noi_dung}</p>
                 </td>
                 <td className="px-4 py-3"><Badge text="Đơn hàng" color="green" /></td>
                 <td className="px-4 py-3">
-                  <Badge text={n.da_doc ? 'Đã đọc' : 'Chưa đọc'} color={n.da_doc ? 'gray' : 'amber'} />
+                  <Badge text={n.da_doc ? 'Đã đọc' : 'Chưa đọc'} color={n.da_doc ? 'gray' : 'orange'} />
                 </td>
-                <td className="px-4 py-3 text-body-md text-on-surface-variant whitespace-nowrap">
+                <td className="px-4 py-3 text-body text-text-secondary whitespace-nowrap">
                     {formatDateTime(n.ngay_tao)}
 </td>
               </tr>
@@ -312,7 +315,7 @@ export default function AdminNotifications() {
               <button
                 key={i}
                 onClick={() => setHistPage(i + 1)}
-                className={`h-8 w-8 rounded-lg text-label-sm font-bold transition-all ${histPage === i + 1 ? 'bg-primary text-white' : 'text-on-surface-variant hover:bg-surface-container-low'}`}
+                className={`h-8 w-8 rounded-btn text-caption font-bold transition-all ${histPage === i + 1 ? 'bg-primary text-white' : 'text-text-secondary hover:bg-background'}`}
               >
                 {i + 1}
               </button>
