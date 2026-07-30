@@ -377,7 +377,6 @@ export default function ProductDetail() {
             )}
           </aside>
         </section>
-
         {/* Pre-order & Subscription */}
         <section className="grid gap-xl lg:grid-cols-2 mt-8 md:mt-12 items-start">
           <div className="bg-card rounded-3xl p-5 md:p-xl border border-border shadow-card">

@@ -551,7 +551,6 @@ export function OrderDetail() {
             </div>
           </div>
         </div>
-
         {order.phuong_thuc_tt === "banking" && order.trang_thai !== "da_huy" && (
           <div className="bg-amber-50/60 border border-amber-200 rounded-2xl p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
