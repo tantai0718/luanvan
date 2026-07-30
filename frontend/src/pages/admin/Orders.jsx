@@ -30,6 +30,14 @@ const subscriptionStatusMap = {
 const frequencyMap = { hang_tuan: 'Hàng tuần', hai_tuan: '2 tuần / lần', hang_thang: 'Hàng tháng' };
 
 const formatCurrency = value => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
+const tinhTongTienMoiKy = (subscription) => {
+  const tienSanPham = Number(subscription.gia_tam_tinh || 0) * Number(subscription.so_luong || 0);
+  const coDonCoc = !!subscription.order_id && Number(subscription.order_tong_tien) > 0;
+  const phiVanChuyen = coDonCoc
+    ? Math.max(0, Number(subscription.order_tong_tien) - tienSanPham)
+    : (tienSanPham >= 500000 ? 0 : 30000);
+  return coDonCoc ? Number(subscription.order_tong_tien) : tienSanPham + phiVanChuyen;
+};
 
 const paymentMethodLabel = method => {
   if (method === 'tien_mat' || method === 'cod') return { label: 'Tiền mặt (COD)', color: 'orange' };
@@ -309,7 +317,7 @@ function SubscriptionDetailModal({ detail, subscriptionId, onClose, onDeliver, i
             </div>
             <div className="flex justify-between pt-4 border-t border-slate-200 text-slate-900 font-black items-baseline">
               <span className="text-lg uppercase tracking-wider">Giá mỗi kỳ:</span>
-              <span className="text-3xl font-black text-primary tracking-tight">{formatCurrency(detail.gia_tam_tinh * detail.so_luong)}</span>
+              <span className="text-3xl font-black text-primary tracking-tight">{formatCurrency(tinhTongTienMoiKy(detail))}</span>
             </div>
           </div>
         </div>
@@ -572,7 +580,7 @@ const exportExcel = async () => {
         'Khách hàng': s.ten_nguoi_mua,
         'Số lượng/kỳ': s.so_luong,
         'Tần suất': frequencyMap[s.tan_suat_giao] || s.tan_suat_giao,
-        'Giá/kỳ': Number(s.gia_tam_tinh || 0) * Number(s.so_luong || 0),
+        'Giá/kỳ': tinhTongTienMoiKy(s),
         'Đã giao': `${s.so_ky_da_giao || 0}/${s.so_ky_giao || 0}`,
         'Trạng thái': (subscriptionStatusMap[s.trang_thai] || {}).label || s.trang_thai,
         'Kỳ tiếp theo': s.ngay_giao_tiep_theo ? new Date(s.ngay_giao_tiep_theo).toLocaleDateString('vi-VN') : '',
@@ -899,7 +907,7 @@ const exportExcel = async () => {
                               <Badge text={subStatus.label} color={subStatus.color} />
                             </div>
                             <p className="mt-2 text-body text-text-secondary">{subscription.ten_nguoi_mua} · {subscription.so_luong} {subscription.don_vi} / kỳ · {frequencyMap[subscription.tan_suat_giao] || subscription.tan_suat_giao}</p>
-                            <p className="mt-1 text-body font-bold text-primary">{formatCurrency(subscription.gia_tam_tinh * subscription.so_luong)} / kỳ{subscription.so_luong >= 10 && <span className="ml-2 text-caption font-normal text-text-secondary line-through">{formatCurrency(subscription.product?.price * subscription.so_luong)}</span>}</p>
+                            <p className="mt-1 text-body font-bold text-primary">{formatCurrency(tinhTongTienMoiKy(subscription))} / kỳ{subscription.so_luong >= 10 && <span className="ml-2 text-caption font-normal text-text-secondary line-through">{formatCurrency(subscription.product?.price * subscription.so_luong)}</span>}</p>
                             <p className="mt-1 text-body font-bold text-primary">Đã giao {Number(subscription.so_ky_da_giao || 0)} / {Number(subscription.so_ky_giao || 0)} kỳ</p>
                             <p className="mt-1 text-body text-text-secondary">Kỳ tiếp theo: {new Date(subscription.ngay_giao_tiep_theo).toLocaleDateString('vi-VN')}</p>
                           </div>

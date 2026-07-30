@@ -30,7 +30,11 @@ function BannerCard({ banner, busy, isFirst, isLast, onReplace, onToggle, onDele
   return (
     <div className="bg-card rounded-card border border-border shadow-card overflow-hidden">
       <div className="relative">
-        <img src={banner.image} alt={`Banner ${banner.order}`} className="aspect-[16/7] w-full object-cover" />
+        <img
+        src={banner.image.startsWith('http') ? banner.image : `http://localhost:5000/upload/${banner.image}`}
+        alt={`Banner ${banner.order}`}
+        className="aspect-[16/7] w-full object-cover"
+      />
         <div className="absolute left-4 top-4"><Badge text={banner.active ? 'Đang chạy' : 'Đã tắt'} color={banner.active ? 'green' : 'gray'} /></div>
       </div>
       <div className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">

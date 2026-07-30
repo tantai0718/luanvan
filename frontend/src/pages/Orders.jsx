@@ -38,6 +38,15 @@ const formatCurrency = (value) => `${Number(value || 0).toLocaleString("vi-VN")}
 const canCancelOrder = (status) => ["cho_xac_nhan", "da_xac_nhan"].includes(status);
 const hasDeposit = (order) => (order?.tien_coc || 0) > 0;
 
+const tinhTongTienMoiKy = (subscription) => {
+  const tienSanPham = Number(subscription.gia_tam_tinh || 0) * Number(subscription.so_luong || 0);
+  const coDonCoc = !!subscription.order_id && Number(subscription.order_tong_tien) > 0;
+  const phiVanChuyen = coDonCoc
+    ? Math.max(0, Number(subscription.order_tong_tien) - tienSanPham)
+    : tienSanPham >= 500000 ? 0 : 30000;
+  return coDonCoc ? Number(subscription.order_tong_tien) : tienSanPham + phiVanChuyen;
+};
+
 // --- COMPONENT ORDERLIST ---
 export function OrderList() {
   const [activeTab, setActiveTab] = useState("orders");
@@ -228,20 +237,22 @@ export function OrderList() {
                         </div>
 
                         <div className="mt-5 pt-4 border-t border-border flex items-center justify-between">
-                          <div>
-                            <span className="text-sm font-normal text-text-secondary block">Giá mỗi kỳ</span>
-                            <span className="text-2xl font-semibold text-primary">{formatCurrency(subscription.gia_tam_tinh * subscription.so_luong)}</span>
-                          </div>
-                          {["dang_hoat_dong", "tam_dung"].includes(subscription.trang_thai) && (
-                            <button
-                              onClick={(e) => handleCancelSubscription(e, subscription.ma_dang_ky)}
-                              disabled={cancelingSubscriptionId === subscription.ma_dang_ky}
-                              className="text-sm font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 px-4 py-2.5 rounded-xl transition disabled:opacity-50"
-                            >
-                              {cancelingSubscriptionId === subscription.ma_dang_ky ? "Đang xử lý..." : "Hủy đăng ký"}
-                            </button>
-                          )}
+                        <div>
+                          <span className="text-sm font-normal text-text-secondary block">Giá mỗi kỳ</span>
+                          <span className="text-2xl font-semibold text-primary">
+                            {formatCurrency(tinhTongTienMoiKy(subscription))}
+                          </span>
                         </div>
+                        {["dang_hoat_dong", "tam_dung"].includes(subscription.trang_thai) && (
+                          <button
+                            onClick={(e) => handleCancelSubscription(e, subscription.ma_dang_ky)}
+                            disabled={cancelingSubscriptionId === subscription.ma_dang_ky}
+                            className="text-sm font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 px-4 py-2.5 rounded-xl transition disabled:opacity-50"
+                          >
+                            {cancelingSubscriptionId === subscription.ma_dang_ky ? "Đang xử lý..." : "Hủy đăng ký"}
+                          </button>
+                        )}
+                      </div>
                       </Link>
                     );
                   })
@@ -699,6 +710,16 @@ export function SubscriptionDetail() {
   const progressPercent = soKyGiao > 0 ? Math.min(100, (soKyDaGiao / soKyGiao) * 100) : 0;
   const giaMoiKy = Number(subscription.gia_tam_tinh || 0) * Number(subscription.so_luong || 0);
 
+  const tienSanPham = giaMoiKy;
+  const donGiaGoc = Number(subscription.product?.price || 0);
+  const giamGiaMoiKy = Math.max(0, (donGiaGoc - Number(subscription.gia_tam_tinh || 0)) * Number(subscription.so_luong || 0));
+  const tienTamTinh = tienSanPham + giamGiaMoiKy;
+  const coDonCoc = !!subscription.order_id && Number(subscription.order_tong_tien) > 0;
+  const phiVanChuyen = coDonCoc
+    ? Math.max(0, Number(subscription.order_tong_tien) - tienSanPham)
+    : (tienSanPham >= 500000 ? 0 : 30000);
+  const tongTienMoiKy = coDonCoc ? Number(subscription.order_tong_tien) : tienSanPham + phiVanChuyen;
+
   const imageUrl = subscription.hinh_san_pham
     ? subscription.hinh_san_pham.startsWith("/upload/")
       ? `http://localhost:5000${subscription.hinh_san_pham}`
@@ -723,7 +744,7 @@ export function SubscriptionDetail() {
             </div>
             <div className="text-left sm:text-right shrink-0">
               <span className="text-sm font-normal text-text-secondary block">Giá mỗi kỳ</span>
-              <span className="text-3xl font-semibold text-primary">{formatCurrency(giaMoiKy)}</span>
+              <span className="text-3xl font-semibold text-primary">{formatCurrency(tongTienMoiKy)}</span>
             </div>
           </div>
 
@@ -747,30 +768,51 @@ export function SubscriptionDetail() {
         </div>
 
         <div className="bg-white rounded-2xl border border-border p-6 shadow-sm space-y-4">
-          <h2 className="text-base font-bold uppercase tracking-wide text-text-secondary">Sản phẩm đăng ký</h2>
-          <div className="flex items-center gap-4">
-            <img
-              src={imageUrl}
-              alt={subscription.ten_san_pham}
-              className="h-20 w-20 rounded-xl object-cover bg-background border border-border shrink-0"
-            />
-            <div className="flex-1 min-w-0">
-              <h4 className="font-semibold text-text-primary text-lg truncate">{subscription.ten_san_pham}</h4>
-              <p className="text-base text-text-secondary mt-1">
-                {subscription.so_luong} {subscription.don_vi} / kỳ ×{" "}
-                <span className="text-text-primary font-semibold">
-                  {formatCurrency(subscription.gia_tam_tinh)}
-                </span>
-              </p>
-              <p className="mt-1 text-sm text-text-secondary">
-                Tần suất giao: <span className="font-semibold text-text-primary">
-                  {frequencyMap[subscription.tan_suat_giao] || subscription.tan_suat_giao}
-                </span>
-              </p>
+          <h2 className="text-base font-bold uppercase tracking-wide text-text-secondary">Danh sách nông sản</h2>
+          <div className="divide-y divide-border">
+            <div className="flex items-center gap-4 py-3 first:pt-0 last:pb-0">
+              <img
+                src={imageUrl}
+                alt={subscription.ten_san_pham}
+                className="h-16 w-16 rounded-xl object-cover bg-background border border-border shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <h4 className="font-semibold text-text-primary text-base sm:text-lg truncate">{subscription.ten_san_pham}</h4>
+                <p className="text-sm sm:text-base text-text-secondary mt-1">
+                  {subscription.so_luong} {subscription.don_vi} × <span className="text-text-primary font-semibold">{formatCurrency(donGiaGoc)}</span>
+                </p>
+                <p className="mt-0.5 text-sm text-text-secondary">
+                  Tần suất giao: <span className="font-semibold text-text-primary">{frequencyMap[subscription.tan_suat_giao] || subscription.tan_suat_giao}</span>
+                </p>
+              </div>
+              <span className="font-semibold text-text-primary text-base sm:text-lg shrink-0">{formatCurrency(tienTamTinh)}</span>
             </div>
-            <span className="font-semibold text-text-primary text-lg shrink-0">{formatCurrency(giaMoiKy)}</span>
           </div>
         </div>
+        <div className="bg-white rounded-2xl border border-border p-5 shadow-sm space-y-4 text-[17px]">
+        <div className="flex justify-between text-text-secondary">
+          <span className="font-semibold text-text-secondary">Tiền tạm tính</span>
+          <span className="font-medium text-text-primary">{formatCurrency(tienTamTinh)}</span>
+        </div>
+        {giamGiaMoiKy > 0 && (
+          <div className="flex justify-between text-rose-600">
+            <span className="font-semibold">Khuyến mãi</span>
+            <span className="font-medium">-{formatCurrency(giamGiaMoiKy)}</span>
+          </div>
+        )}
+        <div className="flex justify-between text-text-secondary">
+          <span className="font-semibold text-text-secondary">Phí vận chuyển</span>
+          <span className="font-medium text-text-primary">
+            {phiVanChuyen > 0 ? formatCurrency(phiVanChuyen) : "Miễn phí"}
+          </span>
+        </div>
+        <div className="flex justify-between border-t border-border pt-4 text-[18px]">
+          <span className="font-bold text-text-primary">Tổng tiền mỗi kỳ</span>
+          <span className="text-2xl text-primary font-bold">{formatCurrency(tongTienMoiKy)}</span>
+        </div>
+      </div>
+
+        <div className="grid gap-4 md:grid-cols-2"></div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="bg-white rounded-2xl border border-border p-5 shadow-sm">

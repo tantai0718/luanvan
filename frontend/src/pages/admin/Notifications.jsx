@@ -126,7 +126,7 @@ function NotifFormModal({ initial, onSave, onClose, saving }) {
             >
               <ImagePlus size={32} className="text-text-secondary/40" />
               <p className="text-body font-bold">Nhấn để chọn ảnh</p>
-              <p className="text-caption">PNG, JPG, WEBP — tối đa 5MB</p>
+              <p className="text-caption">PNG, JPG, WEBP </p>
             </div>
           )}
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />

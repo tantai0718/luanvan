@@ -1,5 +1,6 @@
 const db = require("../config/db");
 const promotionModel = require("./promotionModel");
+const subscriptionModel = require("./subscriptionModel");
 
 async function tinhUuDaiTuDong(tongTien, tongSoLuong, loai_don) {
   return await promotionModel.tinhUuDaiTuDong(tongTien, tongSoLuong, loai_don);
@@ -200,6 +201,17 @@ async function createPreorder({
      [madh, tong_tien, mapPaymentMethod(phuong_thuc), isBanking ? "cho_thanh_toan" : "da_thanh_toan"],
   );
 
+  const [dkResult] = await db.query(
+    `INSERT INTO dang_ky_san_pham
+      (mand, masp, loai_dang_ky, so_luong, gia_du_kien, chu_ky,
+       dia_chi_giao, phuong_thuc_tt, ngay_bat_dau, ngay_giao_tiep_theo,
+       so_lan_giao, so_lan_da_giao, trang_thai, ghi_chu)
+     VALUES (?, ?, 'dat_truoc', ?, ?, NULL, ?, ?, NOW(),
+       (SELECT ngay_giao_du_kien FROM don_hang WHERE madh = ?), 1, 0, 'dang_hoat_dong', ?)`,
+    [mand, masp, so_luong, gia_ban, dia_chi_giao, phuong_thuc, madh, ghi_chu || null],
+  );
+  await db.query("UPDATE don_hang SET madk = ? WHERE madh = ?", [dkResult.insertId, madh]);
+
   return { madh, tong_tien, tien_coc: actualDeposit };
 }
 
@@ -245,7 +257,7 @@ async function getOrderById(madh, mand = null) {
 
 async function cancelOrder(madh, mand) {
   const [[dh]] = await db.query(
-    "SELECT trang_thai FROM don_hang WHERE madh = ? AND mand = ?",
+    "SELECT trang_thai, madk, loai_don_hang FROM don_hang WHERE madh = ? AND mand = ?",
     [madh, mand],
   );
   if (!dh) throw new Error("Khong tim thay don hang.");
@@ -268,6 +280,12 @@ async function cancelOrder(madh, mand) {
     "UPDATE thanh_toan SET trang_thai = 'that_bai' WHERE madh = ?",
     [madh],
   );
+  if (dh.loai_don_hang === 'dat_truoc' && dh.madk) {
+    await db.query(
+      `UPDATE dang_ky_san_pham SET trang_thai = 'da_huy', ngay_ket_thuc = NOW() WHERE madk = ?`,
+      [dh.madk],
+    );
+  }
 }
 
 const STATUS_MESSAGES = {
@@ -299,7 +317,7 @@ async function updateOrderStatus(madh, trang_thai) {
   ];
   if (!valid.includes(trang_thai)) throw new Error("Trang thai khong hop le.");
 
-  const [[dh]] = await db.query("SELECT mand FROM don_hang WHERE madh = ?", [madh]);
+  const [[dh]] = await db.query("SELECT mand, madk, loai_don_hang FROM don_hang WHERE madh = ?", [madh]);
 
   await db.query("UPDATE don_hang SET trang_thai = ? WHERE madh = ?", [
     trang_thai,
@@ -313,6 +331,22 @@ async function updateOrderStatus(madh, trang_thai) {
        WHERE madh=?`,
       [madh],
     );
+  }
+
+  if (dh && dh.loai_don_hang === 'dat_truoc' && dh.madk) {
+    if (trang_thai === 'da_giao') {
+      await db.query(
+        `UPDATE dang_ky_san_pham
+         SET so_lan_da_giao = 1, trang_thai = 'hoan_thanh', ngay_ket_thuc = NOW()
+         WHERE madk = ?`,
+        [dh.madk],
+      );
+    } else if (trang_thai === 'da_huy') {
+      await db.query(
+        `UPDATE dang_ky_san_pham SET trang_thai = 'da_huy', ngay_ket_thuc = NOW() WHERE madk = ?`,
+        [dh.madk],
+      );
+    }
   }
 
   if (dh && STATUS_MESSAGES[trang_thai]) {

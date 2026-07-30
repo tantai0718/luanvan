@@ -25,7 +25,7 @@ const saveDataUrlImage = async (
   const fileName = `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}.${ext}`;
   await fs.mkdir(uploadDir, { recursive: true });
   await fs.writeFile(path.join(uploadDir, fileName), buffer);
-  return `${apiBaseUrl()}/upload/${folder}/${fileName}`;
+  return `${folder}/${fileName}`; 
 };
 
 const normalizeStoredProductImages = async (values) => {

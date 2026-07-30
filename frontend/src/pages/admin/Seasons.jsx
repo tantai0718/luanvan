@@ -14,23 +14,53 @@ function SeasonProductsModal({ season, products, allProducts, loading, form, set
       <div className="space-y-6">
         <div className="bg-background rounded-btn p-4 space-y-3">
           <p className="text-body font-semibold text-text-primary">Gắn sản phẩm mới vào mùa này</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <select
-              value={form.masp}
-              onChange={e => setForm({ ...form, masp: e.target.value })}
-              className="bg-card border border-border rounded-btn px-4 py-2.5 text-body focus:ring-2 focus:ring-primary outline-none"
-            >
-              <option value="">-- Chọn sản phẩm --</option>
-              {selectableProducts.map(p => (
-                <option key={p.ma_san_pham} value={p.ma_san_pham}>{p.ten_san_pham}</option>
-              ))}
-            </select>
-            <Input placeholder="Số lượng dự kiến" type="number" value={form.so_luong_du_kien} onChange={e => setForm({ ...form, so_luong_du_kien: e.target.value })} />
-            <Input placeholder="Giá dự kiến (đ)" type="number" value={form.gia_du_kien} onChange={e => setForm({ ...form, gia_du_kien: e.target.value })} />
-            <Input placeholder="Ghi chú" value={form.ghi_chu} onChange={e => setForm({ ...form, ghi_chu: e.target.value })} />
-            <Input placeholder="HSD điều chỉnh (ngày)" type="date" value={form.han_su_dung_dieu_chinh ? form.han_su_dung_dieu_chinh.slice(0, 10) : ''} onChange={e => setForm({ ...form, han_su_dung_dieu_chinh: e.target.value || '' })} />
+          
+          <div className="space-y-3">
+            {/* Hàng 1: Chọn sản phẩm - Số lượng dự kiến - Giá dự kiến */}
+            <div className="grid gap-3 md:grid-cols-3">
+              <select
+                value={form.masp}
+                onChange={e => setForm({ ...form, masp: e.target.value })}
+                className="bg-card border border-border rounded-btn px-4 py-2.5 text-body focus:ring-2 focus:ring-primary outline-none w-full"
+              >
+                <option value="">-- Chọn sản phẩm --</option>
+                {selectableProducts.map(p => (
+                  <option key={p.ma_san_pham} value={p.ma_san_pham}>{p.ten_san_pham}</option>
+                ))}
+              </select>
+              <Input 
+                placeholder="Số lượng dự kiến" 
+                type="number" 
+                value={form.so_luong_du_kien} 
+                onChange={e => setForm({ ...form, so_luong_du_kien: e.target.value })} 
+              />
+              <Input 
+                placeholder="Giá dự kiến (đ)" 
+                type="number" 
+                value={form.gia_du_kien} 
+                onChange={e => setForm({ ...form, gia_du_kien: e.target.value })} 
+              />
+            </div>
+
+            {/* Hàng 2: Ghi chú - HSD điều chỉnh */}
+            <div className="grid gap-3 md:grid-cols-3">
+              <Input 
+                placeholder="Ghi chú" 
+                value={form.ghi_chu} 
+                onChange={e => setForm({ ...form, ghi_chu: e.target.value })} 
+              />
+              <Input 
+                placeholder="HSD điều chỉnh (ngày)" 
+                type="date" 
+                value={form.han_su_dung_dieu_chinh ? form.han_su_dung_dieu_chinh.slice(0, 10) : ''} 
+                onChange={e => setForm({ ...form, han_su_dung_dieu_chinh: e.target.value || '' })} 
+              />
+            </div>
           </div>
-          <Btn onClick={onAdd} disabled={saving || !form.masp}>{saving ? 'Đang lưu...' : '+ Gắn sản phẩm'}</Btn>
+
+          <Btn onClick={onAdd} disabled={saving || !form.masp}>
+            {saving ? 'Đang lưu...' : '+ Gắn sản phẩm'}
+          </Btn>
         </div>
 
         {loading ? <Loading /> : (

@@ -354,7 +354,7 @@ export default function AdminProducts() {
         <StatCard icon={<AlertTriangle size={20} />} label="Hết hàng" value={summary.outOfStock} color="orange" />
       </div>
       {loading ? <Loading /> : products.length ? (
-        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {products.map(product => <ProductCard key={product.ma_san_pham} product={product} onEdit={handleEdit} onToggle={toggleProduct} onDelete={deleteProduct} />)}
         </div>
       ) : (

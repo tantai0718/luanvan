@@ -9,6 +9,7 @@ const links = [
   { to: '/', label: 'Trang chủ', icon: Home },
   { to: '/products', label: 'Sản phẩm', icon: Package },
   { to: '/articles', label: 'Bài viết', icon: FileText },
+  { to: '/about', label: 'Về chúng tôi', icon: ChevronDown },
 ];
 
 const loaiLabelMap = {

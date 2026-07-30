@@ -93,11 +93,16 @@ export default function Home() {
       setCategories(list.filter(c => c.loai === 'san_pham'));
     }).catch(() => { });
     bannerAPI.getAll()
-      .then(d => {
-        const slides = (d.banners || []).filter(b => b.image).map(b => ({ src: b.image, alt: b.title || 'Banner' }));
-        setHeroSlides(slides.length ? slides : fallbackHeroSlides);
-      })
-      .catch(() => { });
+  .then(d => {
+    const slides = (d.banners || [])
+      .filter(b => b.image)
+      .map(b => ({
+        src: b.image.startsWith('http') ? b.image : `http://localhost:5000/upload/${b.image}`,
+        alt: b.title || 'Banner',
+      }));
+    setHeroSlides(slides.length ? slides : fallbackHeroSlides);
+  })
+  .catch(() => { });
     productAPI.getAll('?limit=4&sort=moi_nhat')
       .then(d => setProducts(d.products || []))
       .catch(() => { })

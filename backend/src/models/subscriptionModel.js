@@ -1,4 +1,5 @@
 const db = require("../config/db");
+const promotionModel = require("./promotionModel");
 
 async function ensureSubscriptionTable() {
   await db.query(`
@@ -196,7 +197,65 @@ async function deliverSubscription(madk) {
     ],
   );
 
+  await createDeliveryOrder(current, newDelivered);
+
   return getSubscriptionById(madk);
+}
+
+async function createDeliveryOrder(subscription, kyThu) {
+  const soLuong = Number(subscription.so_luong || 0);
+  const donGia = Number(subscription.gia_du_kien || subscription.gia_ban || 0);
+  const tongHang = donGia * soLuong;
+
+  const { tienGiam, mienPhiShip } = await promotionModel.tinhUuDaiTuDong(
+    tongHang,
+    soLuong,
+    'dinh_ky',
+  );
+
+  const phiShip = mienPhiShip ? 0 : 30000;
+  const tongTien = tongHang - tienGiam + phiShip;
+
+  const [[sp]] = await db.query(
+    `SELECT han_su_dung FROM san_pham WHERE masp = ?`,
+    [subscription.masp],
+  );
+
+  const [dhResult] = await db.query(
+    `INSERT INTO don_hang
+      (mand, madk, tien_giam, ten_nguoi_nhan, email_nguoi_nhan, sdt_nguoi_nhan,
+       loai_don_hang, tong_tien, tong_da_thanh_toan, trang_thai,
+       trang_thai_thanh_toan, dia_chi_giao, ghi_chu, ngay_dat,
+       ngay_giao_du_kien, ngay_giao_thuc_te)
+     VALUES (?, ?, ?, ?, ?, ?, 'dinh_ky', ?, ?, 'da_giao', 'da_thanh_toan', ?, ?, NOW(), NOW(), NOW())`,
+    [
+      subscription.mand,
+      subscription.madk,
+      tienGiam,
+      subscription.ho_ten || '',
+      subscription.email || '',
+      subscription.sdt || '',
+      tongTien,
+      tongTien,
+      subscription.dia_chi_giao,
+      `Giao kỳ ${kyThu}/${subscription.so_lan_giao} - ${subscription.ten_san_pham}`,
+    ],
+  );
+  const madh = dhResult.insertId;
+
+  await db.query(
+    `INSERT INTO chi_tiet_don_hang (madh, masp, so_luong, don_gia, thanh_tien, han_su_dung_luc_ban)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [madh, subscription.masp, soLuong, donGia, tongHang, sp?.han_su_dung || null],
+  );
+
+  await db.query(
+    `INSERT INTO thanh_toan (madh, so_tien, phuong_thuc, trang_thai, ngay_thanh_toan)
+     VALUES (?, ?, ?, 'da_thanh_toan', NOW())`,
+    [madh, tongTien, subscription.phuong_thuc_tt === 'banking' ? 'banking' : 'tien_mat'],
+  );
+
+  return madh;
 }
 
 async function getSubscriptionSummary() {

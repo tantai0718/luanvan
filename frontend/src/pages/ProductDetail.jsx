@@ -262,9 +262,9 @@ export default function ProductDetail() {
         </nav>
 
         {/* Product Main Section */}
-        <section className="grid gap-xl lg:grid-cols-12">
-          {/* Gallery */}
-          <div className="lg:col-span-7">
+        <section className="grid gap-8 lg:gap-12 lg:grid-cols-12 items-start">
+          {/* Gallery - Đổi từ col-span-7 thành col-span-6 */}
+          <div className="lg:col-span-6">
             <div className="lg:sticky lg:top-28 space-y-4">
               <div
                 className="rounded-3xl overflow-hidden bg-background cursor-pointer shadow-card aspect-square"
@@ -294,8 +294,8 @@ export default function ProductDetail() {
             </div>
           </div>
 
-          {/* Product Info */}
-          <aside className="lg:col-span-5">
+          {/* Product Info - Đổi từ col-span-5 thành col-span-6 */}
+          <aside className="lg:col-span-6">
             <div className="inline-flex items-center gap-2 rounded-full bg-primary-light px-3 py-1 text-primary text-caption">
               <ShieldCheck size={14} />
               Nguồn hàng chọn lọc
@@ -318,9 +318,25 @@ export default function ProductDetail() {
 
             {/* Meta */}
             <div className="space-y-3 py-lg border-y border-border text-body text-text-secondary mb-lg">
+              <div className="space-y-3 py-lg border-y border-border text-body text-text-secondary mb-lg">
               <div className="flex justify-between"><span>Nguồn hàng</span><strong className="text-text-primary">{product.ten_nong_trai || 'Farm2Table'}</strong></div>
               <div className="flex justify-between"><span>Khu vực</span><strong className="text-text-primary">{product.tinh_thanh || 'Toàn quốc'}</strong></div>
               <div className="flex justify-between"><span>Tồn kho</span><strong className="text-text-primary">{stock > 0 ? `${stock} ${product.don_vi}` : 'Tạm hết'}</strong></div>
+              {product.han_su_dung && (
+                <div className="flex justify-between">
+                  <span>Hạn sử dụng</span>
+                  <strong className={
+                    product.trang_thai_hsd === 'het_han' ? 'text-rose-600' :
+                    product.trang_thai_hsd === 'can_han' ? 'text-amber-600' :
+                    'text-text-primary'
+                  }>
+                    {new Date(product.han_su_dung).toLocaleDateString('vi-VN')}
+                    {product.trang_thai_hsd === 'can_han' && ' (Sắp hết hạn)'}
+                    {product.trang_thai_hsd === 'het_han' && ' (Đã hết hạn)'}
+                  </strong>
+                </div>
+              )}
+            </div>
             </div>
 
             {/* Quantity */}
@@ -363,11 +379,13 @@ export default function ProductDetail() {
         </section>
 
         {/* Pre-order & Subscription */}
-        <section className="grid gap-xl lg:grid-cols-2">
+        <section className="grid gap-xl lg:grid-cols-2 mt-8 md:mt-12 items-start">
           <div className="bg-card rounded-3xl p-5 md:p-xl border border-border shadow-card">
             <h2 className="text-h3 text-text-primary mb-lg">Đặt trước sản phẩm</h2>
             <form onSubmit={handlePreorder} className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
+              
+              {/* Ép buộc Số lượng và Ngày nhận luôn ở trên 1 hàng với grid-cols-2 */}
+              <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[12px] font-medium text-text-secondary">Số lượng ({product.don_vi})</label>
                   <input type="number" min="1" value={preorderForm.quantity} onChange={e => setPreorderForm({ ...preorderForm, quantity: Number(e.target.value) || 1 })} className="bg-card border border-border rounded-xl px-4 py-3 text-body focus:ring-2 focus:ring-primary focus:border-primary outline-none" placeholder={`Số lượng (${product.don_vi})`} />
@@ -377,15 +395,19 @@ export default function ProductDetail() {
                   <input type="date" value={preorderForm.ngay_giao_du_kien} onChange={e => setPreorderForm({ ...preorderForm, ngay_giao_du_kien: e.target.value })} min={new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0]} max={new Date(Date.now() + 60 * 86400000).toISOString().split('T')[0]} className="bg-card border border-border rounded-xl px-4 py-3 text-body focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
                 </div>
               </div>
+              
               <p className="text-[12px] font-medium text-text-secondary">Chọn trong khoảng 3–60 ngày tới. Nếu không chọn, hệ thống sẽ tự đặt ngày giao dự kiến sau 7 ngày.</p>
+              
               <div className="flex flex-col gap-1.5">
                 <label className="text-[12px] font-medium text-text-secondary">Địa chỉ giao hàng</label>
                 <textarea rows={3} value={preorderForm.dia_chi_giao} onChange={e => setPreorderForm({ ...preorderForm, dia_chi_giao: e.target.value })} placeholder="Ví dụ: 12 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP.HCM" className="bg-card border border-border rounded-xl w-full resize-none px-4 py-3 text-body focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
               </div>
+              
               <div className="flex flex-col gap-1.5">
                 <label className="text-[12px] font-medium text-text-secondary">Ghi chú (không bắt buộc)</label>
                 <input value={preorderForm.ghi_chu} onChange={e => setPreorderForm({ ...preorderForm, ghi_chu: e.target.value })} placeholder="Ví dụ: giao giờ hành chính, gọi trước khi giao..." className="bg-card border border-border rounded-xl px-4 py-3 text-body w-full focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
               </div>
+              
               <div className="flex flex-col gap-1.5">
                 <label className="text-[12px] font-medium text-text-secondary">Phương thức thanh toán</label>
                 <select value={preorderForm.phuong_thuc_tt} onChange={e => setPreorderForm({ ...preorderForm, phuong_thuc_tt: e.target.value })} className="bg-card border border-border rounded-xl px-4 py-3 text-body focus:ring-2 focus:ring-primary focus:border-primary outline-none">
@@ -393,6 +415,7 @@ export default function ProductDetail() {
                   <option value="banking">🏦 Chuyển khoản ngân hàng (Sepay QR)</option>
                 </select>
               </div>
+              
               {preorderForm.phuong_thuc_tt === 'banking' && (
                 <div className="bg-primary-light/20 rounded-xl p-4 space-y-3">
                   <p className="text-[12px] font-medium text-text-secondary">Hình thức thanh toán</p>
@@ -440,22 +463,37 @@ export default function ProductDetail() {
                   })()}
                 </div>
               )}
+              
               {preorderMessage && <p className="text-body text-text-secondary">{preorderMessage}</p>}
-              <button disabled={savingPreorder} className="w-full bg-secondary text-on-secondary rounded-xl px-5 py-3 font-bold transition-all active:scale-95">{savingPreorder ? 'Đang tạo...' : 'Đặt trước'}</button>
+              
+              <button disabled={savingPreorder} className="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-xl px-5 py-3 font-bold transition-all active:scale-95">
+                {savingPreorder ? 'Đang tạo...' : 'Đặt trước'}
+              </button>
             </form>
           </div>
 
           <div className="bg-card rounded-3xl p-5 md:p-xl border border-border shadow-card">
             <h2 className="text-h3 text-text-primary mb-lg">Giao định kỳ</h2>
             <form onSubmit={handleSubscription} className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid grid-cols-3 gap-3 sm:gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[12px] font-medium text-text-secondary">Số lượng / lần giao</label>
-                  <input type="number" min="1" value={subscriptionForm.quantity} onChange={e => setSubscriptionForm({ ...subscriptionForm, quantity: Number(e.target.value) || 1 })} placeholder={`Số lượng (${product.don_vi})`} className="bg-card border border-border rounded-xl px-4 py-3 text-body focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+                  <input 
+                    type="number" 
+                    min="1" 
+                    value={subscriptionForm.quantity} 
+                    onChange={e => setSubscriptionForm({ ...subscriptionForm, quantity: Number(e.target.value) || 1 })} 
+                    placeholder={`Số lượng (${product.don_vi})`} 
+                    className="bg-card border border-border rounded-xl px-3 sm:px-4 py-3 text-body focus:ring-2 focus:ring-primary focus:border-primary outline-none w-full" 
+                  />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[12px] font-medium text-text-secondary">Chu kỳ giao</label>
-                  <select value={subscriptionForm.tan_suat_giao} onChange={e => setSubscriptionForm({ ...subscriptionForm, tan_suat_giao: e.target.value })} className="bg-card border border-border rounded-xl px-4 py-3 text-body focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+                  <select 
+                    value={subscriptionForm.tan_suat_giao} 
+                    onChange={e => setSubscriptionForm({ ...subscriptionForm, tan_suat_giao: e.target.value })} 
+                    className="bg-card border border-border rounded-xl px-2 sm:px-4 py-3 text-body focus:ring-2 focus:ring-primary focus:border-primary outline-none w-full"
+                  >
                     <option value="hang_tuan">Hàng tuần</option>
                     <option value="hai_tuan">Hai tuần</option>
                     <option value="hang_thang">Hàng tháng</option>
@@ -463,25 +501,61 @@ export default function ProductDetail() {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[12px] font-medium text-text-secondary">Tổng số lần giao</label>
-                  <input type="number" min="2" value={subscriptionForm.so_ky_giao} onChange={e => setSubscriptionForm({ ...subscriptionForm, so_ky_giao: Number(e.target.value) || 2 })} placeholder="Số lần giao" className="bg-card border border-border rounded-xl px-4 py-3 text-body focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+                  <input 
+                    type="number" 
+                    min="2" 
+                    value={subscriptionForm.so_ky_giao} 
+                    onChange={e => setSubscriptionForm({ ...subscriptionForm, so_ky_giao: Number(e.target.value) || 2 })} 
+                    placeholder="Số lần giao" 
+                    className="bg-card border border-border rounded-xl px-3 sm:px-4 py-3 text-body focus:ring-2 focus:ring-primary focus:border-primary outline-none w-full" 
+                  />
                 </div>
               </div>
+
               <p className="text-[12px] font-medium text-text-secondary">Ví dụ: chọn "Hàng tuần" và nhập 4 lần → hệ thống sẽ giao liên tiếp trong 4 tuần.</p>
+              
               <div className="flex flex-col gap-1.5">
                 <label className="text-[12px] font-medium text-text-secondary">Ngày bắt đầu giao lần đầu tiên</label>
-                <input type="date" value={subscriptionForm.ngay_bat_dau} onChange={e => setSubscriptionForm({ ...subscriptionForm, ngay_bat_dau: e.target.value })} className="bg-card border border-border rounded-xl px-4 py-3 text-body w-full focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+                <input 
+                  type="date" 
+                  value={subscriptionForm.ngay_bat_dau} 
+                  onChange={e => setSubscriptionForm({ ...subscriptionForm, ngay_bat_dau: e.target.value })} 
+                  className="bg-card border border-border rounded-xl px-4 py-3 text-body w-full focus:ring-2 focus:ring-primary focus:border-primary outline-none" 
+                />
               </div>
+
               <div className="flex flex-col gap-1.5">
                 <label className="text-[12px] font-medium text-text-secondary">Địa chỉ giao hàng</label>
-                <textarea rows={3} value={subscriptionForm.dia_chi_giao} onChange={e => setSubscriptionForm({ ...subscriptionForm, dia_chi_giao: e.target.value })} placeholder="Ví dụ: 12 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP.HCM" className="bg-card border border-border rounded-xl w-full resize-none px-4 py-3 text-body focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+                <textarea 
+                  rows={3} 
+                  value={subscriptionForm.dia_chi_giao} 
+                  onChange={e => setSubscriptionForm({ ...subscriptionForm, dia_chi_giao: e.target.value })} 
+                  placeholder="Ví dụ: 12 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP.HCM" 
+                  className="bg-card border border-border rounded-xl w-full resize-none px-4 py-3 text-body focus:ring-2 focus:ring-primary focus:border-primary outline-none" 
+                />
               </div>
               <div className="flex flex-col gap-1.5">
+                <label className="text-[12px] font-medium text-text-secondary">Ghi chú (không bắt buộc)</label>
+                <input 
+                  value={subscriptionForm.ghi_chu || ''} 
+                  onChange={e => setSubscriptionForm({ ...subscriptionForm, ghi_chu: e.target.value })} 
+                  placeholder="Ví dụ: giao giờ hành chính, gọi trước khi giao..." 
+                  className="bg-card border border-border rounded-xl px-4 py-3 text-body w-full focus:ring-2 focus:ring-primary focus:border-primary outline-none" 
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
                 <label className="text-[12px] font-medium text-text-secondary">Phương thức thanh toán</label>
-                <select value={subscriptionForm.phuong_thuc_tt} onChange={e => setSubscriptionForm({ ...subscriptionForm, phuong_thuc_tt: e.target.value })} className="bg-card border border-border rounded-xl px-4 py-3 text-body focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+                <select 
+                  value={subscriptionForm.phuong_thuc_tt} 
+                  onChange={e => setSubscriptionForm({ ...subscriptionForm, phuong_thuc_tt: e.target.value })} 
+                  className="bg-card border border-border rounded-xl px-4 py-3 text-body focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+                >
                   <option value="tien_mat">💵 Tiền mặt khi nhận hàng (COD)</option>
                   <option value="banking">🏦 Chuyển khoản ngân hàng (Sepay QR)</option>
                 </select>
               </div>
+
               {subscriptionForm.phuong_thuc_tt === 'banking' && (
                 <div className="bg-primary-light/20 rounded-xl p-4 space-y-3">
                   <p className="text-[12px] font-medium text-text-secondary">Hình thức thanh toán</p>
@@ -529,8 +603,11 @@ export default function ProductDetail() {
                   })()}
                 </div>
               )}
+
               {subscriptionMessage && <p className="text-body text-primary">{subscriptionMessage}</p>}
-              <button disabled={savingSubscription} className="w-full bg-primary text-white rounded-xl px-5 py-3 font-bold transition-all active:scale-95">{savingSubscription ? 'Đang lưu...' : 'Đăng ký định kỳ'}</button>
+              <button disabled={savingSubscription} className="w-full bg-primary text-white rounded-xl px-5 py-3 font-bold transition-all active:scale-95">
+                {savingSubscription ? 'Đang lưu...' : 'Đăng ký định kỳ'}
+              </button>
             </form>
           </div>
         </section>

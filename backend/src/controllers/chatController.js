@@ -40,15 +40,16 @@ const STOPWORDS = [
     'trái', 'quả', 'ạ', 'nha', 'nhỉ', 'đó', 'này',
 ];
 
+const STOPWORDS_NORMALIZED = new Set(STOPWORDS.map(removeDiacritics));
+
 function extractKeywords(text) {
     return text
         .toLowerCase()
         .normalize('NFC')
         .replace(/[?!.,]/g, '')
         .split(/\s+/)
-        .filter((w) => w.length >= 2 && !STOPWORDS.includes(w));
+        .filter((w) => w.length >= 2 && !STOPWORDS_NORMALIZED.has(removeDiacritics(w))); 
 }
-
 function findMatchedSeasonIds(userText, seasons) {
     const textNormalized = removeDiacritics(userText.trim());
     const padded = ` ${textNormalized} `;
