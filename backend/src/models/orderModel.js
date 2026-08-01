@@ -446,7 +446,7 @@ async function updatePaymentSuccess(madh, { ma_giao_dich = '' }) {
     [amountPaid || 0, madh],
   );
   await db.query(
-    `UPDATE thanh_toan SET trang_thai = 'thanh_cong', ma_giao_dich = ?,
+    `UPDATE thanh_toan SET trang_thai = 'da_thanh_toan', ma_giao_dich = ?,
       ngay_thanh_toan = NOW() WHERE madh = ?`,
     [ma_giao_dich, madh],
   );
@@ -471,7 +471,7 @@ async function confirmBankingPayment(madh) {
     [amountPaid, madh],
   );
   await db.query(
-    `UPDATE thanh_toan SET trang_thai = 'thanh_cong',
+    `UPDATE thanh_toan SET trang_thai = 'da_thanh_toan',
       ngay_thanh_toan = NOW() WHERE madh = ?`,
     [madh],
   );

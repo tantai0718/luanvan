@@ -24,14 +24,6 @@ exports.webhook = async (req, res) => {
     }
     const { id, code, content, transferAmount, transferType } = req.body;
     if (!id) return res.status(400).json({ success: false });
-    const [[existing]] = await db.query(
-      'SELECT id FROM sepay_webhook_logs WHERE transaction_id = ?', [id]
-    );
-    if (existing) return res.json({ success: true });
-    await db.query(
-      'INSERT IGNORE INTO sepay_webhook_logs (transaction_id, body) VALUES (?, ?)',
-      [id, JSON.stringify(req.body)]
-    );
     if (transferType !== 'in') {
       return res.json({ success: true });
     }
