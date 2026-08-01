@@ -11,6 +11,12 @@ const readFileAsDataUrl = file => new Promise((resolve, reject) => {
   reader.onerror = () => reject(new Error(`Không đọc được ảnh ${file.name}`));
   reader.readAsDataURL(file);
 });
+const BACKEND = 'http://localhost:5000';
+const resolveImg = (value) => {
+  if (!value) return null;
+  if (value.startsWith('http') || value.startsWith('data:')) return value;
+  return `${BACKEND}/upload/${value}`;
+};
 
 function fmtDate(d) {
   if (!d) return '';
@@ -180,7 +186,7 @@ export default function AdminArticles() {
                   <tr key={item.ma_bai_viet} className="hover:bg-background transition-colors group">
                     <td className="p-5">
                       {item.hinh_anh ? (
-                        <img src={item.hinh_anh} alt={item.tieu_de} className="w-16 h-12 rounded-lg object-cover shadow-sm" />
+                        <img src={resolveImg(item.hinh_anh)} alt={item.tieu_de} className="w-16 h-12 rounded-lg object-cover shadow-sm" />
                       ) : (
                         <div className="w-16 h-12 rounded-lg bg-emerald-50 flex items-center justify-center">
                           <FileText size={20} className="text-emerald-300" />
@@ -279,7 +285,7 @@ export default function AdminArticles() {
                 <span className="text-caption font-bold text-text-secondary">Hình ảnh bìa</span>
                 {editing.hinh_anh ? (
                   <div className="relative rounded-btn overflow-hidden border border-border">
-                    <img src={editing.hinh_anh.startsWith('/upload/') ? `http://localhost:5000${editing.hinh_anh}` : editing.hinh_anh} alt="Ảnh bìa" className="w-full h-48 object-cover" />
+                    <img src={resolveImg(editing.hinh_anh)} alt="Ảnh bìa" className="w-full h-48 object-cover" />
                     <button type="button" onClick={() => setEditing(prev => ({ ...prev, hinh_anh: '' }))}
                       className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors">
                       <X size={16} />
