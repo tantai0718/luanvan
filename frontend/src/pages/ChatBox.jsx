@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { chatAPI } from '../services/api';
 import { Send, X, MessageCircle } from 'lucide-react';
+import { getExpiryDiscountPrice } from '../utils/expiryDiscount';
 
 const BACKEND = 'http://localhost:5000';
 const formatCurrency = v => `${Number(v || 0).toLocaleString('vi-VN')}đ`;
 
 function ProductCard({ product, onClick }) {
   const img = product.hinh_anh ? `${BACKEND}${product.hinh_anh}` : '/images/placeholder.png';
+  const discounted = getExpiryDiscountPrice(product);
   return (
     <button
       onClick={onClick}
@@ -16,7 +18,7 @@ function ProductCard({ product, onClick }) {
       <img src={img} alt={product.ten_san_pham} className="h-12 w-12 flex-shrink-0 rounded-md object-cover" />
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-text-primary">{product.ten_san_pham}</p>
-        <p className="text-sm font-semibold text-primary">{formatCurrency(product.gia_ban)}</p>
+        <p className="text-sm font-semibold text-primary">{formatCurrency(discounted != null ? discounted : product.gia_ban)}</p>
       </div>
     </button>
   );

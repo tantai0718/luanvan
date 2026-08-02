@@ -4,6 +4,7 @@ import { bannerAPI, categoryAPI, productAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { pickCategoryImage, pickProductImage } from '../utils/marketImages';
+import { getExpiryDiscountPrice, getExpiryDiscountPercent } from '../utils/expiryDiscount';
 import { ShoppingCart, Check, ArrowRight, Truck, Leaf, CreditCard, ShieldCheck } from 'lucide-react';
 
 const formatCurrency = v => `${Number(v || 0).toLocaleString('vi-VN')}đ`;
@@ -63,7 +64,19 @@ function ProductCard({ product }) {
           <span className="text-primary text-caption uppercase tracking-wider">{product.ten_danh_muc || 'Nông sản'}</span>
           <h4 className="text-h3 mt-1 mb-2">{product.ten_san_pham}</h4>
           <div className="flex items-center gap-2 mb-4">
-            <span className="text-text-secondary font-bold text-lg">{formatCurrency(product.gia_ban)}</span>
+            {(() => {
+              const discounted = getExpiryDiscountPrice(product);
+              if (discounted != null) {
+                return (
+                  <>
+                    <span className="text-primary font-bold text-lg">{formatCurrency(discounted)}</span>
+                    <span className="text-text-secondary/40 text-sm line-through">{formatCurrency(product.gia_ban)}</span>
+                    <span className="text-[11px] font-bold text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded-full">-{getExpiryDiscountPercent(product)}%</span>
+                  </>
+                );
+              }
+              return <span className="text-text-secondary font-bold text-lg">{formatCurrency(product.gia_ban)}</span>;
+            })()}
             <span className="text-text-secondary/50 text-sm">/{product.don_vi}</span>
           </div>
         </Link>

@@ -124,8 +124,8 @@ function ProductFormModal({ categories, initialData, onClose, onDone }) {
             <h3 className="text-h3 text-text-primary">Hạn sử dụng & Cảnh báo</h3>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
-            <Input label="Ngày sản xuất" type="date" value={form.ngay_san_xuat ? form.ngay_san_xuat.slice(0, 10) : ''} onChange={e => setForm({ ...form, ngay_san_xuat: e.target.value || null })} />
-            <Input label="Hạn sử dụng" type="date" value={form.han_su_dung ? form.han_su_dung.slice(0, 10) : ''} onChange={e => setForm({ ...form, han_su_dung: e.target.value || null })} />
+            <Input label="Ngày sản xuất" type="date" max={form.han_su_dung ? form.han_su_dung.slice(0, 10) : undefined} value={form.ngay_san_xuat ? form.ngay_san_xuat.slice(0, 10) : ''} onChange={e => setForm({ ...form, ngay_san_xuat: e.target.value || null })} />
+            <Input label="Hạn sử dụng" type="date" min={form.ngay_san_xuat ? form.ngay_san_xuat.slice(0, 10) : undefined} value={form.han_su_dung ? form.han_su_dung.slice(0, 10) : ''} onChange={e => setForm({ ...form, han_su_dung: e.target.value || null })} />
             <Input label="Cảnh báo trước (số ngày)" type="number" min="0" value={form.so_ngay_can_han} onChange={e => setForm({ ...form, so_ngay_can_han: Number(e.target.value) || 0 })} />
             <Input label="Giảm giá khi gần hết hạn (%)" type="number" min="0" max="100" value={form.phan_tram_giam_can_han} onChange={e => setForm({ ...form, phan_tram_giam_can_han: Number(e.target.value) || 0 })} />
           </div>

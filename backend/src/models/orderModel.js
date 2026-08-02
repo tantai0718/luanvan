@@ -56,18 +56,23 @@ async function createOrder({
         `"${item.ten_san_pham}" chi con ${item.so_luong_ton} trong kho.`,
       );
   }
-  const tongHang = items.reduce(
-    (s, i) => s + Number(i.gia_ban) * i.so_luong,
-    0,
-  );
   const totalQty = items.reduce((s, i) => s + i.so_luong, 0);
-  const tongGiamCanHan = items.reduce((s, i) => s + getItemExpiryDiscount(i), 0);
+  const giamCanHanTheoDong = items.map(i => ({ ...i, giam_can_han: getItemExpiryDiscount(i) }));
 
-  const { tienGiam, mienPhiShip, appliedPromotions } = await promotionModel.tinhUuDaiTuDong(Math.max(0, tongHang - tongGiamCanHan), totalQty, 'thuong');
-  
-  const tien_giam = tongGiamCanHan + tienGiam;
+  const itemsGiaSauGiam = giamCanHanTheoDong.map(i => {
+    if (i.giam_can_han > 0) {
+      const donGiaGiam = Number(i.gia_ban) - Math.round(Number(i.gia_ban) * Number(i.phan_tram_giam_can_han || 0) / 100);
+      return { ...i, don_gia: donGiaGiam, thanh_tien: donGiaGiam * i.so_luong };
+    }
+    return { ...i, don_gia: Number(i.gia_ban), thanh_tien: Number(i.gia_ban) * i.so_luong };
+  });
+  const tongHangSauGiam = itemsGiaSauGiam.reduce((s, i) => s + i.thanh_tien, 0);
+
+  const { tienGiam, mienPhiShip, appliedPromotions } = await promotionModel.tinhUuDaiTuDong(Math.max(0, tongHangSauGiam), totalQty, 'thuong');
+
+  const tien_giam = tienGiam;
   const phi_ship = mienPhiShip ? 0 : 30000;
-  const tong_tien = Math.max(0, tongHang - tien_giam) + phi_ship;
+  const tong_tien = Math.max(0, tongHangSauGiam - tien_giam) + phi_ship;
   const isBanking = phuong_thuc === "banking";
 
   const [dhResult] = await db.query(
@@ -117,12 +122,12 @@ async function createOrder({
   const madh = dhResult.insertId;
   await promotionModel.saveOrderPromotions(madh, appliedPromotions);
 
-  const ctValues = items.map((i) => [
+  const ctValues = itemsGiaSauGiam.map((i) => [
     madh,
     i.masp,
     i.so_luong,
-    i.gia_ban,
-    Number(i.gia_ban) * i.so_luong,
+    i.don_gia,
+    i.thanh_tien,
     i.han_su_dung || null,
   ]);
   await db.query(
@@ -169,10 +174,12 @@ async function createPreorder({
   const tong_hang = gia_ban * so_luong;
   const itemForDiscount = { ...sp, gia_ban, so_luong };
   const giam_can_han = getItemExpiryDiscount(itemForDiscount);
-  const { tienGiam, mienPhiShip, appliedPromotions } = await promotionModel.tinhUuDaiTuDong(Math.max(0, tong_hang - giam_can_han), so_luong, 'dat_truoc');
-  const tien_giam = giam_can_han + tienGiam;
+  const don_gia_sau_giam = giam_can_han > 0 ? Number(gia_ban) - Math.round(Number(gia_ban) * Number(sp.phan_tram_giam_can_han || 0) / 100) : Number(gia_ban);
+  const thanh_tien_sau_giam = don_gia_sau_giam * so_luong;
+  const { tienGiam, mienPhiShip, appliedPromotions } = await promotionModel.tinhUuDaiTuDong(Math.max(0, thanh_tien_sau_giam), so_luong, 'dat_truoc');
+  const tien_giam = tienGiam;
   const phi_ship = mienPhiShip ? 0 : 30000;
-  const tong_tien = Math.max(0, tong_hang - tien_giam) + phi_ship;
+  const tong_tien = Math.max(0, thanh_tien_sau_giam - tien_giam) + phi_ship;
   const isBanking = phuong_thuc === "banking";
   const actualDeposit = Math.min(Number(tien_coc) || 0, tong_tien);
 
@@ -212,7 +219,7 @@ async function createPreorder({
 
   await db.query(
     "INSERT INTO chi_tiet_don_hang (madh, masp, so_luong, don_gia, thanh_tien, han_su_dung_luc_ban) VALUES (?, ?, ?, ?, ?, ?)",
-    [madh, masp, so_luong, gia_ban, tong_hang, sp.han_su_dung || null],
+    [madh, masp, so_luong, don_gia_sau_giam, thanh_tien_sau_giam, sp.han_su_dung || null],
   );
 
   await db.query(
