@@ -340,13 +340,11 @@ export default function ProductDetail() {
                       product.trang_thai_hsd === 'can_han' ? 'text-amber-600' :
                       'text-text-primary'
                     }>
-                      {new Date(product.han_su_dung).toLocaleDateString('vi-VN')}
-                      {' '}
-                      {soNgayConLai === null ? '' :
-                        soNgayConLai < 0 ? '(Đã hết hạn)' :
-                        soNgayConLai === 0 ? '(Hết hạn hôm nay)' :
-                        product.trang_thai_hsd === 'can_han' ? `(Sắp hết hạn, còn ${soNgayConLai} ngày)` :
-                        `(Còn ${soNgayConLai} ngày)`}
+                      {soNgayConLai === null ? new Date(product.han_su_dung).toLocaleDateString('vi-VN') :
+                        soNgayConLai < 0 ? 'Đã hết hạn' :
+                        soNgayConLai === 0 ? 'Hết hạn hôm nay' :
+                        product.trang_thai_hsd === 'can_han' ? `Sắp hết hạn, còn ${soNgayConLai} ngày` :
+                        `Còn ${soNgayConLai} ngày`}
                     </strong>
                   </div>
                 );
