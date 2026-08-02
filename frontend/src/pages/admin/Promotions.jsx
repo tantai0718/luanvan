@@ -218,7 +218,16 @@ export default function AdminPromotions() {
                   type="number"
                   step="0.1"
                   value={form.phan_tram_giam}
-                  onChange={e => setForm({ ...form, phan_tram_giam: e.target.value })}
+                  onChange={e => {
+                    const newPct = e.target.value;
+                    setForm(prev => {
+                      let newTen = prev.ten_km;
+                      if (newTen && /Giảm\s+\d+(?:\.\d+)?%/i.test(newTen) && newPct !== '') {
+                        newTen = newTen.replace(/Giảm\s+\d+(?:\.\d+)?%/i, `Giảm ${newPct}%`);
+                      }
+                      return { ...prev, phan_tram_giam: newPct, ten_km: newTen };
+                    });
+                  }}
                   placeholder="Ví dụ: 5 hoặc 8"
                 />
               )}

@@ -16,6 +16,20 @@ async function getOrCreateCart(mand) {
     return result.insertId;
 }
 
+function getItemExpiryDiscount(item) {
+    if (!item.han_su_dung || Number(item.phan_tram_giam_can_han || 0) <= 0 || Number(item.so_ngay_can_han || 0) < 0) return 0;
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const nsx = item.ngay_san_xuat ? new Date(item.ngay_san_xuat) : null;
+    const nsxDay = nsx ? new Date(nsx.getFullYear(), nsx.getMonth(), nsx.getDate()) : null;
+    const refDate = (nsxDay && nsxDay > today) ? nsxDay : today;
+    const expiry = new Date(item.han_su_dung);
+    const expiryDay = new Date(expiry.getFullYear(), expiry.getMonth(), expiry.getDate());
+    const daysLeft = Math.round((expiryDay - refDate) / (1000 * 60 * 60 * 24));
+    if (daysLeft < 0 || daysLeft > Number(item.so_ngay_can_han)) return 0;
+    return Math.round(Number(item.price || item.gia_ban || 0) * Number(item.quantity || item.so_luong || 1) * Number(item.phan_tram_giam_can_han || 0) / 100);
+}
+
 // GET /api/cart
 async function getCart(mand) {
     const magh = await getOrCreateCart(mand);
@@ -29,6 +43,10 @@ async function getCart(mand) {
        sp.don_vi       AS unit,
        sp.so_luong_ton AS stock,
        sp.madm         AS category_id,
+       sp.han_su_dung,
+       sp.ngay_san_xuat,
+       sp.so_ngay_can_han,
+       sp.phan_tram_giam_can_han,
        hav.duong_dan   AS hinh_chinh
      FROM chi_tiet_gio_hang ctgh
      JOIN san_pham sp ON sp.masp = ctgh.masp
@@ -41,19 +59,30 @@ async function getCart(mand) {
 
     const totalPrice = items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
     const totalQty = items.reduce((s, i) => s + i.quantity, 0);
+    const expiryDiscountTotal = items.reduce((s, i) => s + getItemExpiryDiscount(i), 0);
 
     const promotionModel = require('./promotionModel');
-    const { tienGiam, mienPhiShip, appliedList, appliedPromotions } = await promotionModel.tinhUuDaiTuDong(totalPrice, totalQty, 'thuong');
+    const { tienGiam: promoDiscount, mienPhiShip, appliedList, appliedPromotions } = await promotionModel.tinhUuDaiTuDong(Math.max(0, totalPrice - expiryDiscountTotal), totalQty, 'thuong');
 
-    const discounts = appliedPromotions.map(p => ({
-        code: `KM_${p.makm}`,
-        label: p.ten_km,
-        amount: p.tien_giam_ap_dung,
-    }));
+    const discounts = [];
+    if (expiryDiscountTotal > 0) {
+        discounts.push({
+            code: 'EXPIRY_DISCOUNT',
+            label: 'Giảm giá sản phẩm cận hạn',
+            amount: expiryDiscountTotal,
+        });
+    }
+    appliedPromotions.forEach(p => {
+        discounts.push({
+            code: `KM_${p.makm}`,
+            label: p.ten_km,
+            amount: p.tien_giam_ap_dung,
+        });
+    });
 
-    const discountAmount = tienGiam;
+    const discountAmount = expiryDiscountTotal + promoDiscount;
     const shipping = mienPhiShip ? 0 : 30000;
-    const total = totalPrice - discountAmount + shipping;
+    const total = Math.max(0, totalPrice - discountAmount) + shipping;
 
     return {
         items: items.map(i => ({
@@ -66,6 +95,10 @@ async function getCart(mand) {
                 stock: i.stock,
                 category_id: i.category_id,
                 images: i.hinh_chinh ? [i.hinh_chinh] : [],
+                han_su_dung: i.han_su_dung,
+                ngay_san_xuat: i.ngay_san_xuat,
+                so_ngay_can_han: i.so_ngay_can_han,
+                phan_tram_giam_can_han: i.phan_tram_giam_can_han,
             },
         })),
         summary: { totalPrice, discountAmount, discounts, shipping, total },

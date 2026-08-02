@@ -9,13 +9,42 @@ import { Check, ShieldCheck, ChevronRight, ChevronLeft, Play, Minus, Plus, X, Ey
 const isVideoUrl = url => /\.(mp4|webm|mov)$/i.test(url || '');
 const formatCurrency = value => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
 
-function tinhSoNgayConLai(hanSuDung) {
-  if (!hanSuDung) return null;
+function tinhSoNgaySuDung(ngaySanXuat, hanSuDung) {
+  if (!ngaySanXuat || !hanSuDung) return null;
+  const start = new Date(ngaySanXuat);
+  const end = new Date(hanSuDung);
+  const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  return Math.round((endDay - startDay) / (1000 * 60 * 60 * 24));
+}
+
+function calculateExpiryDiscount(product, quantity = 1) {
+  if (!product || !product.han_su_dung || Number(product.phan_tram_giam_can_han || 0) <= 0 || Number(product.so_ngay_can_han || 0) < 0) return 0;
   const now = new Date();
-  const han = new Date(hanSuDung);
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const end = new Date(han.getFullYear(), han.getMonth(), han.getDate());
-  return Math.round((end - start) / (1000 * 60 * 60 * 24));
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const nsx = product.ngay_san_xuat ? new Date(product.ngay_san_xuat) : null;
+  const nsxDay = nsx ? new Date(nsx.getFullYear(), nsx.getMonth(), nsx.getDate()) : null;
+  const refDate = (nsxDay && nsxDay > today) ? nsxDay : today;
+  const expiry = new Date(product.han_su_dung);
+  const expiryDay = new Date(expiry.getFullYear(), expiry.getMonth(), expiry.getDate());
+  const daysLeft = Math.round((expiryDay - refDate) / (1000 * 60 * 60 * 24));
+  if (daysLeft < 0 || daysLeft > Number(product.so_ngay_can_han)) return 0;
+  return Math.round(Number(product.gia_ban || 0) * Number(quantity || 0) * Number(product.phan_tram_giam_can_han || 0) / 100);
+}
+
+function formatPromoTitle(ten_km, phan_tram_giam, loai_uu_dai) {
+  if (!ten_km) return '';
+  if (loai_uu_dai === 'giam_theo_so_luong' && phan_tram_giam != null) {
+    const pct = Number(phan_tram_giam);
+    if (pct > 0) {
+      if (/Giảm\s+\d+(?:\.\d+)?%/i.test(ten_km)) {
+        return ten_km.replace(/Giảm\s+\d+(?:\.\d+)?%/i, `Giảm ${pct}%`);
+      } else if (/\d+(?:\.\d+)?%/.test(ten_km)) {
+        return ten_km.replace(/\d+(?:\.\d+)?%/, `${pct}%`);
+      }
+    }
+  }
+  return ten_km;
 }
 
 function calcPromotions(promos, totalAmount, quantity, loaiDon) {
@@ -43,10 +72,11 @@ function calcPromotions(promos, totalAmount, quantity, loaiDon) {
           discount = Math.min(discount, Number(promo.gia_tri_giam_toi_da));
         }
         tienGiam += discount;
+        const title = formatPromoTitle(promo.ten_km, pct, promo.loai_uu_dai);
         appliedList.push({
-          name: promo.ten_km,
+          name: title,
           amount: discount,
-          label: `${promo.ten_km} (-${Number(discount).toLocaleString('vi-VN')}đ)`,
+          label: `${title} (-${Number(discount).toLocaleString('vi-VN')}đ)`,
         });
       }
     } else if (promo.loai_uu_dai === 'mien_phi_ship') {
@@ -166,6 +196,10 @@ export default function ProductDetail() {
 
   const stock = Number(product.ton_kho || 0);
   const maxQuantity = Math.max(1, stock || 1);
+
+  const expiryDiscount = calculateExpiryDiscount(product, 1);
+  const expiryDiscountPercent = Number(product?.phan_tram_giam_can_han || 0);
+  const expiryPrice = expiryDiscount > 0 ? Math.round(Number(product.gia_ban || 0) * (100 - expiryDiscountPercent) / 100) : null;
 
   const handleAddToCart = async () => {
     if (!user) return navigate('/login');
@@ -318,8 +352,18 @@ export default function ProductDetail() {
 
             {/* Price */}
             <div className="bg-background rounded-3xl p-5 mb-lg">
-              <div className="flex items-baseline gap-2">
-                <span className="text-h1 text-text-secondary">{formatCurrency(product.gia_ban)}</span>
+              <div className="flex items-baseline gap-2 flex-wrap">
+                {expiryPrice ? (
+                  <>
+                    <span className="text-h1 text-rose-600 font-bold">{formatCurrency(expiryPrice)}</span>
+                    <span className="text-body text-text-secondary line-through">{formatCurrency(product.gia_ban)}</span>
+                    <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-bold text-rose-600">
+                      Ưu đãi trong ngày - Giảm {expiryDiscountPercent}%
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-h1 text-text-secondary">{formatCurrency(product.gia_ban)}</span>
+                )}
                 <span className="text-body text-text-secondary">/ {product.don_vi}</span>
               </div>
               <p className="mt-1 text-[12px] font-medium text-text-secondary">Giá đã bao gồm VAT nếu có.</p>
@@ -330,8 +374,8 @@ export default function ProductDetail() {
               <div className="flex justify-between"><span>Nguồn hàng</span><strong className="text-text-primary">{product.ten_nong_trai || 'Farm2Table'}</strong></div>
               <div className="flex justify-between"><span>Khu vực</span><strong className="text-text-primary">{product.tinh_thanh || 'Toàn quốc'}</strong></div>
               <div className="flex justify-between"><span>Tồn kho</span><strong className="text-text-primary">{stock > 0 ? `${stock} ${product.don_vi}` : 'Tạm hết'}</strong></div>
-              {product.han_su_dung && (() => {
-                const soNgayConLai = tinhSoNgayConLai(product.han_su_dung);
+              {(product.ngay_san_xuat && product.han_su_dung) && (() => {
+                const soNgaySuDung = tinhSoNgaySuDung(product.ngay_san_xuat, product.han_su_dung);
                 return (
                   <div className="flex justify-between">
                     <span>Hạn sử dụng</span>
@@ -340,11 +384,10 @@ export default function ProductDetail() {
                       product.trang_thai_hsd === 'can_han' ? 'text-amber-600' :
                       'text-text-primary'
                     }>
-                      {soNgayConLai === null ? new Date(product.han_su_dung).toLocaleDateString('vi-VN') :
-                        soNgayConLai < 0 ? 'Đã hết hạn' :
-                        soNgayConLai === 0 ? 'Hết hạn hôm nay' :
-                        product.trang_thai_hsd === 'can_han' ? `Sắp hết hạn, còn ${soNgayConLai} ngày` :
-                        `Còn ${soNgayConLai} ngày`}
+                      {soNgaySuDung === null ? new Date(product.han_su_dung).toLocaleDateString('vi-VN') :
+                        product.trang_thai_hsd === 'het_han' ? 'Đã hết hạn' :
+                        product.trang_thai_hsd === 'can_han' ? ` ${soNgaySuDung} ngày` :
+                        ` ${soNgaySuDung} ngày`}
                     </strong>
                   </div>
                 );
@@ -449,13 +492,17 @@ export default function ProductDetail() {
                   {(() => {
                     const subtotal = (product.gia_ban || 0) * preorderForm.quantity;
                     const { tienGiam: discount, mienPhiShip, appliedList } = calcPromotions(promotions, subtotal, preorderForm.quantity, 'dat_truoc');
-                    const subtotalAfterDiscount = subtotal - discount;
+                    const expiryDiscount = calculateExpiryDiscount(product, preorderForm.quantity);
+                    const subtotalAfterDiscount = subtotal - discount - expiryDiscount;
                     const shippingFee = mienPhiShip ? 0 : 30000;
                     const finalTotal = subtotalAfterDiscount + shippingFee;
                     const depositAmount = preorderForm.loai_tien_coc === '30' ? Math.round(finalTotal * 0.3) : finalTotal;
                     const remaining = finalTotal - depositAmount;
                     return (
                       <div className="text-body space-y-1">
+                        {expiryDiscount > 0 && (
+                          <p className="text-xs text-orange-600 font-semibold">Giảm giá cận hạn: -{formatCurrency(expiryDiscount)}</p>
+                        )}
                         {appliedList.map((item, i) => (
                           <p key={i} className="text-xs text-[#16A34A] font-semibold">
                             {item.label}
@@ -589,13 +636,17 @@ export default function ProductDetail() {
                   {(() => {
                     const subtotal = (product.gia_ban || 0) * subscriptionForm.quantity;
                     const { tienGiam: discount, mienPhiShip, appliedList } = calcPromotions(promotions, subtotal, subscriptionForm.quantity, 'dinh_ky');
-                    const subtotalAfterDiscount = subtotal - discount;
+                    const expiryDiscount = calculateExpiryDiscount(product, subscriptionForm.quantity);
+                    const subtotalAfterDiscount = subtotal - discount - expiryDiscount;
                     const shippingFee = mienPhiShip ? 0 : 30000;
                     const finalPerCycle = subtotalAfterDiscount + shippingFee;
                     const depositAmount = subscriptionForm.loai_tien_coc === '30' ? Math.round(finalPerCycle * 0.3) : finalPerCycle;
                     const remaining = finalPerCycle - depositAmount;
                     return (
                       <div className="text-body space-y-1">
+                        {expiryDiscount > 0 && (
+                          <p className="text-xs text-orange-600 font-semibold">Giảm giá cận hạn: -{formatCurrency(expiryDiscount)}</p>
+                        )}
                         {appliedList.map((item, i) => (
                           <p key={i} className="text-xs text-[#16A34A] font-semibold">
                             {item.label}

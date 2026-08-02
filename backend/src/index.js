@@ -6,6 +6,7 @@ const path = require("path");
 const { Server } = require("socket.io");
 const routes = require("./routes");
 const sepayController = require("./controllers/sepayController");
+const { autoHideExpiredProducts } = require('./models/productModel');
 
 const app = express();
 const server = http.createServer(app);
@@ -79,4 +80,9 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`\n🚀 Backend: http://localhost:${PORT}`);
   console.log(`📡 API:     http://localhost:${PORT}/api\n`);
+
+  // Chạy ngay lần đầu khi khởi động server
+  autoHideExpiredProducts();
+  // Sau đó chạy mỗi 1 giờ để ẩn sản phẩm hết hạn
+  setInterval(autoHideExpiredProducts, 60 * 60 * 1000);
 });

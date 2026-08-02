@@ -11,6 +11,7 @@ const formatCurrency = value => `${Number(value || 0).toLocaleString('vi-VN')}đ
 const promotionLabelMap = {
   BULK_QUANTITY: 'Mua từ 10 sản phẩm',
   LOYAL_CUSTOMER: 'Khách hàng mua nhiều lần',
+  EXPIRY_DISCOUNT: 'Giảm giá sản phẩm cận hạn',
 };
 
 const inputCls = 'bg-card border border-border rounded-xl px-4 py-3.5 text-body focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all shadow-sm';

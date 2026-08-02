@@ -12,6 +12,22 @@ function mapPaymentMethod(method) {
   return PAYMENT_METHOD_MAP[method] || 'tien_mat';
 }
 
+function getItemExpiryDiscount(item) {
+  if (!item.han_su_dung || Number(item.phan_tram_giam_can_han || 0) <= 0 || Number(item.so_ngay_can_han || 0) < 0) return 0;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const nsx = item.ngay_san_xuat ? new Date(item.ngay_san_xuat) : null;
+  const nsxDay = nsx ? new Date(nsx.getFullYear(), nsx.getMonth(), nsx.getDate()) : null;
+  const refDate = (nsxDay && nsxDay > today) ? nsxDay : today;
+  const expiry = new Date(item.han_su_dung);
+  const expiryDay = new Date(expiry.getFullYear(), expiry.getMonth(), expiry.getDate());
+  const daysLeft = Math.round((expiryDay - refDate) / (1000 * 60 * 60 * 24));
+  if (daysLeft < 0 || daysLeft > Number(item.so_ngay_can_han)) return 0;
+  const price = Number(item.gia_ban || item.don_gia || 0);
+  const qty = Number(item.so_luong || 1);
+  return Math.round(price * qty * Number(item.phan_tram_giam_can_han || 0) / 100);
+}
+
 async function createOrder({
   mand,
   dia_chi_giao,
@@ -27,7 +43,7 @@ async function createOrder({
   if (!gh) throw new Error("Gio hang trong.");
 
   const [items] = await db.query(
-    `SELECT ctgh.masp, ctgh.so_luong, sp.gia_ban, sp.ten_san_pham, sp.so_luong_ton, sp.han_su_dung
+    `SELECT ctgh.masp, ctgh.so_luong, sp.gia_ban, sp.ten_san_pham, sp.so_luong_ton, sp.han_su_dung, sp.ngay_san_xuat, sp.so_ngay_can_han, sp.phan_tram_giam_can_han
      FROM chi_tiet_gio_hang ctgh
      JOIN san_pham sp ON sp.masp = ctgh.masp
      WHERE ctgh.magh = ?`,
@@ -45,11 +61,13 @@ async function createOrder({
     0,
   );
   const totalQty = items.reduce((s, i) => s + i.so_luong, 0);
-  const { tienGiam, mienPhiShip, appliedPromotions } = await promotionModel.tinhUuDaiTuDong(tongHang, totalQty, 'thuong');
+  const tongGiamCanHan = items.reduce((s, i) => s + getItemExpiryDiscount(i), 0);
+
+  const { tienGiam, mienPhiShip, appliedPromotions } = await promotionModel.tinhUuDaiTuDong(Math.max(0, tongHang - tongGiamCanHan), totalQty, 'thuong');
   
-  const tien_giam = tienGiam;
+  const tien_giam = tongGiamCanHan + tienGiam;
   const phi_ship = mienPhiShip ? 0 : 30000;
-  const tong_tien = tongHang - tien_giam + phi_ship;
+  const tong_tien = Math.max(0, tongHang - tien_giam) + phi_ship;
   const isBanking = phuong_thuc === "banking";
 
   const [dhResult] = await db.query(
@@ -143,16 +161,18 @@ async function createPreorder({
   tien_coc = 0,
 }) {
   const [[sp]] = await db.query(
-    "SELECT ten_san_pham, han_su_dung FROM san_pham WHERE masp = ? AND trang_thai = 1",
+    "SELECT ten_san_pham, han_su_dung, ngay_san_xuat, so_ngay_can_han, phan_tram_giam_can_han FROM san_pham WHERE masp = ? AND trang_thai = 1",
     [masp],
   );
   if (!sp) throw new Error("Sản phẩm không tồn tại hoặc đã ngừng bán");
 
   const tong_hang = gia_ban * so_luong;
-  const { tienGiam, mienPhiShip, appliedPromotions } = await promotionModel.tinhUuDaiTuDong(tong_hang, so_luong, 'dat_truoc');
-  const tien_giam = tienGiam;
+  const itemForDiscount = { ...sp, gia_ban, so_luong };
+  const giam_can_han = getItemExpiryDiscount(itemForDiscount);
+  const { tienGiam, mienPhiShip, appliedPromotions } = await promotionModel.tinhUuDaiTuDong(Math.max(0, tong_hang - giam_can_han), so_luong, 'dat_truoc');
+  const tien_giam = giam_can_han + tienGiam;
   const phi_ship = mienPhiShip ? 0 : 30000;
-  const tong_tien = tong_hang - tien_giam + phi_ship;
+  const tong_tien = Math.max(0, tong_hang - tien_giam) + phi_ship;
   const isBanking = phuong_thuc === "banking";
   const actualDeposit = Math.min(Number(tien_coc) || 0, tong_tien);
 

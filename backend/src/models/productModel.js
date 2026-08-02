@@ -8,6 +8,30 @@ function removeDiacritics(str = '') {
         .replace(/đ/g, 'd');
 }
 
+function formatDateOnly(value) {
+    if (!value) return null;
+    if (typeof value === 'string') return value.slice(0, 10);
+    const y = value.getFullYear();
+    const m = String(value.getMonth() + 1).padStart(2, '0');
+    const d = String(value.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+function calculateHsdStatus(hanSuDung, soNgayCanHan, ngaySanXuat = null) {
+    if (!hanSuDung) return 'con_han';
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const nsx = ngaySanXuat ? new Date(ngaySanXuat) : null;
+    const nsxDay = nsx ? new Date(nsx.getFullYear(), nsx.getMonth(), nsx.getDate()) : null;
+    const refDate = (nsxDay && nsxDay > today) ? nsxDay : today;
+    const expiry = new Date(hanSuDung);
+    const expiryDay = new Date(expiry.getFullYear(), expiry.getMonth(), expiry.getDate());
+    const daysLeft = Math.round((expiryDay - refDate) / (1000 * 60 * 60 * 24));
+
+    if (daysLeft < 0) return 'het_han';
+    if (daysLeft <= Number(soNgayCanHan != null ? soNgayCanHan : 3)) return 'can_han';
+    return 'con_han';
+}
+
 const mapProduct = (row) => ({
     ma_san_pham: row.masp,
     ten_san_pham: row.ten_san_pham,
@@ -25,11 +49,11 @@ const mapProduct = (row) => ({
     tong_danh_gia: Number(row.tong_danh_gia || 0),
     hinh_chinh: row.hinh_chinh ? `/upload/${row.hinh_chinh}` : null,
     images: row.hinh_chinh ? [`/upload/${row.hinh_chinh}`] : [],
-    han_su_dung: row.han_su_dung || null,
-    ngay_san_xuat: row.ngay_san_xuat || null,
+    han_su_dung: formatDateOnly(row.han_su_dung),
+    ngay_san_xuat: formatDateOnly(row.ngay_san_xuat),
     so_ngay_can_han: row.so_ngay_can_han != null ? Number(row.so_ngay_can_han) : 3,
     phan_tram_giam_can_han: row.phan_tram_giam_can_han != null ? Number(row.phan_tram_giam_can_han) : 0,
-    trang_thai_hsd: row.trang_thai_hsd || 'con_han',
+    trang_thai_hsd: calculateHsdStatus(row.han_su_dung, row.so_ngay_can_han, row.ngay_san_xuat),
 });
 
 async function listProducts({ q = '', category = '', sort = 'moi_nhat', inStock = '', page = 1, limit = 12 } = {}) {
@@ -117,16 +141,29 @@ async function listCategories() {
 }
 
 async function createProduct({ madm, ten_san_pham, gia_ban, so_luong_ton, don_vi, khu_vuc, mo_ta = '', han_su_dung = null, ngay_san_xuat = null, so_ngay_can_han = 3, phan_tram_giam_can_han = 0 }) {
+    const trang_thai_hsd = calculateHsdStatus(han_su_dung, so_ngay_can_han, ngay_san_xuat);
+    const trang_thai = trang_thai_hsd === 'het_han' ? 0 : 1;
     const [result] = await db.query(
         `INSERT INTO san_pham (madm, ten_san_pham, gia_ban, so_luong_ton, don_vi, khu_vuc, mo_ta, han_su_dung, ngay_san_xuat, so_ngay_can_han, phan_tram_giam_can_han, trang_thai_hsd, trang_thai, ngay_tao)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'con_han', 1, NOW())`,
-        [madm, ten_san_pham, gia_ban, so_luong_ton || 0, don_vi, khu_vuc, mo_ta, han_su_dung || null, ngay_san_xuat || null, so_ngay_can_han, phan_tram_giam_can_han]
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [madm, ten_san_pham, gia_ban, so_luong_ton || 0, don_vi, khu_vuc, mo_ta, han_su_dung || null, ngay_san_xuat || null, so_ngay_can_han, phan_tram_giam_can_han, trang_thai_hsd, trang_thai]
     );
     return result.insertId;
 }
 
 async function updateProduct(masp, fields) {
-    const allowed = ['ten_san_pham', 'gia_ban', 'so_luong_ton', 'don_vi', 'khu_vuc', 'madm', 'mo_ta', 'han_su_dung', 'ngay_san_xuat', 'so_ngay_can_han', 'phan_tram_giam_can_han', 'trang_thai_hsd'];
+    if (fields.han_su_dung !== undefined || fields.so_ngay_can_han !== undefined || fields.ngay_san_xuat !== undefined) {
+        const [[current]] = await db.query('SELECT han_su_dung, ngay_san_xuat, so_ngay_can_han, trang_thai FROM san_pham WHERE masp = ?', [masp]);
+        const hsd = fields.han_su_dung !== undefined ? fields.han_su_dung : current?.han_su_dung;
+        const nsx = fields.ngay_san_xuat !== undefined ? fields.ngay_san_xuat : current?.ngay_san_xuat;
+        const snch = fields.so_ngay_can_han !== undefined ? fields.so_ngay_can_han : current?.so_ngay_can_han;
+        fields.trang_thai_hsd = calculateHsdStatus(hsd, snch, nsx);
+        // Nếu hết hạn và đang hiển thị → tự ẩn
+        if (fields.trang_thai_hsd === 'het_han' && fields.trang_thai === undefined) {
+            fields.trang_thai = 0;
+        }
+    }
+    const allowed = ['ten_san_pham', 'gia_ban', 'so_luong_ton', 'don_vi', 'khu_vuc', 'madm', 'mo_ta', 'han_su_dung', 'ngay_san_xuat', 'so_ngay_can_han', 'phan_tram_giam_can_han', 'trang_thai_hsd', 'trang_thai'];
     const sets = [], params = [];
     for (const key of allowed) {
         if (fields[key] !== undefined) { sets.push(`${key} = ?`); params.push(fields[key]); }
@@ -138,6 +175,38 @@ async function updateProduct(masp, fields) {
 
 async function toggleProduct(masp) {
     await db.query('UPDATE san_pham SET trang_thai = 1 - trang_thai WHERE masp = ?', [masp]);
+}
+
+// Tự động ẩn các sản phẩm đã hết hạn sử dụng
+async function autoHideExpiredProducts() {
+    try {
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        // Lấy các sản phẩm có han_su_dung đã qua, đang hiển thị (trang_thai=1)
+        const [rows] = await db.query(
+            `SELECT masp, han_su_dung, ngay_san_xuat, so_ngay_can_han FROM san_pham
+             WHERE trang_thai = 1 AND han_su_dung IS NOT NULL AND DATE(han_su_dung) < ?`,
+            [today]
+        );
+        let hiddenCount = 0;
+        for (const row of rows) {
+            const status = calculateHsdStatus(row.han_su_dung, row.so_ngay_can_han, row.ngay_san_xuat);
+            if (status === 'het_han') {
+                await db.query(
+                    `UPDATE san_pham SET trang_thai = 0, trang_thai_hsd = 'het_han' WHERE masp = ?`,
+                    [row.masp]
+                );
+                hiddenCount++;
+            }
+        }
+        if (hiddenCount > 0) {
+            console.log(`[Auto-hide] Đã ẩn ${hiddenCount} sản phẩm hết hạn sử dụng.`);
+        }
+        return hiddenCount;
+    } catch (err) {
+        console.error('[Auto-hide] Lỗi khi tự động ẩn sản phẩm hết hạn:', err.message);
+        return 0;
+    }
 }
 
 async function listAllProducts({ q = '', category = '' } = {}) {
@@ -245,4 +314,5 @@ module.exports = {
     listProducts, listAllProducts, getProductById,
     listCategories, createProduct, updateProduct, toggleProduct,
     searchProductsForChat, getActiveSeasons, findProductsForChat,
+    calculateHsdStatus, autoHideExpiredProducts,
 };

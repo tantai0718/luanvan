@@ -1,5 +1,20 @@
 const db = require("../config/db");
 
+function formatPromoTitle(ten_km, phan_tram_giam, loai_uu_dai) {
+  if (!ten_km) return '';
+  if (loai_uu_dai === 'giam_theo_so_luong' && phan_tram_giam != null) {
+    const pct = Number(phan_tram_giam);
+    if (pct > 0) {
+      if (/Giảm\s+\d+(?:\.\d+)?%/i.test(ten_km)) {
+        return ten_km.replace(/Giảm\s+\d+(?:\.\d+)?%/i, `Giảm ${pct}%`);
+      } else if (/\d+(?:\.\d+)?%/.test(ten_km)) {
+        return ten_km.replace(/\d+(?:\.\d+)?%/, `${pct}%`);
+      }
+    }
+  }
+  return ten_km;
+}
+
 async function ensurePromotionTables() {
   await db.query(`
     CREATE TABLE IF NOT EXISTS khuyen_mai (
@@ -25,6 +40,18 @@ async function ensurePromotionTables() {
       FOREIGN KEY (makm) REFERENCES khuyen_mai(makm) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
+
+  try {
+    const [promos] = await db.query("SELECT makm, ten_km, phan_tram_giam, loai_uu_dai FROM khuyen_mai");
+    for (const p of promos) {
+      const formatted = formatPromoTitle(p.ten_km, p.phan_tram_giam, p.loai_uu_dai);
+      if (formatted !== p.ten_km) {
+        await db.query("UPDATE khuyen_mai SET ten_km = ? WHERE makm = ?", [formatted, p.makm]);
+      }
+    }
+  } catch (err) {
+    // silent fallback
+  }
 }
 
 async function getActivePromotions() {
@@ -32,7 +59,10 @@ async function getActivePromotions() {
   const [rows] = await db.query(
     "SELECT * FROM khuyen_mai WHERE trang_thai = 1 ORDER BY makm ASC"
   );
-  return rows;
+  return rows.map(r => ({
+    ...r,
+    ten_km: formatPromoTitle(r.ten_km, r.phan_tram_giam, r.loai_uu_dai),
+  }));
 }
 
 async function tinhUuDaiTuDong(tongTien, tongSoLuong, loai_don = 'thuong') {
@@ -101,13 +131,20 @@ async function saveOrderPromotions(madh, appliedPromotions) {
 async function getAllPromotions() {
   await ensurePromotionTables();
   const [rows] = await db.query("SELECT * FROM khuyen_mai ORDER BY makm DESC");
-  return rows;
+  return rows.map(r => ({
+    ...r,
+    ten_km: formatPromoTitle(r.ten_km, r.phan_tram_giam, r.loai_uu_dai),
+  }));
 }
 
 async function getPromotionById(makm) {
   await ensurePromotionTables();
   const [[row]] = await db.query("SELECT * FROM khuyen_mai WHERE makm = ?", [makm]);
-  return row || null;
+  if (!row) return null;
+  return {
+    ...row,
+    ten_km: formatPromoTitle(row.ten_km, row.phan_tram_giam, row.loai_uu_dai),
+  };
 }
 
 async function createPromotion({
@@ -120,12 +157,13 @@ async function createPromotion({
   trang_thai = 1,
 }) {
   await ensurePromotionTables();
+  const finalTenKm = formatPromoTitle(ten_km, phan_tram_giam, loai_uu_dai);
   const [result] = await db.query(
     `INSERT INTO khuyen_mai
       (ten_km, loai_uu_dai, dieu_kien_toi_thieu, phan_tram_giam, gia_tri_giam_toi_da, ap_dung_cho, trang_thai)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
-      ten_km,
+      finalTenKm,
       loai_uu_dai,
       dieu_kien_toi_thieu,
       phan_tram_giam || null,
@@ -147,13 +185,14 @@ async function updatePromotion(makm, {
   trang_thai,
 }) {
   await ensurePromotionTables();
+  const finalTenKm = formatPromoTitle(ten_km, phan_tram_giam, loai_uu_dai);
   await db.query(
     `UPDATE khuyen_mai
      SET ten_km = ?, loai_uu_dai = ?, dieu_kien_toi_thieu = ?,
          phan_tram_giam = ?, gia_tri_giam_toi_da = ?, ap_dung_cho = ?, trang_thai = ?
      WHERE makm = ?`,
     [
-      ten_km,
+      finalTenKm,
       loai_uu_dai,
       dieu_kien_toi_thieu,
       phan_tram_giam !== undefined ? phan_tram_giam : null,
