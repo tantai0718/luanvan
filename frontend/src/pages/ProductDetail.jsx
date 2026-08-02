@@ -9,6 +9,15 @@ import { Check, ShieldCheck, ChevronRight, ChevronLeft, Play, Minus, Plus, X, Ey
 const isVideoUrl = url => /\.(mp4|webm|mov)$/i.test(url || '');
 const formatCurrency = value => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
 
+function tinhSoNgayConLai(hanSuDung) {
+  if (!hanSuDung) return null;
+  const now = new Date();
+  const han = new Date(hanSuDung);
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const end = new Date(han.getFullYear(), han.getMonth(), han.getDate());
+  return Math.round((end - start) / (1000 * 60 * 60 * 24));
+}
+
 function calcPromotions(promos, totalAmount, quantity, loaiDon) {
   let tienGiam = 0;
   let mienPhiShip = false;
@@ -318,25 +327,30 @@ export default function ProductDetail() {
 
             {/* Meta */}
             <div className="space-y-3 py-lg border-y border-border text-body text-text-secondary mb-lg">
-              <div className="space-y-3 py-lg border-y border-border text-body text-text-secondary mb-lg">
               <div className="flex justify-between"><span>Nguồn hàng</span><strong className="text-text-primary">{product.ten_nong_trai || 'Farm2Table'}</strong></div>
               <div className="flex justify-between"><span>Khu vực</span><strong className="text-text-primary">{product.tinh_thanh || 'Toàn quốc'}</strong></div>
               <div className="flex justify-between"><span>Tồn kho</span><strong className="text-text-primary">{stock > 0 ? `${stock} ${product.don_vi}` : 'Tạm hết'}</strong></div>
-              {product.han_su_dung && (
-                <div className="flex justify-between">
-                  <span>Hạn sử dụng</span>
-                  <strong className={
-                    product.trang_thai_hsd === 'het_han' ? 'text-rose-600' :
-                    product.trang_thai_hsd === 'can_han' ? 'text-amber-600' :
-                    'text-text-primary'
-                  }>
-                    {new Date(product.han_su_dung).toLocaleDateString('vi-VN')}
-                    {product.trang_thai_hsd === 'can_han' && ' (Sắp hết hạn)'}
-                    {product.trang_thai_hsd === 'het_han' && ' (Đã hết hạn)'}
-                  </strong>
-                </div>
-              )}
-            </div>
+              {product.han_su_dung && (() => {
+                const soNgayConLai = tinhSoNgayConLai(product.han_su_dung);
+                return (
+                  <div className="flex justify-between">
+                    <span>Hạn sử dụng</span>
+                    <strong className={
+                      product.trang_thai_hsd === 'het_han' ? 'text-rose-600' :
+                      product.trang_thai_hsd === 'can_han' ? 'text-amber-600' :
+                      'text-text-primary'
+                    }>
+                      {new Date(product.han_su_dung).toLocaleDateString('vi-VN')}
+                      {' '}
+                      {soNgayConLai === null ? '' :
+                        soNgayConLai < 0 ? '(Đã hết hạn)' :
+                        soNgayConLai === 0 ? '(Hết hạn hôm nay)' :
+                        product.trang_thai_hsd === 'can_han' ? `(Sắp hết hạn, còn ${soNgayConLai} ngày)` :
+                        `(Còn ${soNgayConLai} ngày)`}
+                    </strong>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Quantity */}

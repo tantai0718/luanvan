@@ -45,7 +45,7 @@ async function createProduct(req, res) {
     try {
         // Frontend gửi: ten_san_pham, ma_danh_muc, gia_ban, don_vi, ton_kho, hinh_anh[]
         // Model nhận:   ten_san_pham, madm,         gia_ban, don_vi, so_luong_ton, khu_vuc
-        const { ten_san_pham, ma_danh_muc, gia_ban, don_vi, ton_kho, mo_ta, hinh_anh = [], han_su_dung, so_ngay_can_han, phan_tram_giam_can_han } = req.body;
+        const { ten_san_pham, ma_danh_muc, gia_ban, don_vi, ton_kho, mo_ta, hinh_anh = [], han_su_dung, ngay_san_xuat, so_ngay_can_han, phan_tram_giam_can_han } = req.body;
 
         if (!ten_san_pham?.trim()) return res.status(400).json({ message: 'Ten san pham khong duoc de trong.' });
         if (!ma_danh_muc) return res.status(400).json({ message: 'Vui long chon danh muc.' });
@@ -59,6 +59,7 @@ async function createProduct(req, res) {
             so_luong_ton: Number(ton_kho || 0), // map ton_kho → so_luong_ton
             khu_vuc: '',
             han_su_dung: han_su_dung || null,
+            ngay_san_xuat: ngay_san_xuat || null,
             so_ngay_can_han: Number(so_ngay_can_han) || 3,
             phan_tram_giam_can_han: Number(phan_tram_giam_can_han) || 0,
         });
@@ -100,7 +101,14 @@ async function createProduct(req, res) {
 async function updateProduct(req, res) {
     try {
         const masp = req.params.id;
-        const { hinh_anh = [], video = [], ...fields } = req.body;
+        const { hinh_anh = [], video = [], ...rawFields } = req.body;
+
+        // Map field tên frontend → cột DB (giống createProduct)
+        const fields = {
+            ...rawFields,
+            ...(rawFields.ton_kho !== undefined ? { so_luong_ton: Number(rawFields.ton_kho) } : {}),
+            ...(rawFields.ma_danh_muc !== undefined ? { madm: Number(rawFields.ma_danh_muc) } : {}),
+        };
 
         await productModel.updateProduct(masp, fields);
 

@@ -26,6 +26,7 @@ const mapProduct = (row) => ({
     hinh_chinh: row.hinh_chinh ? `/upload/${row.hinh_chinh}` : null,
     images: row.hinh_chinh ? [`/upload/${row.hinh_chinh}`] : [],
     han_su_dung: row.han_su_dung || null,
+    ngay_san_xuat: row.ngay_san_xuat || null,
     so_ngay_can_han: row.so_ngay_can_han != null ? Number(row.so_ngay_can_han) : 3,
     phan_tram_giam_can_han: row.phan_tram_giam_can_han != null ? Number(row.phan_tram_giam_can_han) : 0,
     trang_thai_hsd: row.trang_thai_hsd || 'con_han',
@@ -115,17 +116,17 @@ async function listCategories() {
     return rows;
 }
 
-async function createProduct({ madm, ten_san_pham, gia_ban, so_luong_ton, don_vi, khu_vuc, mo_ta = '', han_su_dung = null, so_ngay_can_han = 3, phan_tram_giam_can_han = 0 }) {
+async function createProduct({ madm, ten_san_pham, gia_ban, so_luong_ton, don_vi, khu_vuc, mo_ta = '', han_su_dung = null, ngay_san_xuat = null, so_ngay_can_han = 3, phan_tram_giam_can_han = 0 }) {
     const [result] = await db.query(
-        `INSERT INTO san_pham (madm, ten_san_pham, gia_ban, so_luong_ton, don_vi, khu_vuc, mo_ta, han_su_dung, so_ngay_can_han, phan_tram_giam_can_han, trang_thai_hsd, trang_thai, ngay_tao)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'con_han', 1, NOW())`,
-        [madm, ten_san_pham, gia_ban, so_luong_ton || 0, don_vi, khu_vuc, mo_ta, han_su_dung || null, so_ngay_can_han, phan_tram_giam_can_han]
+        `INSERT INTO san_pham (madm, ten_san_pham, gia_ban, so_luong_ton, don_vi, khu_vuc, mo_ta, han_su_dung, ngay_san_xuat, so_ngay_can_han, phan_tram_giam_can_han, trang_thai_hsd, trang_thai, ngay_tao)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'con_han', 1, NOW())`,
+        [madm, ten_san_pham, gia_ban, so_luong_ton || 0, don_vi, khu_vuc, mo_ta, han_su_dung || null, ngay_san_xuat || null, so_ngay_can_han, phan_tram_giam_can_han]
     );
     return result.insertId;
 }
 
 async function updateProduct(masp, fields) {
-    const allowed = ['ten_san_pham', 'gia_ban', 'so_luong_ton', 'don_vi', 'khu_vuc', 'madm', 'mo_ta', 'han_su_dung', 'so_ngay_can_han', 'phan_tram_giam_can_han', 'trang_thai_hsd'];
+    const allowed = ['ten_san_pham', 'gia_ban', 'so_luong_ton', 'don_vi', 'khu_vuc', 'madm', 'mo_ta', 'han_su_dung', 'ngay_san_xuat', 'so_ngay_can_han', 'phan_tram_giam_can_han', 'trang_thai_hsd'];
     const sets = [], params = [];
     for (const key of allowed) {
         if (fields[key] !== undefined) { sets.push(`${key} = ?`); params.push(fields[key]); }

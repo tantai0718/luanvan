@@ -17,7 +17,10 @@ function getBankingInfo(amount, orderId) {
   return { ...BANKING_INFO, qr_url: qrUrl, amount, noi_dung_chuyen_khoan: addInfo };
 }
 
-const mapSubscription = (subscription) => ({
+const mapSubscription = (subscription) => {
+  const orderTrangThaiTT =
+    subscription.order_trang_thai_tt === "da_thanh_toan" ? "da_tt" : "chua_tt";
+  return {
   ma_dang_ky: subscription.madk,
   id: subscription.madk,
   user_id: subscription.mand,
@@ -47,8 +50,8 @@ const mapSubscription = (subscription) => ({
   order_id: subscription.order_id || null,
   order_tong_tien: Number(subscription.order_tong_tien || 0),
   order_tien_coc: Number(subscription.order_tien_coc || 0),
-  order_trang_thai_tt: subscription.order_trang_thai_tt || null,
-  ...(subscription.order_id && subscription.order_trang_thai_tt !== 'da_tt'
+  order_trang_thai_tt: orderTrangThaiTT,
+  ...(subscription.order_id && orderTrangThaiTT !== 'da_tt'
     ? { banking_info: getBankingInfo(Number(subscription.order_tien_coc || 0), subscription.order_id) }
     : {}),
 
@@ -63,7 +66,8 @@ const mapSubscription = (subscription) => ({
     email: subscription.email,
     phone: subscription.sdt,
   },
-});
+  };
+};
 
 exports.create = async (req, res) => {
   try {

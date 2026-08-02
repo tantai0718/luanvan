@@ -435,10 +435,11 @@ function mapOrder(row) {
 
 async function updatePaymentSuccess(madh, { ma_giao_dich = '' }) {
   const [[dh]] = await db.query(
-    'SELECT tien_coc FROM don_hang WHERE madh = ?', [madh]
+    'SELECT tien_coc, tong_tien FROM don_hang WHERE madh = ?', [madh]
   );
   const depositAmount = dh ? Number(dh.tien_coc || 0) : 0;
-  const amountPaid = depositAmount > 0 ? depositAmount : undefined;
+  const tongTien = dh ? Number(dh.tong_tien || 0) : 0;
+  const amountPaid = depositAmount > 0 ? depositAmount : tongTien;
   await db.query(
     `UPDATE don_hang SET trang_thai = 'da_xac_nhan',
       trang_thai_thanh_toan = 'da_thanh_toan',
@@ -461,10 +462,11 @@ async function updateBankingPayment(madh) {
 
 async function confirmBankingPayment(madh) {
   const [[dh]] = await db.query(
-    'SELECT tien_coc FROM don_hang WHERE madh = ?', [madh]
+    'SELECT tien_coc, tong_tien FROM don_hang WHERE madh = ?', [madh]
   );
   const depositAmount = dh ? Number(dh.tien_coc || 0) : 0;
-  const amountPaid = depositAmount > 0 ? depositAmount : 0;
+  const tongTien = dh ? Number(dh.tong_tien || 0) : 0;
+  const amountPaid = depositAmount > 0 ? depositAmount : tongTien;
   await db.query(
     `UPDATE don_hang SET trang_thai_thanh_toan = 'da_thanh_toan',
       tong_da_thanh_toan = ? WHERE madh = ?`,
