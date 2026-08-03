@@ -113,7 +113,7 @@ async function createOrder({
       nguoi_dung?.email || "",
       sdt_nguoi_nhan || nguoi_dung?.sdt || "",
       tong_tien,
-      isBanking ? 0 : tong_tien,
+      0,
       "chua_thanh_toan",
       dia_chi_giao,
       ghi_chu || null,
@@ -203,9 +203,9 @@ async function createPreorder({
       nguoi_dung?.email || "",
       sdt_nguoi_nhan || nguoi_dung?.sdt || "",
       tong_tien,
-      isBanking ? 0 : tong_tien,
+      0,
       actualDeposit,
-      isBanking ? "chua_thanh_toan" : "da_thanh_toan",
+      "chua_thanh_toan",
       dia_chi_giao,
       ghi_chu || null,
       ngay_giao_du_kien || null,
@@ -225,7 +225,7 @@ async function createPreorder({
   await db.query(
     `INSERT INTO thanh_toan (madh, so_tien, phuong_thuc, trang_thai, ngay_thanh_toan)
      VALUES (?, ?, ?, ?, NOW())`,
-     [madh, tong_tien, mapPaymentMethod(phuong_thuc), isBanking ? "cho_thanh_toan" : "da_thanh_toan"],
+     [madh, tong_tien, mapPaymentMethod(phuong_thuc), "cho_thanh_toan"],
   );
 
   const [dkResult] = await db.query(
@@ -354,11 +354,13 @@ async function updateOrderStatus(madh, trang_thai) {
   if (trang_thai === "da_giao") {
     await db.query(
       `UPDATE don_hang
-       SET trang_thai_thanh_toan='da_thanh_toan', ngay_giao_thuc_te=NOW()
+       SET trang_thai_thanh_toan='da_thanh_toan',
+           ngay_giao_thuc_te=NOW(),
+           tong_da_thanh_toan = tong_tien
        WHERE madh=?`,
       [madh],
     );
-  }
+}
 
   if (dh && dh.loai_don_hang === 'dat_truoc' && dh.madk) {
     if (trang_thai === 'da_giao') {

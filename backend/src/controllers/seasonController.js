@@ -20,7 +20,7 @@ exports.listProducts = async (req, res) => {
     try {
         const [rows] = await db.query(
             `SELECT spmv.maspmv, spmv.masp, spmv.so_luong_du_kien, spmv.so_luong_thuc_te,
-                    spmv.gia_du_kien, spmv.ghi_chu, spmv.han_su_dung_dieu_chinh,
+                    spmv.gia_du_kien, spmv.ghi_chu,
                     sp.ten_san_pham, sp.gia_ban, sp.don_vi,
                     hav.duong_dan AS hinh_chinh
              FROM san_pham_mua_vu spmv
@@ -42,7 +42,6 @@ exports.listProducts = async (req, res) => {
             gia_du_kien: r.gia_du_kien !== null ? Number(r.gia_du_kien) : null,
             ghi_chu: r.ghi_chu || '',
             hinh_anh: r.hinh_chinh ? `/upload/${r.hinh_chinh}` : null,
-            han_su_dung_dieu_chinh: r.han_su_dung_dieu_chinh || null,
         }));
         res.json({ products });
     } catch (err) {
@@ -110,18 +109,17 @@ exports.remove = async (req, res) => {
 
 exports.addProduct = async (req, res) => {
     try {
-        const { masp, so_luong_du_kien, gia_du_kien, ghi_chu = '', han_su_dung_dieu_chinh } = req.body;
+        const { masp, so_luong_du_kien, gia_du_kien, ghi_chu = '' } = req.body;
         if (!masp) return res.status(400).json({ message: 'Vui lòng chọn sản phẩm.' });
 
         const [result] = await db.query(
-            `INSERT INTO san_pham_mua_vu (masp, mamv, so_luong_du_kien, gia_du_kien, ghi_chu, han_su_dung_dieu_chinh)
-             VALUES (?, ?, ?, ?, ?, ?)
+            `INSERT INTO san_pham_mua_vu (masp, mamv, so_luong_du_kien, gia_du_kien, ghi_chu)
+             VALUES (?, ?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE
                so_luong_du_kien = VALUES(so_luong_du_kien),
                gia_du_kien = VALUES(gia_du_kien),
-               ghi_chu = VALUES(ghi_chu),
-               han_su_dung_dieu_chinh = VALUES(han_su_dung_dieu_chinh)`,
-            [masp, req.params.id, so_luong_du_kien || null, gia_du_kien || null, ghi_chu, han_su_dung_dieu_chinh || null]
+               ghi_chu = VALUES(ghi_chu)`,
+            [masp, req.params.id, so_luong_du_kien || null, gia_du_kien || null, ghi_chu]
         );
         res.status(201).json({ message: 'Đã gắn sản phẩm vào mùa vụ', id: result.insertId });
     } catch (err) {

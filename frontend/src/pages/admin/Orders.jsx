@@ -698,15 +698,37 @@ const exportExcel = async () => {
     }
   };
 
-  const handleAdvanceStatus = async (id, currentStatus) => {
+const handleAdvanceStatus = async (id, currentStatus) => {
     const nextStatus = nextStatusMap[currentStatus];
     if (!nextStatus) return;
     await orderAPI.adminUpdateStatus(id, { trang_thai: nextStatus });
-    setOrders(prev => prev.map(order => order.ma_don_hang === id ? { ...order, trang_thai: nextStatus } : order));
+
+    const extraFields = nextStatus === 'da_giao'
+      ? {
+          ngay_giao_thuc_te: new Date().toISOString(),
+          trang_thai_thanh_toan: 'da_thanh_toan',
+          trang_thai_tt: 'da_tt',
+        }
+      : {};
+
+    setOrders(prev => prev.map(order =>
+      order.ma_don_hang === id
+        ? { ...order, trang_thai: nextStatus, ...(nextStatus === 'da_giao' ? { tong_da_thanh_toan: order.tong_thanh_toan } : {}) }
+        : order
+    ));
+
     if (selectedId === id && detail) {
-      setDetail(prev => ({ ...prev, order: { ...prev.order, trang_thai: nextStatus, ...(nextStatus === 'da_giao' ? { ngay_giao_thuc_te: new Date().toISOString() } : {}) } }));
+      setDetail(prev => ({
+        ...prev,
+        order: {
+          ...prev.order,
+          trang_thai: nextStatus,
+          ...extraFields,
+          ...(nextStatus === 'da_giao' ? { tong_da_thanh_toan: prev.order.tong_thanh_toan } : {}),
+        },
+      }));
     }
-  };
+};
 
   const handleCancel = async id => {
     if (!window.confirm('Bạn có chắc muốn hủy đơn hàng này không?')) return;

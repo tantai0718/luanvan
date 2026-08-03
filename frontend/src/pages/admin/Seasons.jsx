@@ -3,8 +3,7 @@ import { api, seasonAPI } from '../../services/api';
 import { Badge, Btn, Input, Loading, Modal, PageHero, Table } from '../../components/ui/AdminUI';
 
 const emptyForm = { ten_mua: '', thang_bat_dau: 1, thang_ket_thuc: 3, qua_nam: 0, mo_ta: '' };
-const emptyProductForm = { masp: '', so_luong_du_kien: '', gia_du_kien: '', ghi_chu: '', han_su_dung_dieu_chinh: '' };
-
+const emptyProductForm = { masp: '', so_luong_du_kien: '', gia_du_kien: '', ghi_chu: '' };
 function SeasonProductsModal({ season, products, allProducts, loading, form, setForm, saving, onClose, onAdd, onRemove }) {
   const attachedIds = new Set(products.map(p => p.masp));
   const selectableProducts = allProducts.filter(p => !attachedIds.has(p.ma_san_pham));
@@ -49,12 +48,6 @@ function SeasonProductsModal({ season, products, allProducts, loading, form, set
                 value={form.ghi_chu} 
                 onChange={e => setForm({ ...form, ghi_chu: e.target.value })} 
               />
-              <Input 
-                placeholder="HSD điều chỉnh (ngày)" 
-                type="date" 
-                value={form.han_su_dung_dieu_chinh ? form.han_su_dung_dieu_chinh.slice(0, 10) : ''} 
-                onChange={e => setForm({ ...form, han_su_dung_dieu_chinh: e.target.value || '' })} 
-              />
             </div>
           </div>
 
@@ -64,7 +57,7 @@ function SeasonProductsModal({ season, products, allProducts, loading, form, set
         </div>
 
         {loading ? <Loading /> : (
-          <Table headers={['#', 'Sản phẩm', 'Giá bán', 'Giá dự kiến mùa', 'SL dự kiến', 'HSD điều chỉnh', 'Ghi chú', 'Thao tác']} empty={{ icon: '🌱', text: 'Mùa này chưa có sản phẩm nào.' }}>
+          <Table headers={['#', 'Sản phẩm', 'Giá bán', 'Giá dự kiến mùa', 'SL dự kiến', 'Ghi chú', 'Thao tác']} empty={{ icon: '🌱', text: 'Mùa này chưa có sản phẩm nào.' }}>
             {products.map((product, index) => (
               <tr key={product.maspmv} className="hover:bg-background">
                 <td className="px-4 py-3 text-caption text-text-secondary">{index + 1}</td>
@@ -77,7 +70,6 @@ function SeasonProductsModal({ season, products, allProducts, loading, form, set
                 <td className="px-4 py-3 text-body text-text-secondary">{Number(product.gia_ban).toLocaleString('vi-VN')}đ/{product.don_vi}</td>
                 <td className="px-4 py-3 text-body font-bold text-primary">{product.gia_du_kien ? `${product.gia_du_kien.toLocaleString('vi-VN')}đ` : '—'}</td>
                 <td className="px-4 py-3 text-body text-text-secondary">{product.so_luong_du_kien ?? '—'}</td>
-                <td className="px-4 py-3 text-body text-text-secondary">{product.han_su_dung_dieu_chinh ? new Date(product.han_su_dung_dieu_chinh).toLocaleDateString('vi-VN') : '—'}</td>
                 <td className="px-4 py-3 text-body text-text-secondary">{product.ghi_chu || '—'}</td>
                 <td className="px-4 py-3">
                   <Btn size="sm" variant="danger" onClick={() => onRemove(product.masp)}>Gỡ</Btn>

@@ -114,7 +114,28 @@ exports.create = async (req, res) => {
     const soLuong = Number(quantity) > 0 ? Number(quantity) : 1;
 
     const giaBan = Number(product.gia_ban);
-    const tongHang = giaBan * soLuong;
+
+    // Tính giảm giá cận hạn (giống logic trong orderModel.getItemExpiryDiscount)
+    let donGiaSauGiamCanHan = giaBan;
+    if (
+      product.han_su_dung &&
+      Number(product.phan_tram_giam_can_han || 0) > 0 &&
+      Number(product.so_ngay_can_han || 0) >= 0
+    ) {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const nsx = product.ngay_san_xuat ? new Date(product.ngay_san_xuat) : null;
+      const nsxDay = nsx ? new Date(nsx.getFullYear(), nsx.getMonth(), nsx.getDate()) : null;
+      const refDate = (nsxDay && nsxDay > today) ? nsxDay : today;
+      const expiry = new Date(product.han_su_dung);
+      const expiryDay = new Date(expiry.getFullYear(), expiry.getMonth(), expiry.getDate());
+      const daysLeft = Math.round((expiryDay - refDate) / (1000 * 60 * 60 * 24));
+      if (daysLeft >= 0 && daysLeft <= Number(product.so_ngay_can_han)) {
+        donGiaSauGiamCanHan = giaBan - Math.round(giaBan * Number(product.phan_tram_giam_can_han) / 100);
+      }
+    }
+
+    const tongHang = donGiaSauGiamCanHan * soLuong;
 
     const { tienGiam, mienPhiShip, appliedPromotions } = await orderModel.tinhUuDaiTuDong(tongHang, soLuong, 'dinh_ky');
 
@@ -190,7 +211,7 @@ exports.create = async (req, res) => {
       await db.query(
         `INSERT INTO chi_tiet_don_hang (madh, masp, so_luong, don_gia, thanh_tien, han_su_dung_luc_ban)
          VALUES (?, ?, ?, ?, ?, ?)`,
-        [madh, masp, soLuong, giaBan, tongHang, product.han_su_dung || null],
+        [madh, masp, soLuong, donGiaSauGiamCanHan, tongHang, product.han_su_dung || null],
       );
 
       await db.query(
