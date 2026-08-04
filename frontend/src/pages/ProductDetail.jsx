@@ -9,25 +9,22 @@ import { Check, ShieldCheck, ChevronRight, ChevronLeft, Play, Minus, Plus, X, Ey
 const isVideoUrl = url => /\.(mp4|webm|mov)$/i.test(url || '');
 const formatCurrency = value => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
 
-function tinhSoNgaySuDung(ngaySanXuat, hanSuDung) {
-  if (!ngaySanXuat || !hanSuDung) return null;
-  const start = new Date(ngaySanXuat);
+function tinhSoNgaySuDung(hanSuDung) {
+  if (!hanSuDung) return null;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const end = new Date(hanSuDung);
-  const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
   const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
-  return Math.round((endDay - startDay) / (1000 * 60 * 60 * 24));
+  return Math.round((endDay - today) / (1000 * 60 * 60 * 24));
 }
 
 function calculateExpiryDiscount(product, quantity = 1) {
   if (!product || !product.han_su_dung || Number(product.phan_tram_giam_can_han || 0) <= 0 || Number(product.so_ngay_can_han || 0) < 0) return 0;
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const nsx = product.ngay_san_xuat ? new Date(product.ngay_san_xuat) : null;
-  const nsxDay = nsx ? new Date(nsx.getFullYear(), nsx.getMonth(), nsx.getDate()) : null;
-  const refDate = (nsxDay && nsxDay > today) ? nsxDay : today;
   const expiry = new Date(product.han_su_dung);
   const expiryDay = new Date(expiry.getFullYear(), expiry.getMonth(), expiry.getDate());
-  const daysLeft = Math.round((expiryDay - refDate) / (1000 * 60 * 60 * 24));
+  const daysLeft = Math.round((expiryDay - today) / (1000 * 60 * 60 * 24));
   if (daysLeft < 0 || daysLeft > Number(product.so_ngay_can_han)) return 0;
   return Math.round(Number(product.gia_ban || 0) * Number(quantity || 0) * Number(product.phan_tram_giam_can_han || 0) / 100);
 }
@@ -374,8 +371,8 @@ export default function ProductDetail() {
               <div className="flex justify-between"><span>Nguồn hàng</span><strong className="text-text-primary">{product.ten_nong_trai || 'Farm2Table'}</strong></div>
               <div className="flex justify-between"><span>Khu vực</span><strong className="text-text-primary">{product.tinh_thanh || 'Toàn quốc'}</strong></div>
               <div className="flex justify-between"><span>Tồn kho</span><strong className="text-text-primary">{stock > 0 ? `${stock} ${product.don_vi}` : 'Tạm hết'}</strong></div>
-              {(product.ngay_san_xuat && product.han_su_dung) && (() => {
-                const soNgaySuDung = tinhSoNgaySuDung(product.ngay_san_xuat, product.han_su_dung);
+              {(product.han_su_dung) && (() => {
+                const soNgaySuDung = tinhSoNgaySuDung(product.han_su_dung);
                 return (
                   <div className="flex justify-between">
                     <span>Hạn sử dụng</span>

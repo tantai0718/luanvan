@@ -20,12 +20,9 @@ function calculateHsdStatus(hanSuDung, soNgayCanHan, ngaySanXuat = null) {
     if (!hanSuDung) return 'con_han';
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const nsx = ngaySanXuat ? new Date(ngaySanXuat) : null;
-    const nsxDay = nsx ? new Date(nsx.getFullYear(), nsx.getMonth(), nsx.getDate()) : null;
-    const refDate = (nsxDay && nsxDay > today) ? nsxDay : today;
     const expiry = new Date(hanSuDung);
     const expiryDay = new Date(expiry.getFullYear(), expiry.getMonth(), expiry.getDate());
-    const daysLeft = Math.round((expiryDay - refDate) / (1000 * 60 * 60 * 24));
+    const daysLeft = Math.round((expiryDay - today) / (1000 * 60 * 60 * 24));
 
     if (daysLeft < 0) return 'het_han';
     if (daysLeft <= Number(soNgayCanHan != null ? soNgayCanHan : 3)) return 'can_han';

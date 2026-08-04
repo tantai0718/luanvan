@@ -20,12 +20,9 @@ function getItemExpiryDiscount(item) {
     if (!item.han_su_dung || Number(item.phan_tram_giam_can_han || 0) <= 0 || Number(item.so_ngay_can_han || 0) < 0) return 0;
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const nsx = item.ngay_san_xuat ? new Date(item.ngay_san_xuat) : null;
-    const nsxDay = nsx ? new Date(nsx.getFullYear(), nsx.getMonth(), nsx.getDate()) : null;
-    const refDate = (nsxDay && nsxDay > today) ? nsxDay : today;
     const expiry = new Date(item.han_su_dung);
     const expiryDay = new Date(expiry.getFullYear(), expiry.getMonth(), expiry.getDate());
-    const daysLeft = Math.round((expiryDay - refDate) / (1000 * 60 * 60 * 24));
+    const daysLeft = Math.round((expiryDay - today) / (1000 * 60 * 60 * 24));
     if (daysLeft < 0 || daysLeft > Number(item.so_ngay_can_han)) return 0;
     return Math.round(Number(item.price || item.gia_ban || 0) * Number(item.quantity || item.so_luong || 1) * Number(item.phan_tram_giam_can_han || 0) / 100);
 }

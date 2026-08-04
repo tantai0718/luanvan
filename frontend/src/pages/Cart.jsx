@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { orderAPI } from '../services/api';
 import { pickProductImage } from '../utils/marketImages';
-import { ShoppingCart, ChevronRight, Info, Plus, Minus, ArrowRight, ShieldCheck, Truck, HeadphonesIcon, CreditCard, Landmark, AlertCircle } from 'lucide-react';
+import { getAddresses, addAddress, setDefaultAddress, removeAddress } from '../utils/addressBook';
+import { ShoppingCart, ChevronRight, Info, Plus, Minus, ArrowRight, ShieldCheck, Truck, HeadphonesIcon, CreditCard, Landmark, AlertCircle, MapPin, Star, Trash2 } from 'lucide-react';
 
 const formatCurrency = value => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
 
@@ -48,14 +49,18 @@ export default function Cart() {
   const { items, updateItem, removeItem, clearCart, totalPrice, summary } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const userId = user?.id;
+  const [savedAddresses, setSavedAddresses] = useState([]);
   const [form, setForm] = useState({
-    dia_chi_giao: user?.address || '',
+    dia_chi_giao: '',
+    dia_chi_nguoi_nhan: '',
     ghi_chu: '',
     phuong_thuc_tt: 'tien_mat',
     ship_to_other: false,
     ten_nguoi_nhan: '',
     sdt_nguoi_nhan: '',
   });
+  const [saveNote, setSaveNote] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const discount = Number(summary?.discountAmount || 0);
@@ -63,15 +68,66 @@ export default function Cart() {
   const shipping = Number(summary?.shipping ?? (totalPrice > 500000 ? 0 : 30000));
   const total = Number(summary?.total ?? (Math.max(0, totalPrice - discount) + shipping));
 
+  useEffect(() => {
+    if (!userId) return;
+    const list = getAddresses(userId);
+    setSavedAddresses(list);
+    const def = list.find(a => a.is_default) || list[0] || null;
+    setForm(prev => ({ ...prev, dia_chi_giao: def ? def.dia_chi : (user?.address || '') }));
+  }, [userId, user?.address]);
+
+  const refreshAddresses = () => setSavedAddresses(getAddresses(userId));
+
+  const selectAddress = addr => {
+    setForm(prev => ({ ...prev, dia_chi_giao: addr.dia_chi, ten_nguoi_nhan: '', sdt_nguoi_nhan: '' }));
+    if (!addr.is_default && !savedAddresses.some(a => a.is_default)) setDefaultAddress(userId, addr.id);
+    refreshAddresses();
+  };
+
+  const handleMakeDefault = addr => {
+    setDefaultAddress(userId, addr.id);
+    refreshAddresses();
+  };
+
+  const handleDeleteAddress = addr => {
+    removeAddress(userId, addr.id);
+    const remaining = getAddresses(userId);
+    const next = remaining.find(a => a.is_default) || remaining[0];
+    refreshAddresses();
+    setForm(prev => ({ ...prev, dia_chi_giao: next ? next.dia_chi : '' }));
+  };
+
+  const handleSaveAddress = () => {
+    const val = form.dia_chi_giao.trim();
+    if (!val) { setSaveNote('Vui lòng nhập địa chỉ trước khi lưu.'); return; }
+    if ((getAddresses(userId) || []).some(a => a.dia_chi.trim() === val)) { setSaveNote('Địa chỉ này đã có trong sổ.'); return; }
+    addAddress(userId, { dia_chi: val, ten_nguoi_nhan: form.ten_nguoi_nhan, sdt_nguoi_nhan: form.sdt_nguoi_nhan });
+    refreshAddresses();
+    setSaveNote('Đã lưu vào sổ địa chỉ.');
+  };
+
   const handleOrder = async () => {
-    if (!form.dia_chi_giao.trim()) { setError('Vui lòng nhập địa chỉ giao hàng.'); return; }
+    let finalAddress = form.dia_chi_giao.trim();
     if (form.ship_to_other) {
       if (!form.ten_nguoi_nhan.trim()) { setError('Vui lòng nhập tên người nhận.'); return; }
       if (!form.sdt_nguoi_nhan.trim()) { setError('Vui lòng nhập số điện thoại người nhận.'); return; }
+      if (!form.dia_chi_nguoi_nhan.trim()) { setError('Vui lòng nhập địa chỉ người nhận.'); return; }
+      finalAddress = form.dia_chi_nguoi_nhan.trim();
+    } else if (!finalAddress) {
+      setError('Vui lòng nhập địa chỉ giao hàng.'); return;
     }
     setLoading(true); setError('');
     try {
-      const data = await orderAPI.create(form);
+      if (form.ship_to_other && !(getAddresses(userId) || []).some(a => a.dia_chi.trim() === finalAddress)) {
+        addAddress(userId, { dia_chi: finalAddress, ten_nguoi_nhan: form.ten_nguoi_nhan.trim(), sdt_nguoi_nhan: form.sdt_nguoi_nhan.trim() });
+      }
+      const data = await orderAPI.create({
+        dia_chi_giao: finalAddress,
+        ghi_chu: form.ghi_chu,
+        phuong_thuc_tt: form.phuong_thuc_tt,
+        ten_nguoi_nhan: form.ten_nguoi_nhan?.trim(),
+        sdt_nguoi_nhan: form.sdt_nguoi_nhan?.trim(),
+      });
       await clearCart();
       if (data.payment_url) { window.location.assign(data.payment_url); return; }
       navigate(`/orders/${data.order.id}?success=1`);
@@ -133,12 +189,60 @@ export default function Cart() {
                   </label>
                 </div>
 
-                <label className="grid gap-2">
-                  <span className="text-[13px] font-medium text-text-secondary">
-                    Địa chỉ giao hàng <span className="text-danger font-bold">*</span>
-                  </span>
-                  <textarea rows={3} value={form.dia_chi_giao} onChange={e => setForm({ ...form, dia_chi_giao: e.target.value })} placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành..." className={`${inputCls} resize-none`} />
-                </label>
+                {!form.ship_to_other && savedAddresses.length > 0 && (
+                  <div>
+                    <span className="text-[13px] font-medium text-text-secondary block mb-3">Sổ địa chỉ của bạn</span>
+                    <div className="space-y-2.5">
+                      {savedAddresses.map(addr => {
+                        const active = form.dia_chi_giao.trim() === addr.dia_chi.trim();
+                        return (
+                          <div key={addr.id} className={`rounded-2xl border-2 p-4 transition-all ${active ? 'border-primary bg-primary/5 shadow-sm shadow-primary/10' : 'border-border bg-background hover:border-primary/30'}`}>
+                            <label className="flex items-start gap-3 cursor-pointer">
+                              <input type="radio" checked={active} onChange={() => selectAddress(addr)} className="mt-1 h-5 w-5 accent-primary flex-shrink-0 cursor-pointer" />
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-body font-medium leading-relaxed ${active ? 'text-primary' : 'text-text-primary'}`}>{addr.dia_chi}</p>
+                                {(addr.ten_nguoi_nhan || addr.sdt_nguoi_nhan) && (
+                                  <p className="text-[12px] text-text-secondary mt-0.5">
+                                    {addr.ten_nguoi_nhan}{addr.ten_nguoi_nhan && addr.sdt_nguoi_nhan ? ' • ' : ''}{addr.sdt_nguoi_nhan}
+                                  </p>
+                                )}
+                                <div className="flex items-center gap-4 mt-2">
+                                  {addr.is_default ? (
+                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-primary bg-primary/10 rounded-full px-2.5 py-1">
+                                      <Star size={12} className="fill-primary" /> Mặc định
+                                    </span>
+                                  ) : (
+                                    <button type="button" onClick={() => handleMakeDefault(addr)} className="text-[11px] font-semibold text-text-secondary hover:text-primary inline-flex items-center gap-1 transition-colors">
+                                      <Star size={12} /> Đặt làm mặc định
+                                    </button>
+                                  )}
+                                  <button type="button" onClick={() => handleDeleteAddress(addr)} className="text-[11px] font-semibold text-danger/70 hover:text-danger inline-flex items-center gap-1 transition-colors">
+                                    <Trash2 size={12} /> Xóa
+                                  </button>
+                                </div>
+                              </div>
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {!form.ship_to_other && (
+                  <label className="grid gap-2">
+                    <span className="text-[13px] font-medium text-text-secondary">
+                      Địa chỉ giao hàng <span className="text-danger font-bold">*</span>
+                    </span>
+                    <textarea rows={3} value={form.dia_chi_giao} onChange={e => { setForm({ ...form, dia_chi_giao: e.target.value }); setSaveNote(''); }} placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành..." className={`${inputCls} resize-none`} />
+                    <div className="flex items-center gap-3">
+                      <button type="button" onClick={handleSaveAddress} className="text-[12px] font-semibold text-primary hover:text-primary/80 inline-flex items-center gap-1 transition-colors">
+                        <Plus size={14} /> Lưu địa chỉ này vào sổ
+                      </button>
+                      {saveNote && <span className="text-[12px] font-medium text-text-secondary">{saveNote}</span>}
+                    </div>
+                  </label>
+                )}
 
                 <label className="grid gap-2">
                   <span className="text-[13px] font-medium text-text-secondary">Ghi chú thêm</span>
@@ -146,19 +250,29 @@ export default function Cart() {
                 </label>
 
                 <label className="flex items-center gap-3 p-4 rounded-xl bg-background border border-border/60 hover:border-primary/40 transition-colors cursor-pointer">
-                  <input type="checkbox" checked={form.ship_to_other} onChange={e => setForm({ ...form, ship_to_other: e.target.checked })} className="h-5 w-5 accent-primary rounded cursor-pointer" />
+                  <input type="checkbox" checked={form.ship_to_other} onChange={e => { setForm({ ...form, ship_to_other: e.target.checked, ten_nguoi_nhan: '', sdt_nguoi_nhan: '', dia_chi_nguoi_nhan: '' }); setSaveNote(''); }} className="h-5 w-5 accent-primary rounded cursor-pointer" />
                   <span className="text-body font-medium text-text-primary">Giao hàng cho người khác</span>
                 </label>
 
                 {form.ship_to_other && (
-                  <div className="grid gap-6 md:grid-cols-2 pt-2 border-t border-border/40">
+                  <div className="grid gap-6 pt-2 border-t border-border/40">
+                    <div className="rounded-xl bg-primary/5 border border-primary/15 p-3.5 text-[12px] text-text-secondary flex items-start gap-2">
+                      <Info size={15} className="text-primary flex-shrink-0 mt-0.5" />
+                      <span>Đang giao cho người khác — vui lòng nhập thông tin và địa chỉ người nhận bên dưới (không dùng địa chỉ của bạn ở trên).</span>
+                    </div>
+                    <div className="grid gap-6 md:grid-cols-2">
+                      <label className="grid gap-2">
+                        <span className="text-[13px] font-medium text-text-secondary">Người nhận <span className="text-danger">*</span></span>
+                        <input value={form.ten_nguoi_nhan} onChange={e => setForm({ ...form, ten_nguoi_nhan: e.target.value })} placeholder="Họ tên người nhận" className={inputCls} />
+                      </label>
+                      <label className="grid gap-2">
+                        <span className="text-[13px] font-medium text-text-secondary">Số điện thoại <span className="text-danger">*</span></span>
+                        <input value={form.sdt_nguoi_nhan} onChange={e => setForm({ ...form, sdt_nguoi_nhan: e.target.value })} placeholder="Số điện thoại người nhận" className={inputCls} />
+                      </label>
+                    </div>
                     <label className="grid gap-2">
-                      <span className="text-[13px] font-medium text-text-secondary">Người nhận <span className="text-danger">*</span></span>
-                      <input value={form.ten_nguoi_nhan} onChange={e => setForm({ ...form, ten_nguoi_nhan: e.target.value })} placeholder="Họ tên người nhận" className={inputCls} />
-                    </label>
-                    <label className="grid gap-2">
-                      <span className="text-[13px] font-medium text-text-secondary">Số điện thoại <span className="text-danger">*</span></span>
-                      <input value={form.sdt_nguoi_nhan} onChange={e => setForm({ ...form, sdt_nguoi_nhan: e.target.value })} placeholder="Số điện thoại người nhận" className={inputCls} />
+                      <span className="text-[13px] font-medium text-text-secondary">Địa chỉ người nhận <span className="text-danger font-bold">*</span></span>
+                      <textarea rows={3} value={form.dia_chi_nguoi_nhan} onChange={e => setForm({ ...form, dia_chi_nguoi_nhan: e.target.value })} placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành của người nhận..." className={`${inputCls} resize-none`} />
                     </label>
                   </div>
                 )}

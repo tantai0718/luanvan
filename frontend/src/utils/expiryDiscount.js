@@ -1,18 +1,15 @@
-export function getExpiryDiscountDaysLeft(hanSuDung, ngaySanXuat) {
+export function getExpiryDiscountDaysLeft(hanSuDung) {
   if (!hanSuDung) return null;
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const nsx = ngaySanXuat ? new Date(ngaySanXuat) : null;
-  const nsxDay = nsx ? new Date(nsx.getFullYear(), nsx.getMonth(), nsx.getDate()) : null;
-  const refDate = (nsxDay && nsxDay > today) ? nsxDay : today;
   const expiry = new Date(hanSuDung);
   const expiryDay = new Date(expiry.getFullYear(), expiry.getMonth(), expiry.getDate());
-  return Math.round((expiryDay - refDate) / (1000 * 60 * 60 * 24));
+  return Math.round((expiryDay - today) / (1000 * 60 * 60 * 24));
 }
 
 export function getExpiryDiscountPercent(product) {
   if (!product || !product.han_su_dung || Number(product.phan_tram_giam_can_han || 0) <= 0 || Number(product.so_ngay_can_han || 0) < 0) return 0;
-  const daysLeft = getExpiryDiscountDaysLeft(product.han_su_dung, product.ngay_san_xuat);
+  const daysLeft = getExpiryDiscountDaysLeft(product.han_su_dung);
   if (daysLeft === null || daysLeft < 0 || daysLeft > Number(product.so_ngay_can_han)) return 0;
   return Number(product.phan_tram_giam_can_han || 0);
 }
