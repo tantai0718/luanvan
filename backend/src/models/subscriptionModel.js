@@ -117,7 +117,7 @@ const SELECT_FIELDS = `
   nd.ho_ten, nd.email, nd.sdt,
   hav.duong_dan AS hinh_chinh,
   dh.madh AS order_id, dh.tong_tien AS order_tong_tien,
-  dh.tien_coc AS order_tien_coc, dh.trang_thai_thanh_toan AS order_trang_thai_tt
+  COALESCE(first_dh.tien_coc, 0) AS order_tien_coc, dh.trang_thai_thanh_toan AS order_trang_thai_tt
 `;
 
 const JOINS = `
@@ -133,6 +133,10 @@ const JOINS = `
       WHERE loai_don_hang = 'dinh_ky' GROUP BY madk
     ) latest ON dh1.madh = latest.max_madh
   ) dh ON dh.madk = dk.madk
+  LEFT JOIN (
+    SELECT madk, MAX(tien_coc) AS tien_coc FROM don_hang
+    WHERE loai_don_hang = 'dinh_ky' GROUP BY madk
+  ) first_dh ON first_dh.madk = dk.madk
 `;
 
 async function getUserSubscriptions(mand) {
@@ -177,6 +181,23 @@ async function deliverSubscription(madk) {
   const current = await getSubscriptionById(madk);
   if (!current) return null;
 
+  // KIEM TRA TON KHO TRUOC TIEN - chan ngay neu khong du hang
+  const [[spBefore]] = await db.query(
+    'SELECT so_luong_ton FROM san_pham WHERE masp = ?', [current.masp]
+  );
+  const tonKhoHienTai = spBefore ? Number(spBefore.so_luong_ton) : 0;
+  const soLuongCan = Number(current.so_luong || 0);
+
+  if (tonKhoHienTai < soLuongCan) {
+    const err = new Error(
+      tonKhoHienTai <= 0
+        ? `Không thể ghi nhận giao hàng: sản phẩm "${current.ten_san_pham}" đã hết hàng trong kho. Vui lòng nhập thêm hàng trước khi giao.`
+        : `Không thể ghi nhận giao hàng: sản phẩm "${current.ten_san_pham}" chỉ còn ${tonKhoHienTai} ${current.don_vi || 'đơn vị'} trong kho, không đủ ${soLuongCan} theo đăng ký. Vui lòng nhập thêm hàng trước khi giao.`
+    );
+    err.isStockError = true;
+    throw err;
+  }
+
   const newDelivered = Number(current.so_lan_da_giao || 0) + 1;
   const isDone = newDelivered >= Number(current.so_lan_giao || 0);
 
@@ -190,32 +211,58 @@ async function deliverSubscription(madk) {
          ngay_giao_tiep_theo = ?,
          trang_thai = ?
      WHERE madk = ?`,
-    [
-      newDelivered,
-      nextDelivery,
-      isDone ? "hoan_thanh" : current.trang_thai,
-      madk,
-    ],
+    [newDelivered, nextDelivery, isDone ? "hoan_thanh" : current.trang_thai, madk],
+  );
+
+  await db.query(
+    `UPDATE san_pham SET so_luong_ton = so_luong_ton - ? WHERE masp = ?`,
+    [current.so_luong, current.masp]
   );
 
   await createDeliveryOrder(current, newDelivered);
 
-  return getSubscriptionById(madk);
+  // Van giu canh bao cho KY TIEP THEO (khong lien quan ky hien tai vua giao)
+  const [[spAfter]] = await db.query('SELECT so_luong_ton FROM san_pham WHERE masp = ?', [current.masp]);
+  const tonKhoConLai = spAfter ? Number(spAfter.so_luong_ton) : 0;
+
+  let stockWarning = null;
+  if (!isDone && tonKhoConLai < soLuongCan) {
+    stockWarning = {
+      ton_kho_con_lai: tonKhoConLai,
+      so_luong_can: soLuongCan,
+      ten_san_pham: current.ten_san_pham,
+      message: tonKhoConLai <= 0
+        ? `Sản phẩm "${current.ten_san_pham}" đã hết hàng trong kho! Vui lòng nhập thêm hàng trước kỳ giao tiếp theo.`
+        : `Sản phẩm "${current.ten_san_pham}" chỉ còn ${tonKhoConLai} ${current.don_vi || 'đơn vị'} trong kho, không đủ cho kỳ giao tiếp theo (cần ${soLuongCan}). Vui lòng nhập thêm hàng.`,
+    };
+  }
+
+  const updated = await getSubscriptionById(madk);
+  return { subscription: updated, stockWarning };
 }
+
 
 async function createDeliveryOrder(subscription, kyThu) {
   const soLuong = Number(subscription.so_luong || 0);
-  const donGia = Number(subscription.gia_du_kien || subscription.gia_ban || 0);
-  const tongHang = donGia * soLuong;
+  const donGiaGoc = Number(subscription.gia_ban || 0);
+  const tongHangGoc = donGiaGoc * soLuong;
 
   const { tienGiam, mienPhiShip } = await promotionModel.tinhUuDaiTuDong(
-    tongHang,
+    tongHangGoc,
     soLuong,
     'dinh_ky',
   );
 
   const phiShip = mienPhiShip ? 0 : 30000;
-  const tongTien = tongHang - tienGiam + phiShip;
+
+  // Nếu là kỳ cuối cùng, đối trừ khoản cọc ban đầu vào tổng tiền kỳ cuối
+  const isLastCycle = Number(kyThu) >= Number(subscription.so_lan_giao || 0);
+  let tienCocDeducted = 0;
+  if (isLastCycle && Number(subscription.order_tien_coc || 0) > 0) {
+    tienCocDeducted = Number(subscription.order_tien_coc);
+  }
+
+  const tongTien = Math.max(0, tongHangGoc - tienGiam + phiShip - tienCocDeducted);
 
   const [[sp]] = await db.query(
     `SELECT han_su_dung FROM san_pham WHERE masp = ?`,
@@ -225,10 +272,10 @@ async function createDeliveryOrder(subscription, kyThu) {
   const [dhResult] = await db.query(
     `INSERT INTO don_hang
       (mand, madk, tien_giam, ten_nguoi_nhan, email_nguoi_nhan, sdt_nguoi_nhan,
-       loai_don_hang, tong_tien, tong_da_thanh_toan, trang_thai,
+       loai_don_hang, tong_tien, tong_da_thanh_toan, tien_coc, trang_thai,
        trang_thai_thanh_toan, dia_chi_giao, ghi_chu, ngay_dat,
        ngay_giao_du_kien, ngay_giao_thuc_te)
-     VALUES (?, ?, ?, ?, ?, ?, 'dinh_ky', ?, ?, 'da_giao', 'da_thanh_toan', ?, ?, NOW(), NOW(), NOW())`,
+     VALUES (?, ?, ?, ?, ?, ?, 'dinh_ky', ?, ?, ?, 'da_giao', 'da_thanh_toan', ?, ?, NOW(), NOW(), NOW())`,
     [
       subscription.mand,
       subscription.madk,
@@ -238,6 +285,7 @@ async function createDeliveryOrder(subscription, kyThu) {
       subscription.sdt || '',
       tongTien,
       tongTien,
+      tienCocDeducted,
       subscription.dia_chi_giao,
       `Giao kỳ ${kyThu}/${subscription.so_lan_giao} - ${subscription.ten_san_pham}`,
     ],
@@ -247,7 +295,7 @@ async function createDeliveryOrder(subscription, kyThu) {
   await db.query(
     `INSERT INTO chi_tiet_don_hang (madh, masp, so_luong, don_gia, thanh_tien, han_su_dung_luc_ban)
      VALUES (?, ?, ?, ?, ?, ?)`,
-    [madh, subscription.masp, soLuong, donGia, tongHang, sp?.han_su_dung || null],
+    [madh, subscription.masp, soLuong, donGiaGoc, tongHangGoc, sp?.han_su_dung || null],
   );
 
   await db.query(

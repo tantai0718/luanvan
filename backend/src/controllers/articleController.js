@@ -1,27 +1,27 @@
-const baiVietModel = require('../models/baiVietModel');
+const articleModel = require('../models/articleModel');
 const cheerio = require('cheerio');
 const { saveDataUrlImage } = require('../utils/imageHelpers');
 
 exports.listPublic = async (req, res) => {
   try {
     const { q, the_loai, page, limit } = req.query;
-    const data = await baiVietModel.listPublic({ q, the_loai, page: Number(page) || 1, limit: Number(limit) || 12 });
+    const data = await articleModel.listPublic({ q, the_loai, page: Number(page) || 1, limit: Number(limit) || 12 });
     res.json(data);
   } catch (err) {
-    console.error('[baiViet:listPublic]', err);
+    console.error('[article:listPublic]', err);
     res.status(500).json({ message: 'Lỗi server' });
   }
 };
 
 exports.getById = async (req, res) => {
   try {
-    const item = await baiVietModel.getById(req.params.id);
+    const item = await articleModel.getById(req.params.id);
     if (!item) return res.status(404).json({ message: 'Không tìm thấy bài viết' });
-    await baiVietModel.incrementViews(req.params.id);
+    await articleModel.incrementViews(req.params.id);
     item.luot_xem += 1;
     res.json(item);
   } catch (err) {
-    console.error('[baiViet:getById]', err);
+    console.error('[article:getById]', err);
     res.status(500).json({ message: 'Lỗi server' });
   }
 };
@@ -29,10 +29,10 @@ exports.getById = async (req, res) => {
 exports.adminList = async (req, res) => {
   try {
     const { q, the_loai, trang_thai, page, limit } = req.query;
-    const data = await baiVietModel.adminList({ q, the_loai, trang_thai, page: Number(page) || 1, limit: Number(limit) || 20 });
+    const data = await articleModel.adminList({ q, the_loai, trang_thai, page: Number(page) || 1, limit: Number(limit) || 20 });
     res.json(data);
   } catch (err) {
-    console.error('[baiViet:adminList]', err);
+    console.error('[article:adminList]', err);
     res.status(500).json({ message: 'Lỗi server' });
   }
 };
@@ -42,30 +42,30 @@ exports.create = async (req, res) => {
     const { tieu_de, noi_dung } = req.body;
     if (!tieu_de?.trim()) return res.status(400).json({ message: 'Thiếu tiêu đề' });
     if (!noi_dung?.trim()) return res.status(400).json({ message: 'Thiếu nội dung' });
-    const result = await baiVietModel.create(req.body);
+    const result = await articleModel.create(req.body);
     res.status(201).json({ message: 'Tạo bài viết thành công', ...result });
   } catch (err) {
-    console.error('[baiViet:create]', err);
+    console.error('[article:create]', err);
     res.status(400).json({ message: err.message });
   }
 };
 
 exports.update = async (req, res) => {
   try {
-    await baiVietModel.update(req.params.id, req.body);
+    await articleModel.update(req.params.id, req.body);
     res.json({ message: 'Cập nhật thành công' });
   } catch (err) {
-    console.error('[baiViet:update]', err);
+    console.error('[article:update]', err);
     res.status(400).json({ message: err.message });
   }
 };
 
 exports.remove = async (req, res) => {
   try {
-    await baiVietModel.remove(req.params.id);
+    await articleModel.remove(req.params.id);
     res.json({ message: 'Xóa bài viết thành công' });
   } catch (err) {
-    console.error('[baiViet:remove]', err);
+    console.error('[article:remove]', err);
     res.status(400).json({ message: err.message });
   }
 };
@@ -131,7 +131,7 @@ exports.importUrl = async (req, res) => {
 
     res.json({ tieu_de: tieu_de.trim(), tom_tat: tom_tat.trim(), noi_dung, hinh_anh });
   } catch (err) {
-    console.error('[baiViet:importUrl]', err);
+    console.error('[article:importUrl]', err);
     res.status(400).json({ message: err.message || 'Không thể lấy nội dung từ URL' });
   }
 };
@@ -143,7 +143,7 @@ exports.uploadImage = async (req, res) => {
     const url = await saveDataUrlImage(base64, 'articles', 'article');
     res.json({ url });
   } catch (err) {
-    console.error('[baiViet:uploadImage]', err);
+    console.error('[article:uploadImage]', err);
     res.status(500).json({ message: err.message });
   }
 };

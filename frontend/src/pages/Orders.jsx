@@ -20,6 +20,7 @@ const subscriptionStatusMap = {
 const orderTypeMap = {
   thuong: { label: "Đơn thường", color: "bg-slate-100 text-slate-700" },
   dat_truoc: { label: "Đặt trước", color: "bg-orange-50 text-orange-700 border border-orange-200" },
+  dinh_ky: { label: "Giao định kỳ", color: "bg-emerald-50 text-emerald-700 border border-emerald-200" },
 };
 
 const frequencyMap = {
@@ -40,11 +41,8 @@ const hasDeposit = (order) => (order?.tien_coc || 0) > 0;
 
 const tinhTongTienMoiKy = (subscription) => {
   const tienSanPham = Number(subscription.gia_tam_tinh || 0) * Number(subscription.so_luong || 0);
-  const coDonCoc = !!subscription.order_id && Number(subscription.order_tong_tien) > 0;
-  const phiVanChuyen = coDonCoc
-    ? Math.max(0, Number(subscription.order_tong_tien) - tienSanPham)
-    : tienSanPham >= 500000 ? 0 : 30000;
-  return coDonCoc ? Number(subscription.order_tong_tien) : tienSanPham + phiVanChuyen;
+  const phiVanChuyen = tienSanPham >= 500000 ? 0 : 30000;
+  return tienSanPham + phiVanChuyen;
 };
 
 // --- COMPONENT ORDERLIST ---
@@ -55,6 +53,7 @@ export function OrderList() {
   const [loading, setLoading] = useState(true);
   const [cancelingOrderId, setCancelingOrderId] = useState(null);
   const [cancelingSubscriptionId, setCancelingSubscriptionId] = useState(null);
+  const [cancelModal, setCancelModal] = useState({ isOpen: false, id: null, tienCoc: 0, type: null });
 
   const fetchData = () => {
     setLoading(true);
@@ -74,33 +73,42 @@ export function OrderList() {
     fetchData();
   }, []);
 
-  const handleCancelOrder = async (event, orderId) => {
+  const handleCancelOrder = (event, orderId) => {
     event.preventDefault();
     event.stopPropagation();
-    if (!window.confirm("Bạn có chắc muốn hủy đơn hàng này không?")) return;
-    setCancelingOrderId(orderId);
-    try {
-      await orderAPI.cancel(orderId, {});
-      setOrders((prev) =>
-        prev.map((order) => (order.ma_don_hang === orderId ? { ...order, trang_thai: "da_huy" } : order))
-      );
-    } finally {
-      setCancelingOrderId(null);
-    }
+    setCancelModal({ isOpen: true, id: orderId, tienCoc: 0, type: 'order' });
   };
 
-  const handleCancelSubscription = async (event, id) => {
+  const handleCancelSubscription = (event, id, tienCoc = 0) => {
     event.preventDefault();
     event.stopPropagation();
-    if (!window.confirm("Bạn có chắc muốn hủy đăng ký giao định kỳ này không?")) return;
-    setCancelingSubscriptionId(id);
-    try {
-      await subscriptionAPI.cancel(id);
-      setSubscriptions((prev) =>
-        prev.map((item) => (item.ma_dang_ky === id ? { ...item, trang_thai: "da_huy" } : item))
-      );
-    } finally {
-      setCancelingSubscriptionId(null);
+    setCancelModal({ isOpen: true, id, tienCoc, type: 'subscription' });
+  };
+
+  const executeCancel = async () => {
+    const { id, type } = cancelModal;
+    if (type === 'subscription') {
+      setCancelingSubscriptionId(id);
+      try {
+        await subscriptionAPI.cancel(id);
+        setSubscriptions((prev) =>
+          prev.map((item) => (item.ma_dang_ky === id ? { ...item, trang_thai: "da_huy" } : item))
+        );
+      } finally {
+        setCancelingSubscriptionId(null);
+        setCancelModal({ isOpen: false, id: null, tienCoc: 0, type: null });
+      }
+    } else if (type === 'order') {
+      setCancelingOrderId(id);
+      try {
+        await orderAPI.cancel(id, {});
+        setOrders((prev) =>
+          prev.map((order) => (order.ma_don_hang === id ? { ...order, trang_thai: "da_huy" } : order))
+        );
+      } finally {
+        setCancelingOrderId(null);
+        setCancelModal({ isOpen: false, id: null, tienCoc: 0, type: null });
+      }
     }
   };
 
@@ -214,6 +222,12 @@ export function OrderList() {
                 {subscriptions.length ? (
                   subscriptions.map((subscription) => {
                     const status = subscriptionStatusMap[subscription.trang_thai] || subscriptionStatusMap.hoan_tat;
+                    const soKyDaGiao = Number(subscription.so_ky_da_giao || 0);
+                    const soKyGiao = Number(subscription.so_ky_giao || 0);
+                    const isLastCycle = soKyDaGiao >= soKyGiao - 1 && soKyGiao > 0;
+                    const tienCoc = Number(subscription.order_tien_coc || 0);
+                    const tongTien = tinhTongTienMoiKy(subscription);
+                    const giaHienThi = isLastCycle && tienCoc > 0 ? Math.max(0, tongTien - tienCoc) : tongTien;
                     return (
                       <Link
                         key={subscription.ma_dang_ky}
@@ -230,7 +244,7 @@ export function OrderList() {
                           <div className="mt-3 space-y-1.5 text-base text-text-secondary">
                             <p>📦 Số lượng: <span className="font-semibold text-text-primary">{subscription.so_luong} {subscription.don_vi} / mỗi kỳ</span></p>
                             <p>📅 Tần suất: <span className="font-semibold text-text-primary">{frequencyMap[subscription.tan_suat_giao] || subscription.tan_suat_giao}</span></p>
-                            <p>🔄 Tiến độ: <span className="font-semibold text-primary">Đã nhận {subscription.so_ky_da_giao || 0}/{subscription.so_ky_giao || 0} lần giao</span></p>
+                            <p>🔄 Tiến độ: <span className="font-semibold text-primary">Đã nhận {soKyDaGiao}/{soKyGiao} lần giao</span></p>
                             <p className="text-sm font-normal text-text-secondary">Kỳ giao tiếp theo: {new Date(subscription.ngay_giao_tiep_theo).toLocaleDateString("vi-VN")}</p>
                           </div>
                           <p className="mt-2 text-sm font-normal text-text-secondary">Nhấn để xem chi tiết đăng ký</p>
@@ -238,14 +252,16 @@ export function OrderList() {
 
                         <div className="mt-5 pt-4 border-t border-border flex items-center justify-between">
                         <div>
-                          <span className="text-sm font-normal text-text-secondary block">Giá mỗi kỳ</span>
-                          <span className="text-2xl font-semibold text-primary">
-                            {formatCurrency(tinhTongTienMoiKy(subscription))}
+                          <span className="text-sm font-normal text-text-secondary block">
+                            {isLastCycle && tienCoc > 0 ? `Giá kỳ cuối (trừ cọc ${formatCurrency(tienCoc)})` : 'Giá mỗi kỳ'}
+                          </span>
+                          <span className={`text-2xl font-semibold ${isLastCycle && tienCoc > 0 ? 'text-green-600' : 'text-primary'}`}>
+                            {formatCurrency(giaHienThi)}
                           </span>
                         </div>
                         {["dang_hoat_dong", "tam_dung"].includes(subscription.trang_thai) && (
                           <button
-                            onClick={(e) => handleCancelSubscription(e, subscription.ma_dang_ky)}
+                            onClick={(e) => handleCancelSubscription(e, subscription.ma_dang_ky, tienCoc)}
                             disabled={cancelingSubscriptionId === subscription.ma_dang_ky}
                             className="text-sm font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 px-4 py-2.5 rounded-xl transition disabled:opacity-50"
                           >
@@ -267,6 +283,42 @@ export function OrderList() {
           </>
         )}
       </div>
+
+      {cancelModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm transition-opacity">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl space-y-4 animate-in fade-in zoom-in duration-200">
+            <h3 className="text-xl font-semibold text-text-primary">
+              {cancelModal.type === 'subscription' ? 'Xác nhận hủy đăng ký định kỳ?' : 'Xác nhận hủy đơn hàng?'}
+            </h3>
+            <p className="text-text-secondary text-base leading-relaxed">
+              {cancelModal.type === 'subscription' ? (
+                <>
+                  Nếu hủy gói đăng ký lúc này, khoản tiền cọc 30%
+                  {cancelModal.tienCoc > 0 ? <strong className="text-rose-600"> {formatCurrency(cancelModal.tienCoc)}</strong> : ''} đã thanh toán ban đầu sẽ <strong className="text-rose-600">không được hoàn trả</strong> theo quy định.
+                  <br /><br />
+                  Bạn có chắc chắn muốn hủy gói không?
+                </>
+              ) : (
+                'Bạn có chắc chắn muốn hủy đơn hàng này không?'
+              )}
+            </p>
+            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">
+              <button
+                onClick={() => setCancelModal({ isOpen: false, id: null, tienCoc: 0, type: null })}
+                className="px-5 py-2.5 rounded-xl text-text-secondary bg-slate-100 hover:bg-slate-200 font-medium transition duration-200"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={executeCancel}
+                className="px-5 py-2.5 rounded-xl text-white bg-rose-600 hover:bg-rose-700 font-medium transition duration-200 shadow-sm shadow-rose-200"
+              >
+                Đồng ý hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -344,8 +396,11 @@ export function OrderDetail() {
   const orderType = orderTypeMap[order.loai_don || "thuong"] || orderTypeMap.thuong;
   const subtotal = items.reduce((sum, item) => sum + Number(item.thanh_tien || 0), 0);
 
-  const giamGia = Number(order.giam_gia || 0);
-  const shippingFee = Math.max(0, Number(order.tong_thanh_toan || 0) - subtotal + giamGia);
+  const isFinalDeliveryOrder = order.loai_don === 'dinh_ky' && order.trang_thai === 'da_giao' && Number(order.tien_coc || 0) > 0;
+  const khauTruCocOrder = isFinalDeliveryOrder ? Number(order.tien_coc || 0) : 0;
+
+  const giamGia = Number(order.giam_gia || 0) || Math.max(0, subtotal + 30000 - Number(order.tong_thanh_toan || 0) - khauTruCocOrder);
+  const shippingFee = Math.max(0, Number(order.tong_thanh_toan || 0) - subtotal + giamGia + khauTruCocOrder);
 
   const statusSteps = ["cho_xac_nhan", "da_xac_nhan", "dang_giao", "da_giao"];
   const currentStepIndex = statusSteps.indexOf(order.trang_thai);
@@ -454,14 +509,20 @@ export function OrderDetail() {
               {shippingFee > 0 ? formatCurrency(shippingFee) : "Miễn phí"}
             </span>
           </div>
+          {khauTruCocOrder > 0 && (
+            <div className="flex justify-between text-[#16A34A] font-semibold">
+              <span>Khấu trừ tiền cọc gói (30%)</span>
+              <span>-{formatCurrency(khauTruCocOrder)}</span>
+            </div>
+          )}
           <div className="flex justify-between border-t border-border pt-4 text-[18px]">
-            <span className="font-bold text-text-primary">Tổng tiền thanh toán</span>
+            <span className="font-bold text-text-primary">Tổng tiền thanh toán (COD)</span>
             <span className="text-2xl text-primary font-bold">{formatCurrency(order.tong_thanh_toan)}</span>
           </div>
-          {hasDeposit(order) && order.phuong_thuc_tt === 'banking' && (
+          {hasDeposit(order) && !isFinalDeliveryOrder && order.phuong_thuc_tt === 'banking' && (
             <>
               <div className="flex justify-between text-amber-700 bg-amber-50 rounded-xl px-4 py-2.5">
-                <span className="font-semibold">Đã đặt cọc (QR)</span>
+                <span className="font-semibold">Cọc trước (QR)</span>
                 <span className="font-bold">{formatCurrency(order.tien_coc)}</span>
               </div>
               {order.tong_thanh_toan > order.tien_coc && (
@@ -638,6 +699,7 @@ export function SubscriptionDetail() {
   const [loading, setLoading] = useState(true);
   const [canceling, setCanceling] = useState(false);
   const [polling, setPolling] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -674,15 +736,19 @@ export function SubscriptionDetail() {
     return () => { clearInterval(interval); setPolling(false); };
   }, [subscription?.order_id, subscription?.order_trang_thai_tt, id]);
 
-  const handleCancel = async () => {
+  const handleCancel = () => {
     if (!subscription || !["dang_hoat_dong", "tam_dung"].includes(subscription.trang_thai)) return;
-    if (!window.confirm("Bạn có chắc muốn hủy đăng ký giao định kỳ này không?")) return;
+    setShowCancelModal(true);
+  };
+
+  const confirmCancel = async () => {
     setCanceling(true);
     try {
       await subscriptionAPI.cancel(id);
       setSubscription((prev) => ({ ...prev, trang_thai: "da_huy" }));
     } finally {
       setCanceling(false);
+      setShowCancelModal(false);
     }
   };
 
@@ -713,11 +779,8 @@ export function SubscriptionDetail() {
   const donGiaGoc = Number(subscription.product?.price || 0);
   const giamGiaMoiKy = Math.max(0, (donGiaGoc - Number(subscription.gia_tam_tinh || 0)) * Number(subscription.so_luong || 0));
   const tienTamTinh = tienSanPham + giamGiaMoiKy;
-  const coDonCoc = !!subscription.order_id && Number(subscription.order_tong_tien) > 0;
-  const phiVanChuyen = coDonCoc
-    ? Math.max(0, Number(subscription.order_tong_tien) - tienSanPham)
-    : (tienSanPham >= 500000 ? 0 : 30000);
-  const tongTienMoiKy = coDonCoc ? Number(subscription.order_tong_tien) : tienSanPham + phiVanChuyen;
+  const phiVanChuyen = tienSanPham >= 500000 ? 0 : 30000;
+  const tongTienMoiKy = tienSanPham + phiVanChuyen;
 
   const imageUrl = subscription.hinh_san_pham
     ? subscription.hinh_san_pham.startsWith("/upload/")
@@ -742,8 +805,12 @@ export function SubscriptionDetail() {
               </p>
             </div>
             <div className="text-left sm:text-right shrink-0">
-              <span className="text-sm font-normal text-text-secondary block">Giá mỗi kỳ</span>
-              <span className="text-3xl font-semibold text-primary">{formatCurrency(tongTienMoiKy)}</span>
+              <span className="text-sm font-normal text-text-secondary block">
+                {soKyDaGiao >= soKyGiao - 1 && Number(subscription.order_tien_coc || 0) > 0 ? `Giá kỳ cuối (trừ cọc ${formatCurrency(subscription.order_tien_coc)})` : 'Giá mỗi kỳ'}
+              </span>
+              <span className={`text-3xl font-semibold ${soKyDaGiao >= soKyGiao - 1 && Number(subscription.order_tien_coc || 0) > 0 ? 'text-green-600' : 'text-primary'}`}>
+                {formatCurrency(soKyDaGiao >= soKyGiao - 1 && Number(subscription.order_tien_coc || 0) > 0 ? Math.max(0, tongTienMoiKy - Number(subscription.order_tien_coc || 0)) : tongTienMoiKy)}
+              </span>
             </div>
           </div>
 
@@ -789,27 +856,37 @@ export function SubscriptionDetail() {
           </div>
         </div>
         <div className="bg-white rounded-2xl border border-border p-5 shadow-sm space-y-4 text-[17px]">
-        <div className="flex justify-between text-text-secondary">
-          <span className="font-semibold text-text-secondary">Tiền tạm tính</span>
-          <span className="font-medium text-text-primary">{formatCurrency(tienTamTinh)}</span>
-        </div>
-        {giamGiaMoiKy > 0 && (
-          <div className="flex justify-between text-rose-600">
-            <span className="font-semibold">Khuyến mãi</span>
-            <span className="font-medium">-{formatCurrency(giamGiaMoiKy)}</span>
+          <div className="flex justify-between text-text-secondary">
+            <span className="font-semibold text-text-secondary">Tiền tạm tính</span>
+            <span className="font-medium text-text-primary">{formatCurrency(tienTamTinh)}</span>
           </div>
-        )}
-        <div className="flex justify-between text-text-secondary">
-          <span className="font-semibold text-text-secondary">Phí vận chuyển</span>
-          <span className="font-medium text-text-primary">
-            {phiVanChuyen > 0 ? formatCurrency(phiVanChuyen) : "Miễn phí"}
-          </span>
+          {giamGiaMoiKy > 0 && (
+            <div className="flex justify-between text-rose-600">
+              <span className="font-semibold">Khuyến mãi</span>
+              <span className="font-medium">-{formatCurrency(giamGiaMoiKy)}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-text-secondary">
+            <span className="font-semibold text-text-secondary">Phí vận chuyển</span>
+            <span className="font-medium text-text-primary">
+              {phiVanChuyen > 0 ? formatCurrency(phiVanChuyen) : "Miễn phí"}
+            </span>
+          </div>
+          {soKyDaGiao >= soKyGiao - 1 && Number(subscription.order_tien_coc || 0) > 0 && (
+            <div className="flex justify-between text-[#16A34A] font-semibold">
+              <span>Khấu trừ tiền cọc gói (30%)</span>
+              <span>-{formatCurrency(subscription.order_tien_coc)}</span>
+            </div>
+          )}
+          <div className="flex justify-between border-t border-border pt-4 text-[18px]">
+            <span className="font-bold text-text-primary">
+              {soKyDaGiao >= soKyGiao - 1 ? `Tổng thanh toán kỳ cuối (Kỳ ${soKyGiao} COD)` : "Tổng tiền mỗi kỳ"}
+            </span>
+            <span className="text-2xl text-primary font-bold">
+              {formatCurrency(soKyDaGiao >= soKyGiao - 1 ? Math.max(0, tongTienMoiKy - Number(subscription.order_tien_coc || 0)) : tongTienMoiKy)}
+            </span>
+          </div>
         </div>
-        <div className="flex justify-between border-t border-border pt-4 text-[18px]">
-          <span className="font-bold text-text-primary">Tổng tiền mỗi kỳ</span>
-          <span className="text-2xl text-primary font-bold">{formatCurrency(tongTienMoiKy)}</span>
-        </div>
-      </div>
 
         <div className="grid gap-4 md:grid-cols-2"></div>
 
@@ -883,10 +960,10 @@ export function SubscriptionDetail() {
                 {polling && <span className="text-xs font-medium text-amber-600 animate-pulse">🔄 Đang chờ xác nhận thanh toán...</span>}
               </div>
               <div className="mb-4 bg-white/60 rounded-xl p-3 text-sm text-amber-800 space-y-1">
-                <p>💰 Tổng mỗi kỳ: <strong>{formatCurrency(giaMoiKy)}</strong></p>
-                <p className="font-bold text-amber-900">Cần thanh toán qua QR: {formatCurrency(subscription.banking_info.amount)}</p>
-                {giaMoiKy > subscription.banking_info.amount && (
-                  <p className="text-amber-700">Còn lại ({formatCurrency(giaMoiKy - subscription.banking_info.amount)}) thanh toán khi nhận hàng</p>
+                <p>💰 Tổng mỗi kỳ: <strong>{formatCurrency(tongTienMoiKy)}</strong></p>
+                <p className="font-bold text-amber-900">Cần thanh toán cọc qua QR: {formatCurrency(subscription.banking_info.amount)}</p>
+                {tongTienMoiKy > subscription.banking_info.amount && (
+                  <p className="text-amber-700">Thanh toán COD khi nhận hàng: <strong>{formatCurrency(tongTienMoiKy)}</strong>/kỳ (Riêng kỳ cuối đối trừ cọc: <strong>{formatCurrency(tongTienMoiKy - subscription.banking_info.amount)}</strong>)</p>
                 )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
@@ -935,6 +1012,34 @@ export function SubscriptionDetail() {
         </div>
 
       </div>
+
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm transition-opacity">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl space-y-4 animate-in fade-in zoom-in duration-200">
+            <h3 className="text-xl font-semibold text-text-primary">Xác nhận hủy đăng ký định kỳ?</h3>
+            <p className="text-text-secondary text-base leading-relaxed">
+              Nếu hủy gói đăng ký lúc này, khoản tiền cọc 30%
+              {Number(subscription.order_tien_coc || 0) > 0 ? <strong className="text-rose-600"> {formatCurrency(Number(subscription.order_tien_coc))}</strong> : ''} đã thanh toán ban đầu sẽ <strong className="text-rose-600">không được hoàn trả</strong> theo quy định.
+              <br /><br />
+              Bạn có chắc chắn muốn hủy gói không?
+            </p>
+            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">
+              <button
+                onClick={() => setShowCancelModal(false)}
+                className="px-5 py-2.5 rounded-xl text-text-secondary bg-slate-100 hover:bg-slate-200 font-medium transition duration-200"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={confirmCancel}
+                className="px-5 py-2.5 rounded-xl text-white bg-rose-600 hover:bg-rose-700 font-medium transition duration-200 shadow-sm shadow-rose-200"
+              >
+                Đồng ý hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

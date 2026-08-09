@@ -84,6 +84,7 @@ exports.create = async (req, res) => {
       phuong_thuc_tt,
       ghi_chu,
       loai_tien_coc,
+      ma_code,
     } = req.body;
 
     const masp = ma_san_pham || product_id;
@@ -94,6 +95,9 @@ exports.create = async (req, res) => {
     }
     if (!dia_chi_giao) {
       return res.status(400).json({ message: "Thiếu địa chỉ giao hàng" });
+    }
+    if (phuong_thuc_tt !== "banking") {
+      return res.status(400).json({ message: "Giao định kỳ chỉ hỗ trợ thanh toán chuyển khoản ngân hàng." });
     }
 
     const product = await subscriptionModel.getProductInfo(masp);
@@ -134,10 +138,14 @@ exports.create = async (req, res) => {
 
     const tongHang = donGiaSauGiamCanHan * soLuong;
 
-    const { tienGiam, mienPhiShip, appliedPromotions } = await orderModel.tinhUuDaiTuDong(tongHang, soLuong, 'dinh_ky');
+    // Kỳ đầu: tính cả mã giảm giá
+    const { tienGiam: tienGiamKyDau, mienPhiShip: mienPhiShipKyDau, appliedPromotions: appliedPromotionsKyDau } = await orderModel.tinhUuDaiTuDong(tongHang, soLuong, 'dinh_ky', ma_code || '', req.user.id);
+
+    // Các kỳ sau: chỉ tính ưu đãi tự động
+    const { tienGiam: tienGiamTuDong } = await orderModel.tinhUuDaiTuDong(tongHang, soLuong, 'dinh_ky', '', req.user.id);
 
     const giaDuKien = soLuong > 0
-      ? Math.round((tongHang - tienGiam) / soLuong)
+      ? Math.round((tongHang - tienGiamTuDong) / soLuong)
       : giaBan;
 
     const chuKy = ["hang_tuan", "hai_tuan", "hang_thang"].includes(
@@ -167,13 +175,14 @@ exports.create = async (req, res) => {
     };
 
     if (isBanking) {
-      const phiShip = mienPhiShip ? 0 : 30000;
-      const tongTienKy = tongHang - tienGiam + phiShip;
+      const tongHangSauGiam = Math.max(0, tongHang - tienGiamKyDau);
+      const phiShip = mienPhiShipKyDau ? 0 : 30000;
+      const tongTienKyDau = tongHangSauGiam + phiShip;
       let tienCoc = 0;
       if (loai_tien_coc === "30") {
-        tienCoc = Math.round(tongTienKy * 0.3);
+        tienCoc = Math.round(tongHangSauGiam * 0.3);
       } else {
-        tienCoc = tongTienKy;
+        tienCoc = tongTienKyDau;
       }
 
       const nguoiDung = await db.query(
@@ -184,17 +193,18 @@ exports.create = async (req, res) => {
       const subId = subscription.madk;
       const [dhResult] = await db.query(
         `INSERT INTO don_hang
-           (mand, madk, ten_nguoi_nhan, email_nguoi_nhan, sdt_nguoi_nhan,
+           (mand, madk, tien_giam, ten_nguoi_nhan, email_nguoi_nhan, sdt_nguoi_nhan,
             loai_don_hang, tong_tien, tong_da_thanh_toan, tien_coc, trang_thai,
             trang_thai_thanh_toan, dia_chi_giao, ghi_chu, ngay_dat, ngay_giao_du_kien)
-         VALUES (?, ?, ?, ?, ?, 'dinh_ky', ?, 0, ?, 'cho_xac_nhan', 'chua_thanh_toan', ?, ?, NOW(), ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, 'dinh_ky', ?, 0, ?, 'cho_xac_nhan', 'chua_thanh_toan', ?, ?, NOW(), ?)`,
         [
           mand,
           subId,
+          tienGiamKyDau,
           nd.ho_ten || "",
           nd.email || "",
           nd.sdt || "",
-          tongTienKy,
+          tongTienKyDau,
           tienCoc,
           dia_chi_giao,
           ghi_chu || null,
@@ -203,7 +213,7 @@ exports.create = async (req, res) => {
       );
       const madh = dhResult.insertId;
       const promotionModel = require("../models/promotionModel");
-      await promotionModel.saveOrderPromotions(madh, appliedPromotions);
+      await promotionModel.saveOrderPromotions(madh, appliedPromotionsKyDau);
 
       await db.query(
         `INSERT INTO chi_tiet_don_hang (madh, masp, so_luong, don_gia, thanh_tien, han_su_dung_luc_ban)
@@ -219,8 +229,8 @@ exports.create = async (req, res) => {
 
       response.banking_info = getBankingInfo(tienCoc, madh);
       response.banking_info.tien_coc = tienCoc;
-      response.banking_info.tong_tien = tongTienKy;
-      response.banking_info.con_lai = tongTienKy - tienCoc;
+      response.banking_info.tong_tien = tongTienKyDau;
+      response.banking_info.con_lai = tongTienKyDau - tienCoc;
       response.order_id = madh;
     }
 
@@ -317,13 +327,19 @@ exports.adminDeliver = async (req, res) => {
         .json({ message: "Đăng ký đã hoàn tất tất cả các kỳ giao" });
     }
 
-    const updatedSubscription =
+    const result =
       await subscriptionModel.deliverSubscription(madk);
 
-    res.json({
+    const response = {
       message: "Đã ghi nhận giao hàng cho kỳ này",
-      subscription: mapSubscription(updatedSubscription),
-    });
+      subscription: mapSubscription(result.subscription),
+    };
+
+    if (result.stockWarning) {
+      response.stock_warning = result.stockWarning;
+    }
+
+    res.json(response);
   } catch (error) {
     console.error("[adminDeliverSubscription]", error);
     res.status(500).json({ message: error.message });

@@ -17,10 +17,10 @@ function ProductCard({ product }) {
   const navigate = useNavigate();
 
   const handleAdd = async e => {
+    if (stock <= 0) return; // Allow event to bubble up to the Link
     e.preventDefault(); e.stopPropagation();
     if (!user) return navigate('/login');
     if (user.role !== 'buyer') return alert('Chỉ tài khoản người mua mới có thể thêm vào giỏ hàng.');
-    if (stock <= 0) return;
     try {
       await addToCart(product.ma_san_pham, 1);
       setAdded(true);
@@ -45,7 +45,7 @@ function ProductCard({ product }) {
         {stock <= 0 && (
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center">
             <span className="bg-card/90 text-text-primary px-5 py-2 rounded-full text-caption font-semibold flex items-center gap-2">
-              <Ban size={14} /> Hết hàng
+              <Ban size={14} /> Tạm hết
             </span>
           </div>
         )}
@@ -83,17 +83,14 @@ function ProductCard({ product }) {
 
         <button
           onClick={handleAdd}
-          disabled={stock <= 0}
           className={`w-full flex items-center justify-center gap-2 rounded-btn py-2.5 text-body font-semibold transition-all duration-200 active:scale-[0.97] ${
-            stock <= 0
-              ? 'bg-background text-text-secondary/60 cursor-not-allowed border border-border'
-              : added
-                ? 'bg-primary/10 text-primary border border-primary/20'
-                : 'bg-primary text-white hover:bg-primary-dark shadow-sm hover:shadow-md'
+            added
+              ? 'bg-primary/10 text-primary border border-primary/20'
+              : 'bg-primary text-white hover:bg-primary-dark shadow-sm hover:shadow-md'
           }`}
         >
           {stock <= 0 ? (
-            <><Ban size={16} /> Hết hàng</>
+            <><ShoppingCart size={16} /> Đặt trước</>
           ) : added ? (
             <><Check size={16} /> Đã thêm vào giỏ</>
           ) : (

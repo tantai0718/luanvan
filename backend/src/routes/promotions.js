@@ -5,6 +5,7 @@ const auth = require("../middlewares/auth").auth;
 const role = require("../middlewares/auth").role;
 
 router.get("/promotions", promotionCtrl.getActivePromotions);
+router.post("/promotions/validate-code", auth, promotionCtrl.validateCode); // ← thêm dòng này
 
 router.get("/admin/promotions", auth, role("admin"), promotionCtrl.adminGetAll);
 router.post("/admin/promotions", auth, role("admin"), promotionCtrl.adminCreate);

@@ -32,11 +32,8 @@ const frequencyMap = { hang_tuan: 'Hàng tuần', hai_tuan: '2 tuần / lần', 
 const formatCurrency = value => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
 const tinhTongTienMoiKy = (subscription) => {
   const tienSanPham = Number(subscription.gia_tam_tinh || 0) * Number(subscription.so_luong || 0);
-  const coDonCoc = !!subscription.order_id && Number(subscription.order_tong_tien) > 0;
-  const phiVanChuyen = coDonCoc
-    ? Math.max(0, Number(subscription.order_tong_tien) - tienSanPham)
-    : (tienSanPham >= 500000 ? 0 : 30000);
-  return coDonCoc ? Number(subscription.order_tong_tien) : tienSanPham + phiVanChuyen;
+  const phiVanChuyen = tienSanPham >= 500000 ? 0 : 30000;
+  return tienSanPham + phiVanChuyen;
 };
 
 const paymentMethodLabel = method => {
@@ -235,7 +232,17 @@ function OrderDetailModal({ detail, orderId, onClose, onAdvanceStatus, onCancel,
 
 function SubscriptionDetailModal({ detail, subscriptionId, onClose, onDeliver, isDelivering }) {
   const subStatus = subscriptionStatusMap[detail.trang_thai] || subscriptionStatusMap.hoan_tat;
-  const payMethod = paymentMethodLabel(detail.phuong_thuc_tt);
+
+  const soKyDaGiao = Number(detail.so_ky_da_giao || 0);
+  const soKyGiao = Number(detail.so_ky_giao || 0);
+  const isLastCycle = soKyDaGiao >= soKyGiao - 1;
+  const tienCoc = Number(detail.order_tien_coc || 0);
+
+  const donGiaGoc = Number(detail.gia_ban || detail.product?.price || 0);
+  const tienTamTinh = Number(detail.gia_tam_tinh || 0) * Number(detail.so_luong || 0);
+  const phiVanChuyen = tienTamTinh >= 500000 ? 0 : 30000;
+  const tongTienChuaCoc = tienTamTinh + phiVanChuyen;
+  const tongTienKyCuoi = Math.max(0, tongTienChuaCoc - tienCoc);
 
   return (
     <Modal title={`HÓA ĐƠN ĐĂNG KÝ ĐỊNH KỲ`} onClose={onClose} size="lg">
@@ -249,7 +256,7 @@ function SubscriptionDetailModal({ detail, subscriptionId, onClose, onDeliver, i
           <div className="flex justify-center gap-3 pt-2 scale-110 origin-center">
             <Badge text={subStatus.label} color={subStatus.color} />
             <Badge text="Giao định kỳ" color="blue" />
-            <Badge text={`Đã giao ${Number(detail.so_ky_da_giao || 0)}/${Number(detail.so_ky_giao || 0)} kỳ`} color="green" />
+            <Badge text={`Đã giao ${soKyDaGiao}/${soKyGiao} kỳ`} color="green" />
           </div>
         </div>
 
@@ -264,9 +271,14 @@ function SubscriptionDetailModal({ detail, subscriptionId, onClose, onDeliver, i
           <div className="space-y-3 md:text-right md:flex md:flex-col md:items-end justify-start">
             <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Phương thức & Chu kỳ</h3>
             <div className="mt-1 flex items-center gap-2 md:justify-end">
-              <span className="text-slate-500 font-medium">Thanh toán:</span>
-              <Badge text={payMethod.label} color={payMethod.color} />
+              <span className="text-slate-500 font-medium">Thanh toán mỗi kỳ:</span>
+              <Badge text="Tiền mặt (COD)" color="orange" />
             </div>
+            {tienCoc > 0 && (
+              <p className="text-xs text-green-700 font-semibold bg-green-50 px-2.5 py-1 rounded-md border border-green-200 inline-block">
+                ✓ Khách đã cọc {formatCurrency(tienCoc)} (30%) khi đăng ký
+              </p>
+            )}
             <p className="text-slate-600 font-medium">Tần suất giao: <span className="font-extrabold text-slate-900 text-lg">{frequencyMap[detail.tan_suat_giao] || detail.tan_suat_giao}</span></p>
             <p className="text-slate-600 font-medium">Kỳ tiếp theo: <span className="font-extrabold text-primary text-lg">{new Date(detail.ngay_giao_tiep_theo).toLocaleDateString('vi-VN')}</span></p>
             {detail.ghi_chu && (
@@ -313,12 +325,29 @@ function SubscriptionDetailModal({ detail, subscriptionId, onClose, onDeliver, i
           <div className="w-80 space-y-2.5">
             <div className="flex justify-between text-slate-500">
               <span>Tổng chu kỳ đăng ký:</span>
-              <span className="font-bold text-slate-800">{detail.so_ky_giao || 5} kỳ</span>
+              <span className="font-bold text-slate-800">{soKyGiao} kỳ</span>
             </div>
-            <div className="flex justify-between pt-4 border-t border-slate-200 text-slate-900 font-black items-baseline">
-              <span className="text-lg uppercase tracking-wider">Giá mỗi kỳ:</span>
-              <span className="text-3xl font-black text-primary tracking-tight">{formatCurrency(tinhTongTienMoiKy(detail))}</span>
-            </div>
+            {isLastCycle && tienCoc > 0 ? (
+              <>
+                <div className="flex justify-between text-slate-500">
+                  <span>Giá các kỳ trước (COD):</span>
+                  <span className="font-bold text-slate-800">{formatCurrency(tongTienChuaCoc)}</span>
+                </div>
+                <div className="flex justify-between text-green-600 font-semibold">
+                  <span>Khấu trừ tiền cọc gói (30%):</span>
+                  <span>-{formatCurrency(tienCoc)}</span>
+                </div>
+                <div className="flex justify-between pt-4 border-t border-slate-200 text-slate-900 font-black items-baseline">
+                  <span className="text-lg uppercase tracking-wider text-green-700">Giá kỳ cuối (COD):</span>
+                  <span className="text-3xl font-black text-green-600 tracking-tight">{formatCurrency(tongTienKyCuoi)}</span>
+                </div>
+              </>
+            ) : (
+              <div className="flex justify-between pt-4 border-t border-slate-200 text-slate-900 font-black items-baseline">
+                <span className="text-lg uppercase tracking-wider">Giá mỗi kỳ (COD):</span>
+                <span className="text-3xl font-black text-primary tracking-tight">{formatCurrency(tongTienChuaCoc)}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -326,7 +355,7 @@ function SubscriptionDetailModal({ detail, subscriptionId, onClose, onDeliver, i
           <Btn variant="outline" onClick={onClose} size="lg">Đóng hóa đơn</Btn>
           {['dang_hoat_dong', 'tam_dung'].includes(detail.trang_thai) && (
             <Btn size="lg" onClick={() => onDeliver(detail.ma_dang_ky)} disabled={isDelivering}>
-              {isDelivering ? 'Đang ghi nhận...' : 'Ghi nhận đã giao'}
+              {isDelivering ? 'Đang ghi nhận...' : (isLastCycle ? `Ghi nhận giao kỳ cuối (${formatCurrency(tongTienKyCuoi)} COD)` : 'Ghi nhận đã giao')}
             </Btn>
           )}
         </div>
@@ -493,6 +522,7 @@ export default function AdminOrders() {
 
   const [selectedSub, setSelectedSub] = useState(null);
   const [deliveringSubscriptionId, setDeliveringSubscriptionId] = useState(null);
+  const [stockWarning, setStockWarning] = useState(null);
   const limit = 15;
 
   // --- Tổng hợp đơn đặt trước theo ngày ---
@@ -756,6 +786,12 @@ const handleAdvanceStatus = async (id, currentStatus) => {
       if (selectedSub && selectedSub.ma_dang_ky === id) {
         setSelectedSub(prev => ({ ...prev, so_ky_da_giao: response.subscription.so_ky_da_giao, ngay_giao_tiep_theo: response.subscription.ngay_giao_tiep_theo, trang_thai: response.subscription.trang_thai }));
       }
+
+      if (response.stock_warning) {
+        setStockWarning(response.stock_warning);
+      }
+    } catch (err) {
+      alert(err.message || 'Lỗi khi ghi nhận giao định kỳ');
     } finally { setDeliveringSubscriptionId(null); }
   };
 
@@ -919,25 +955,40 @@ const handleAdvanceStatus = async (id, currentStatus) => {
                 <div className="space-y-3">
                   {subscriptions.map(subscription => {
                     const subStatus = subscriptionStatusMap[subscription.trang_thai] || subscriptionStatusMap.hoan_tat;
-                    return (
+                    const soKyDaGiao = Number(subscription.so_ky_da_giao || 0);
+                    const soKyGiao = Number(subscription.so_ky_giao || 0);
+                    const isLastCycle = soKyDaGiao >= soKyGiao - 1;
+                    const tienCoc = Number(subscription.order_tien_coc || 0);
 
+                    const tienSanPham = Number(subscription.gia_tam_tinh || 0) * Number(subscription.so_luong || 0);
+                    const phiVanChuyen = tienSanPham >= 500000 ? 0 : 30000;
+                    const tongTienChuaCoc = tienSanPham + phiVanChuyen;
+                    const tongTienHienTai = isLastCycle && tienCoc > 0 ? Math.max(0, tongTienChuaCoc - tienCoc) : tongTienChuaCoc;
+
+                    return (
                       <div key={subscription.ma_dang_ky} onClick={() => setSelectedSub(subscription)} className="rounded-btn border border-border bg-card p-4 cursor-pointer hover:border-primary hover:shadow-md transition-all">
                         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                           <div>
                             <div className="flex flex-wrap items-center gap-2">
                               <p className="text-body font-semibold text-text-primary">#{subscription.ma_dang_ky} - {subscription.ten_san_pham}</p>
                               <Badge text={subStatus.label} color={subStatus.color} />
+                              <Badge text="Tiền mặt (COD)" color="orange" />
                             </div>
                             <p className="mt-2 text-body text-text-secondary">{subscription.ten_nguoi_mua} · {subscription.so_luong} {subscription.don_vi} / kỳ · {frequencyMap[subscription.tan_suat_giao] || subscription.tan_suat_giao}</p>
-                            <p className="mt-1 text-body font-bold text-primary">{formatCurrency(tinhTongTienMoiKy(subscription))} / kỳ{subscription.so_luong >= 10 && <span className="ml-2 text-caption font-normal text-text-secondary line-through">{formatCurrency(subscription.product?.price * subscription.so_luong)}</span>}</p>
-                            <p className="mt-1 text-body font-bold text-primary">Đã giao {Number(subscription.so_ky_da_giao || 0)} / {Number(subscription.so_ky_giao || 0)} kỳ</p>
+                            <p className="mt-1 text-body font-bold text-primary">
+                              {isLastCycle && tienCoc > 0 ? (
+                                <span className="text-green-700 font-extrabold">{formatCurrency(tongTienHienTai)} / kỳ cuối (Đã tự trừ cọc {formatCurrency(tienCoc)})</span>
+                              ) : (
+                                <span>{formatCurrency(tongTienChuaCoc)} / kỳ (COD)</span>
+                              )}
+                            </p>
+                            <p className="mt-1 text-body font-bold text-slate-700">Đã giao {soKyDaGiao} / {soKyGiao} kỳ</p>
                             <p className="mt-1 text-body text-text-secondary">Kỳ tiếp theo: {new Date(subscription.ngay_giao_tiep_theo).toLocaleDateString('vi-VN')}</p>
                           </div>
                           <div className="flex flex-col items-start gap-3 lg:items-end" onClick={e => e.stopPropagation()}>
-
                             {['dang_hoat_dong', 'tam_dung'].includes(subscription.trang_thai) && (
                               <Btn size="sm" onClick={() => handleDeliverSubscription(subscription.ma_dang_ky)} disabled={deliveringSubscriptionId === subscription.ma_dang_ky}>
-                                {deliveringSubscriptionId === subscription.ma_dang_ky ? 'Đang ghi nhận...' : 'Ghi nhận đã giao'}
+                                {deliveringSubscriptionId === subscription.ma_dang_ky ? 'Đang ghi nhận...' : (isLastCycle ? `Ghi nhận giao kỳ cuối (${formatCurrency(tongTienHienTai)} COD)` : 'Ghi nhận đã giao')}
                               </Btn>
                             )}
                           </div>
@@ -996,6 +1047,39 @@ const handleAdvanceStatus = async (id, currentStatus) => {
           loading={subGroupLoading}
           onClose={() => { setSelectedSubGroup(null); setSubGroupItems([]); }}
         />
+      )}
+
+      {stockWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl space-y-4 animate-in fade-in zoom-in duration-200">
+            <h3 className="text-xl font-semibold text-text-primary flex items-center gap-2">
+              ⚠️ Cảnh báo tồn kho
+            </h3>
+            <p className="text-text-secondary text-base leading-relaxed">
+              {stockWarning.ton_kho_con_lai <= 0 ? (
+                <>
+                  Sản phẩm <strong className="text-rose-600">{stockWarning.ten_san_pham}</strong> đã <strong className="text-rose-600">hết hàng</strong> trong kho sau khi ghi nhận giao kỳ này.
+                  <br /><br />
+                  Vui lòng nhập thêm hàng trước kỳ giao tiếp theo để đảm bảo giao hàng đúng hẹn.
+                </>
+              ) : (
+                <>
+                  Sản phẩm <strong className="text-amber-600">{stockWarning.ten_san_pham}</strong> chỉ còn <strong className="text-amber-600">{stockWarning.ton_kho_con_lai}</strong> trong kho, không đủ cho kỳ giao tiếp theo (cần <strong className="text-rose-600">{stockWarning.so_luong_can}</strong>).
+                  <br /><br />
+                  Vui lòng nhập thêm hàng để đảm bảo giao hàng đúng hẹn.
+                </>
+              )}
+            </p>
+            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">
+              <button
+                onClick={() => setStockWarning(null)}
+                className="px-5 py-2.5 rounded-xl text-white bg-primary hover:bg-primary/90 font-medium transition duration-200 shadow-sm"
+              >
+                Đã hiểu
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

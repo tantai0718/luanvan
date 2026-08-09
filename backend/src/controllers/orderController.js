@@ -21,11 +21,9 @@ exports.createOrder = async (req, res) => {
   try {
     const { dia_chi_giao, phuong_thuc_tt, ma_code, ghi_chu, ten_nguoi_nhan, sdt_nguoi_nhan } = req.body;
     if (!dia_chi_giao?.trim())
-      return res
-        .status(400)
-        .json({ message: "Vui lòng nhập địa chỉ giao hàng." });
+      return res.status(400).json({ message: "Vui lòng nhập địa chỉ giao hàng." });
     const nguoi_dung = await userModel.findById(req.user.id);
-    const { madh, tong_tien } = await orderModel.createOrder({
+    const { madh, tong_tien, usedCode, compareMessage } = await orderModel.createOrder({
       mand: req.user.id,
       dia_chi_giao,
       phuong_thuc: phuong_thuc_tt || "tien_mat",
@@ -38,12 +36,10 @@ exports.createOrder = async (req, res) => {
     const response = {
       message: "Đặt hàng thành công",
       order: { id: madh, ma_don_hang: madh, tong_tien },
+      used_code: usedCode,
+      promo_message: compareMessage,
     };
-
-    if (phuong_thuc_tt === "banking") {
-      response.banking_info = getBankingInfo(tong_tien, madh);
-    }
-
+    if (phuong_thuc_tt === "banking") response.banking_info = getBankingInfo(tong_tien, madh);
     res.status(201).json(response);
   } catch (err) {
     console.error("[createOrder]", err);
@@ -54,66 +50,48 @@ exports.createOrder = async (req, res) => {
 exports.createPreorder = async (req, res) => {
   try {
     const {
-      product_id,
-      quantity,
-      dia_chi_giao,
-      ghi_chu = "",
-      phuong_thuc_tt,
-      ngay_giao_du_kien,
-      ten_nguoi_nhan,
-      sdt_nguoi_nhan,
-      loai_tien_coc,
+      product_id, quantity, dia_chi_giao, ghi_chu = "", phuong_thuc_tt,
+      ngay_giao_du_kien, ten_nguoi_nhan, sdt_nguoi_nhan, loai_tien_coc, ma_code,
     } = req.body;
 
-    if (!product_id)
-      return res.status(400).json({ message: "Thiếu mã sản phẩm" });
+    if (!product_id) return res.status(400).json({ message: "Thiếu mã sản phẩm" });
     if (!quantity) return res.status(400).json({ message: "Thiếu số lượng" });
-    if (!dia_chi_giao?.trim())
-      return res
-        .status(400)
-        .json({ message: "Vui lòng nhập địa chỉ giao hàng" });
+    if (!dia_chi_giao?.trim()) return res.status(400).json({ message: "Vui lòng nhập địa chỉ giao hàng" });
+    if (phuong_thuc_tt !== "banking") {
+      return res.status(400).json({ message: "Đặt trước sản phẩm chỉ hỗ trợ thanh toán chuyển khoản ngân hàng." });
+    }
 
     const nguoi_dung = await userModel.findById(req.user.id);
-
     const [[sp]] = await db.query(
-      "SELECT gia_ban FROM san_pham WHERE masp = ? AND trang_thai = 1",
-      [product_id],
+      "SELECT gia_ban FROM san_pham WHERE masp = ? AND trang_thai = 1", [product_id],
     );
     if (!sp) return res.status(404).json({ message: "Sản phẩm không tồn tại" });
 
+    // Dùng chung logic promotion (so sánh mã code vs tự động) để tính đúng số cọc cần thu
     const tongHang = sp.gia_ban * quantity;
-    const phiShip = tongHang >= 500000 ? 0 : 30000;
-    let tienGiam = 0;
-    if (quantity >= 10) tienGiam = Math.round(tongHang * 0.05);
-    const tongTien = tongHang - tienGiam + phiShip;
+    const { tienGiam, mienPhiShip } = await orderModel.tinhUuDaiTuDong(tongHang, quantity, 'dat_truoc', ma_code || '', req.user.id);
+    const tongHangSauGiam = Math.max(0, tongHang - tienGiam);
+    const phiShip = mienPhiShip ? 0 : 30000;
+    const tongTien = tongHangSauGiam + phiShip;
 
     let tienCoc = 0;
-    if (phuong_thuc_tt === "banking" && loai_tien_coc === "30") {
-      tienCoc = Math.round(tongTien * 0.3);
-    } else if (phuong_thuc_tt === "banking" && loai_tien_coc === "100") {
-      tienCoc = tongTien;
-    }
+    if (phuong_thuc_tt === "banking" && loai_tien_coc === "30") tienCoc = Math.round(tongHangSauGiam * 0.3);
+    else if (phuong_thuc_tt === "banking" && loai_tien_coc === "100") tienCoc = tongTien;
 
-    const { madh, tong_tien } = await orderModel.createPreorder({
-      mand: req.user.id,
-      masp: product_id,
-      so_luong: quantity,
-      gia_ban: sp.gia_ban,
-      ngay_giao_du_kien,
-      dia_chi_giao,
-      phuong_thuc: phuong_thuc_tt || "tien_mat",
-      ghi_chu,
-      nguoi_dung,
-      ten_nguoi_nhan: ten_nguoi_nhan?.trim() || '',
-      sdt_nguoi_nhan: sdt_nguoi_nhan?.trim() || '',
+    const { madh, tong_tien, usedCode, compareMessage } = await orderModel.createPreorder({
+      mand: req.user.id, masp: product_id, so_luong: quantity, gia_ban: sp.gia_ban,
+      ngay_giao_du_kien, dia_chi_giao, phuong_thuc: phuong_thuc_tt || "tien_mat",
+      ma_code: ma_code || "", ghi_chu, nguoi_dung,
+      ten_nguoi_nhan: ten_nguoi_nhan?.trim() || '', sdt_nguoi_nhan: sdt_nguoi_nhan?.trim() || '',
       tien_coc: tienCoc,
     });
 
     const response = {
       message: "Đặt trước thành công",
       order: { id: madh, ma_don_hang: madh, tong_tien, tien_coc: tienCoc },
+      used_code: usedCode,
+      promo_message: compareMessage,
     };
-
     if (phuong_thuc_tt === "banking") {
       const qrAmount = tienCoc > 0 ? tienCoc : tong_tien;
       response.banking_info = getBankingInfo(qrAmount, madh);
@@ -121,7 +99,6 @@ exports.createPreorder = async (req, res) => {
       response.banking_info.tong_tien = tong_tien;
       response.banking_info.con_lai = tong_tien - qrAmount;
     }
-
     res.status(201).json(response);
   } catch (err) {
     console.error("[createPreorder]", err);

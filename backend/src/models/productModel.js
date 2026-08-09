@@ -16,6 +16,7 @@ function formatDateOnly(value) {
     const d = String(value.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
 }
+
 function calculateHsdStatus(hanSuDung, soNgayCanHan, ngaySanXuat = null) {
     if (!hanSuDung) return 'con_han';
     const now = new Date();
@@ -57,7 +58,10 @@ async function listProducts({ q = '', category = '', sort = 'moi_nhat', inStock 
     const conditions = ['sp.trang_thai = 1'];
     const params = [];
 
-    if (q) { conditions.push('sp.ten_san_pham LIKE ?'); params.push(`%${q}%`); }
+    if (q) { 
+        conditions.push('(sp.ten_san_pham LIKE ? OR sp.mo_ta LIKE ?)'); 
+        params.push(`%${q}%`, `%${q}%`); 
+    }
     if (category) { conditions.push('sp.madm = ?'); params.push(Number(category)); }
     if (inStock === '1') { conditions.push('sp.so_luong_ton > 0'); }
 
@@ -155,7 +159,6 @@ async function updateProduct(masp, fields) {
         const nsx = fields.ngay_san_xuat !== undefined ? fields.ngay_san_xuat : current?.ngay_san_xuat;
         const snch = fields.so_ngay_can_han !== undefined ? fields.so_ngay_can_han : current?.so_ngay_can_han;
         fields.trang_thai_hsd = calculateHsdStatus(hsd, snch, nsx);
-        // Nếu hết hạn và đang hiển thị → tự ẩn
         if (fields.trang_thai_hsd === 'het_han' && fields.trang_thai === undefined) {
             fields.trang_thai = 0;
         }
@@ -174,12 +177,10 @@ async function toggleProduct(masp) {
     await db.query('UPDATE san_pham SET trang_thai = 1 - trang_thai WHERE masp = ?', [masp]);
 }
 
-// Tự động ẩn các sản phẩm đã hết hạn sử dụng
 async function autoHideExpiredProducts() {
     try {
         const now = new Date();
         const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-        // Lấy các sản phẩm có han_su_dung đã qua, đang hiển thị (trang_thai=1)
         const [rows] = await db.query(
             `SELECT masp, han_su_dung, ngay_san_xuat, so_ngay_can_han FROM san_pham
              WHERE trang_thai = 1 AND han_su_dung IS NOT NULL AND DATE(han_su_dung) < ?`,
@@ -209,7 +210,10 @@ async function autoHideExpiredProducts() {
 async function listAllProducts({ q = '', category = '' } = {}) {
     const conditions = ['1=1']; 
     const params = [];
-    if (q) { conditions.push('sp.ten_san_pham LIKE ?'); params.push(`%${q}%`); }
+    if (q) { 
+        conditions.push('(sp.ten_san_pham LIKE ? OR sp.mo_ta LIKE ?)'); 
+        params.push(`%${q}%`, `%${q}%`); 
+    }
     if (category) { conditions.push('sp.madm = ?'); params.push(Number(category)); }
 
     const where = `WHERE ${conditions.join(' AND ')}`;
@@ -238,7 +242,6 @@ async function listAllProducts({ q = '', category = '' } = {}) {
             con_hoat_dong: r.trang_thai === 1, 
         })),
     };
-    
 }
 
 async function getActiveSeasons() {
@@ -247,13 +250,13 @@ async function getActiveSeasons() {
     );
     return rows;
 }
- 
 
+// ĐÃ CẬP NHẬT: Lấy thêm trường sp.mo_ta và kiểm tra từ khóa khớp ở cả Tên & Mô tả
 async function findProductsForChat({ keywords = [], seasonIds = [], currentMonthFallback = false } = {}, limit = 8) {
     if (!keywords.length && !seasonIds.length && currentMonthFallback) {
         const month = new Date().getMonth() + 1;
         const [rows] = await db.query(
-            `SELECT DISTINCT sp.masp, sp.ten_san_pham, sp.gia_ban, sp.don_vi,
+            `SELECT DISTINCT sp.masp, sp.ten_san_pham, sp.mo_ta, sp.gia_ban, sp.don_vi,
                     spmv.gia_du_kien,
                     hav.duong_dan AS hinh_anh
              FROM san_pham_mua_vu spmv
@@ -270,8 +273,9 @@ async function findProductsForChat({ keywords = [], seasonIds = [], currentMonth
 
     if (!keywords.length && !seasonIds.length) return [];
 
+    // THÊM: sp.mo_ta trong câu lệnh SELECT
     const [rows] = await db.query(
-        `SELECT DISTINCT sp.masp, sp.ten_san_pham, sp.gia_ban, sp.don_vi,
+        `SELECT DISTINCT sp.masp, sp.ten_san_pham, sp.mo_ta, sp.gia_ban, sp.don_vi,
                 spmv.mamv, spmv.gia_du_kien,
                 hav.duong_dan AS hinh_anh
          FROM san_pham sp
@@ -286,9 +290,11 @@ async function findProductsForChat({ keywords = [], seasonIds = [], currentMonth
     const matched = new Map();
     for (const row of rows) {
         const nameNormalized = removeDiacritics(row.ten_san_pham || '');
-        const paddedName = ` ${nameNormalized} `;
+        const descNormalized = removeDiacritics(row.mo_ta || '');
+        const fullTextPadded = ` ${nameNormalized} ${descNormalized} `;
 
-        const matchesKeyword = normalizedKeywords.some((kw) => paddedName.includes(` ${kw} `));
+        // SO SÁNH: Quét từ khóa xuất hiện ở Tên HOẶC Mô tả
+        const matchesKeyword = normalizedKeywords.some((kw) => fullTextPadded.includes(kw));
         const matchesSeason = row.mamv != null && seasonIdSet.has(row.mamv);
 
         if (!matchesKeyword && !matchesSeason) continue;
@@ -302,6 +308,7 @@ async function findProductsForChat({ keywords = [], seasonIds = [], currentMonth
 
     return Array.from(matched.values());
 }
+
 async function searchProductsForChat(keyword, limit = 6) {
     if (!keyword) return [];
     return findProductsForChat({ keywords: [keyword] }, limit);

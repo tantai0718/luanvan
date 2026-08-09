@@ -2,8 +2,8 @@ const db = require("../config/db");
 const promotionModel = require("./promotionModel");
 const subscriptionModel = require("./subscriptionModel");
 
-async function tinhUuDaiTuDong(tongTien, tongSoLuong, loai_don) {
-  return await promotionModel.tinhUuDaiTuDong(tongTien, tongSoLuong, loai_don);
+async function tinhUuDaiTuDong(tongTien, tongSoLuong, loai_don, maCode = '', mand = null) {
+  return await promotionModel.tinhUuDaiTuDong(tongTien, tongSoLuong, loai_don, maCode, mand);
 }
 
 const PAYMENT_METHOD_MAP = { tien_mat: 'tien_mat', banking: 'banking', vnpay: 'vnpay' };
@@ -29,14 +29,13 @@ async function createOrder({
   mand,
   dia_chi_giao,
   phuong_thuc = "tien_mat",
+  ma_code = "",
   ghi_chu = "",
   nguoi_dung,
   ten_nguoi_nhan = '',
   sdt_nguoi_nhan = '',
 }) {
-  const [[gh]] = await db.query("SELECT magh FROM gio_hang WHERE mand = ?", [
-    mand,
-  ]);
+  const [[gh]] = await db.query("SELECT magh FROM gio_hang WHERE mand = ?", [mand]);
   if (!gh) throw new Error("Gio hang trong.");
 
   const [items] = await db.query(
@@ -49,9 +48,7 @@ async function createOrder({
   if (!items.length) throw new Error("Gio hang trong.");
   for (const item of items) {
     if (item.so_luong > item.so_luong_ton)
-      throw new Error(
-        `"${item.ten_san_pham}" chi con ${item.so_luong_ton} trong kho.`,
-      );
+      throw new Error(`"${item.ten_san_pham}" chi con ${item.so_luong_ton} trong kho.`);
   }
   const totalQty = items.reduce((s, i) => s + i.so_luong, 0);
   const giamCanHanTheoDong = items.map(i => ({ ...i, giam_can_han: getItemExpiryDiscount(i) }));
@@ -65,7 +62,14 @@ async function createOrder({
   });
   const tongHangSauGiam = itemsGiaSauGiam.reduce((s, i) => s + i.thanh_tien, 0);
 
-  const { tienGiam, mienPhiShip, appliedPromotions } = await promotionModel.tinhUuDaiTuDong(Math.max(0, tongHangSauGiam), totalQty, 'thuong');
+  // Truyền ma_code + mand để so sánh mã code vs khuyến mãi tự động
+  const { tienGiam, mienPhiShip, appliedPromotions, usedCode, codeError, compareMessage } =
+    await promotionModel.tinhUuDaiTuDong(Math.max(0, tongHangSauGiam), totalQty, 'thuong', ma_code, mand);
+
+  // Nếu khách CÓ nhập mã nhưng mã lỗi -> chặn đặt hàng, báo lỗi rõ ràng thay vì âm thầm bỏ qua
+  if (ma_code && ma_code.trim() && codeError) {
+    throw new Error(codeError);
+  }
 
   const tien_giam = tienGiam;
   const phi_ship = mienPhiShip ? 0 : 30000;
@@ -74,78 +78,41 @@ async function createOrder({
 
   const [dhResult] = await db.query(
     `INSERT INTO don_hang
-    (
-      mand,
-      tien_giam,
-      ten_nguoi_nhan,
-      email_nguoi_nhan,
-      sdt_nguoi_nhan,
-      loai_don_hang,
-      tong_tien,
-      tong_da_thanh_toan,
-      trang_thai,
-      trang_thai_thanh_toan,
-      dia_chi_giao,
-      ghi_chu,
-      ngay_dat,
-      ngay_giao_du_kien
-    )
-    VALUES
-    (
-      ?, ?, ?, ?, ?,
-      'thuong',
-      ?,
-      ?,
-      'cho_xac_nhan',
-      ?,
-      ?,
-      ?,
-      NOW(),
-      DATE_ADD(NOW(), INTERVAL 2 DAY)
-    )`,
+    (mand, tien_giam, ten_nguoi_nhan, email_nguoi_nhan, sdt_nguoi_nhan, loai_don_hang,
+     tong_tien, tong_da_thanh_toan, trang_thai, trang_thai_thanh_toan, dia_chi_giao, ghi_chu, ngay_dat, ngay_giao_du_kien)
+    VALUES (?, ?, ?, ?, ?, 'thuong', ?, ?, 'cho_xac_nhan', ?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL 2 DAY))`,
     [
-      mand,
-      tien_giam,
+      mand, tien_giam,
       ten_nguoi_nhan || nguoi_dung?.ho_ten || "",
       nguoi_dung?.email || "",
       sdt_nguoi_nhan || nguoi_dung?.sdt || "",
-      tong_tien,
-      0,
-      "chua_thanh_toan",
-      dia_chi_giao,
-      ghi_chu || null,
+      tong_tien, 0, "chua_thanh_toan", dia_chi_giao, ghi_chu || null,
     ],
   );
   const madh = dhResult.insertId;
   await promotionModel.saveOrderPromotions(madh, appliedPromotions);
 
-  const ctValues = itemsGiaSauGiam.map((i) => [
-    madh,
-    i.masp,
-    i.so_luong,
-    i.don_gia,
-    i.thanh_tien,
-    i.han_su_dung || null,
-  ]);
+  // Tăng lượt dùng TỔNG của mã code nếu mã đã thực sự được áp dụng
+  if (usedCode && appliedPromotions.length) {
+    const codePromoEntry = appliedPromotions.find(p => p.ten_km && usedCode);
+    if (codePromoEntry) await promotionModel.incrementCodeUsage(codePromoEntry.makm);
+  }
+
+  const ctValues = itemsGiaSauGiam.map((i) => [madh, i.masp, i.so_luong, i.don_gia, i.thanh_tien, i.han_su_dung || null]);
   await db.query(
     "INSERT INTO chi_tiet_don_hang (madh, masp, so_luong, don_gia, thanh_tien, han_su_dung_luc_ban) VALUES ?",
     [ctValues],
   );
   await db.query(
-    `INSERT INTO thanh_toan (madh, so_tien, phuong_thuc, trang_thai, ngay_thanh_toan)
-     VALUES (?, ?, ?, ?, NOW())`,
-     [madh, tong_tien, mapPaymentMethod(phuong_thuc), "cho_thanh_toan"],
+    `INSERT INTO thanh_toan (madh, so_tien, phuong_thuc, trang_thai, ngay_thanh_toan) VALUES (?, ?, ?, ?, NOW())`,
+    [madh, tong_tien, mapPaymentMethod(phuong_thuc), "cho_thanh_toan"],
   );
   for (const item of items) {
-    await db.query(
-      "UPDATE san_pham SET so_luong_ton = so_luong_ton - ? WHERE masp = ?",
-      [item.so_luong, item.masp],
-    );
+    await db.query("UPDATE san_pham SET so_luong_ton = so_luong_ton - ? WHERE masp = ?", [item.so_luong, item.masp]);
   }
-
   await db.query("DELETE FROM chi_tiet_gio_hang WHERE magh = ?", [gh.magh]);
 
-  return { madh, tong_tien };
+  return { madh, tong_tien, usedCode, compareMessage };
 }
 
 async function createPreorder({
@@ -156,6 +123,7 @@ async function createPreorder({
   ngay_giao_du_kien,
   dia_chi_giao,
   phuong_thuc = "tien_mat",
+  ma_code = "",
   ghi_chu = "",
   nguoi_dung,
   ten_nguoi_nhan = '',
@@ -173,7 +141,13 @@ async function createPreorder({
   const giam_can_han = getItemExpiryDiscount(itemForDiscount);
   const don_gia_sau_giam = giam_can_han > 0 ? Number(gia_ban) - Math.round(Number(gia_ban) * Number(sp.phan_tram_giam_can_han || 0) / 100) : Number(gia_ban);
   const thanh_tien_sau_giam = don_gia_sau_giam * so_luong;
-  const { tienGiam, mienPhiShip, appliedPromotions } = await promotionModel.tinhUuDaiTuDong(Math.max(0, thanh_tien_sau_giam), so_luong, 'dat_truoc');
+  const { tienGiam, mienPhiShip, appliedPromotions, usedCode, codeError, compareMessage } = await promotionModel.tinhUuDaiTuDong(Math.max(0, thanh_tien_sau_giam), so_luong, 'dat_truoc', ma_code, mand);
+
+  // Nếu khách CÓ nhập mã nhưng mã lỗi -> chặn đặt hàng
+  if (ma_code && ma_code.trim() && codeError) {
+    throw new Error(codeError);
+  }
+
   const tien_giam = tienGiam;
   const phi_ship = mienPhiShip ? 0 : 30000;
   const tong_tien = Math.max(0, thanh_tien_sau_giam - tien_giam) + phi_ship;
@@ -214,6 +188,12 @@ async function createPreorder({
   const madh = dhResult.insertId;
   await promotionModel.saveOrderPromotions(madh, appliedPromotions);
 
+  // Tăng lượt dùng TỔNG của mã code nếu mã đã thực sự được áp dụng
+  if (usedCode && appliedPromotions.length) {
+    const codePromoEntry = appliedPromotions.find(p => p.ten_km && usedCode);
+    if (codePromoEntry) await promotionModel.incrementCodeUsage(codePromoEntry.makm);
+  }
+
   await db.query(
     "INSERT INTO chi_tiet_don_hang (madh, masp, so_luong, don_gia, thanh_tien, han_su_dung_luc_ban) VALUES (?, ?, ?, ?, ?, ?)",
     [madh, masp, so_luong, don_gia_sau_giam, thanh_tien_sau_giam, sp.han_su_dung || null],
@@ -236,7 +216,7 @@ async function createPreorder({
   );
   await db.query("UPDATE don_hang SET madk = ? WHERE madh = ?", [dkResult.insertId, madh]);
 
-  return { madh, tong_tien, tien_coc: actualDeposit };
+  return { madh, tong_tien, tien_coc: actualDeposit, usedCode, compareMessage };
 }
 
 async function getOrdersByUser(mand) {

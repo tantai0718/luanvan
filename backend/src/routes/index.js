@@ -17,7 +17,7 @@ const chatRoutes = require('./chat');
 const seasonRoutes = require("./seasons");
 const dashboardRoutes = require("./dashboard");
 const notificationRoutes = require("./notifications");
-const baiVietRoutes = require("./baiViet");
+const articleRoutes = require("./article");
 const blogRoutes = require("./blog");
 const promotionRoutes = require("./promotions");
 
@@ -41,7 +41,7 @@ router.use("/admin/seasons", seasonRoutes);
 router.use("/", subscriptionRoutes);
 router.use("/admin/dashboard", dashboardRoutes);
 router.use("/", notificationRoutes);
-router.use("/articles", baiVietRoutes);
+router.use("/articles", articleRoutes);
 router.use("/blog", blogRoutes);
 router.use("/", promotionRoutes);
 module.exports = router;

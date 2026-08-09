@@ -219,7 +219,10 @@ function ProductCard({ product, onEdit, onToggle, onDelete }) {
             <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-text-secondary truncate">{product.ten_danh_muc}</p>
             <h3 className="mt-1 text-body font-bold text-text-primary truncate">{product.ten_san_pham}</h3>
           </div>
-          <Badge text={product.con_hoat_dong ? 'Đang bán' : 'Đã ẩn'} color={product.con_hoat_dong ? 'green' : 'gray'} />
+          <Badge 
+            text={!product.con_hoat_dong ? 'Đã ẩn' : (product.ton_kho <= 0 ? 'Hết hàng' : 'Đang bán')} 
+            color={!product.con_hoat_dong ? 'gray' : (product.ton_kho <= 0 ? 'red' : 'green')} 
+          />
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2">
           <div className="rounded-btn bg-background p-2">

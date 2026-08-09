@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { orderAPI } from '../services/api';
 import { pickProductImage } from '../utils/marketImages';
 import { getAddresses, addAddress, setDefaultAddress, removeAddress } from '../utils/addressBook';
-import { ShoppingCart, ChevronRight, Info, Plus, Minus, ArrowRight, ShieldCheck, Truck, HeadphonesIcon, CreditCard, Landmark, AlertCircle, MapPin, Star, Trash2 } from 'lucide-react';
+import { ShoppingCart, ChevronRight, Info, Plus, Minus, ArrowRight, ShieldCheck, Truck, HeadphonesIcon, CreditCard, Landmark, AlertCircle, MapPin, Star, Trash2, Tag, X, CheckCircle, Loader2 } from 'lucide-react';
 
 const formatCurrency = value => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
 
@@ -46,7 +46,8 @@ function StepBadge({ step, color }) {
 }
 
 export default function Cart() {
-  const { items, updateItem, removeItem, clearCart, totalPrice, summary } = useCart();
+  const { items, updateItem, removeItem, clearCart, totalPrice, summary, promoCode, promoResult, promoLoading, applyCode, clearCode } = useCart();
+  const [codeInput, setCodeInput] = useState('');
   const { user } = useAuth();
   const navigate = useNavigate();
   const userId = user?.id;
@@ -63,10 +64,14 @@ export default function Cart() {
   const [saveNote, setSaveNote] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const discount = Number(summary?.discountAmount || 0);
+  // Nếu có promoResult (khách nhập mã) → dùng tienGiam từ promoResult, ngược lại dùng summary
+  const hasCodeResult = promoResult && !promoResult.error && promoResult.tien_giam > 0;
+  const discount = hasCodeResult ? Number(promoResult.tien_giam) : Number(summary?.discountAmount || 0);
   const promotions = summary?.discounts || [];
-  const shipping = Number(summary?.shipping ?? (totalPrice > 500000 ? 0 : 30000));
-  const total = Number(summary?.total ?? (Math.max(0, totalPrice - discount) + shipping));
+  const shipping = hasCodeResult
+    ? (promoResult.mien_phi_ship ? 0 : 30000)
+    : Number(summary?.shipping ?? (totalPrice > 500000 ? 0 : 30000));
+  const total = Math.max(0, totalPrice - discount) + shipping;
 
   useEffect(() => {
     if (!userId) return;
@@ -127,6 +132,7 @@ export default function Cart() {
         phuong_thuc_tt: form.phuong_thuc_tt,
         ten_nguoi_nhan: form.ten_nguoi_nhan?.trim(),
         sdt_nguoi_nhan: form.sdt_nguoi_nhan?.trim(),
+        ma_code: promoCode || '',
       });
       await clearCart();
       if (data.payment_url) { window.location.assign(data.payment_url); return; }
@@ -344,6 +350,59 @@ export default function Cart() {
                     Khuyến mãi sẽ được tự động áp dụng khi đủ điều kiện.
                   </p>
                 )}
+
+                {/* ── MÃ GIẢM GIÁ ── */}
+                <div className="pt-1">
+                  <span className="text-[13px] font-semibold text-text-primary flex items-center gap-1.5 mb-2.5">
+                    <Tag size={14} className="text-primary" /> Mã giảm giá
+                  </span>
+
+                  {!promoCode ? (
+                    <div className="flex gap-2">
+                      <input
+                        value={codeInput}
+                        onChange={e => setCodeInput(e.target.value.toUpperCase())}
+                        placeholder="Nhập mã giảm giá..."
+                        className="flex-1 bg-background border border-border rounded-xl px-3.5 py-2.5 text-body text-text-primary uppercase tracking-wider focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all placeholder:normal-case placeholder:tracking-normal"
+                        onKeyDown={e => { if (e.key === 'Enter' && codeInput.trim()) applyCode(codeInput); }}
+                      />
+                      <button
+                        onClick={() => codeInput.trim() && applyCode(codeInput)}
+                        disabled={!codeInput.trim() || promoLoading}
+                        className="px-4 py-2.5 bg-primary text-white rounded-xl font-bold text-body hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 active:scale-95"
+                      >
+                        {promoLoading ? <Loader2 size={14} className="animate-spin" /> : null}
+                        Áp dụng
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between bg-background border border-border rounded-xl px-3.5 py-2.5">
+                        <span className="text-body font-bold text-text-primary tracking-wider">{promoCode}</span>
+                        <button onClick={() => { clearCode(); setCodeInput(''); }} className="text-text-secondary hover:text-danger transition-colors p-0.5">
+                          <X size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Kết quả validate mã */}
+                  {promoResult && (
+                    <div className={`mt-2.5 rounded-xl p-3 text-[12px] font-medium flex items-start gap-2 ${
+                      promoResult.error
+                        ? 'bg-red-50 border border-red-200 text-danger'
+                        : promoResult.used_code
+                          ? 'bg-green-50 border border-green-200 text-green-700'
+                          : 'bg-blue-50 border border-blue-200 text-blue-700'
+                    }`}>
+                      {promoResult.error ? (
+                        <><AlertCircle size={14} className="flex-shrink-0 mt-0.5" /><span>{promoResult.error}</span></>
+                      ) : (
+                        <><CheckCircle size={14} className="flex-shrink-0 mt-0.5" /><span>{promoResult.message}</span></>
+                      )}
+                    </div>
+                  )}
+                </div>
                 
                 <div className="flex justify-between text-text-secondary"><span>Phí vận chuyển</span><span>{shipping ? formatCurrency(shipping) : <span className="text-primary font-bold">Miễn phí</span>}</span></div>
                 

@@ -1,7 +1,6 @@
 const chatModel = require('../models/chatModel');
 const productModel = require('../models/productModel');
 
-
 function removeDiacritics(str = '') {
     return str
         .toLowerCase()
@@ -50,6 +49,21 @@ function extractKeywords(text) {
         .split(/\s+/)
         .filter((w) => w.length >= 2 && !STOPWORDS_NORMALIZED.has(removeDiacritics(w))); 
 }
+
+function mapIntentToKeywords(userText) {
+    const norm = removeDiacritics(userText.toLowerCase());
+    const extraKeywords = [];
+
+    if (/nong|oi|giai nhiet|giai khat|nang/.test(norm)) {
+        extraKeywords.push('giai nhiet', 'giai khat', 'mat', 'thanh nhiet', 'nong');
+    }
+    if (/lanh|ret|am|buoi toi/.test(norm)) {
+        extraKeywords.push('am', 'bo duong', 'tang de khang');
+    }
+
+    return extraKeywords;
+}
+
 function findMatchedSeasonIds(userText, seasons) {
     const textNormalized = removeDiacritics(userText.trim());
     const padded = ` ${textNormalized} `;
@@ -98,7 +112,7 @@ function buildFallback(userMessage, products) {
 
     if (/mùa|theo mùa|đang mùa/i.test(text)) {
         return {
-            reply: `Mình tìm thấy ${products.length} sản phẩm đang vào mùa mà bạn có thể quan tâm 🌱`,
+            reply: `Mình tìm thấy ${products.length} sản phẩm thuộc mùa vụ mà bạn quan tâm 🌱`,
             product_ids: products.slice(0, 4).map((p) => p.masp),
         };
     }
@@ -183,7 +197,7 @@ async function callGemini(apiKey, systemPrompt, fullPrompt) {
     return { res, data };
 }
 
-async function askAI(userMessage, products, isSeasonMatch = false) {
+async function askAI(userMessage, products) {
     if (!GEMINI_API_KEYS.length) return buildFallback(userMessage, products);
 
     const cacheKey = `${userMessage.trim().toLowerCase()}::${products.map((p) => p.masp).sort().join(',')}`;
@@ -193,30 +207,39 @@ async function askAI(userMessage, products, isSeasonMatch = false) {
         return cached;
     }
 
-    const systemPrompt = `Bạn là trợ lý bán hàng của "Chợ Nông Sản" - sàn thương mại nông sản sạch Việt Nam.
-Nhiệm vụ: Tư vấn sản phẩm thân thiện, ngắn gọn, bằng tiếng Việt.
+    const systemPrompt = `Bạn là trợ lý bán hàng thông minh của sàn "Chợ Nông Sản".
+Nhiệm vụ: Tư vấn sản phẩm và hướng dẫn khách hàng thân thiện, tự nhiên.
 
-Quy tắc:
-- CHỈ nhắc tới sản phẩm có trong DANH_SACH, KHÔNG tự bịa sản phẩm.
-- Nếu không có sản phẩm phù hợp, nói lịch sự và gợi ý tìm kiếm khác.
-- Trả lời 1-3 câu, thân thiện, dùng emoji phù hợp.
-- CHỈ trả về DUY NHẤT 1 object JSON, không thêm bất kỳ chữ nào khác trước hoặc sau (không "Here is...", không giải thích, không markdown).
-- Định dạng bắt buộc JSON: {"reply":"câu trả lời","product_ids":[danh sách masp số nguyên, tối đa 4]}`;
+QUY TẮC ĐỊNH DẠNG BẮT BUỘC:
+1. Mỗi sản phẩm NẰM TRÊN 1 DÒNG RIÊNG.
+2. Cấu trúc mỗi sản phẩm: [STT]. [Tên sản phẩm]: [Miêu tả công dụng/vị ngon ngắn gọn trong 1-2 câu lấy từ mo_ta].
+3. Dùng 1-2 dấu xuống dòng (\\n\\n) giữa các phần.
+4. KHÔNG dùng cú pháp Markdown như **, *, #, _.
+5. CHỈ DÙNG SẢN PHẨM CÓ TRONG DANH_SACH, không tự bịa sản phẩm ngoài danh sách.
+6. LỜI CHÚC VÀ HƯỚNG DẪN Ở CUỐI: Kèm câu hướng dẫn đặt hàng và lời chúc ở cuối.
+
+HƯỚNG DẪN QUY TRÌNH HỆ THỐNG:
+1. Cách đặt hàng: Chọn sản phẩm -> Thêm vào giỏ -> Bấm Thanh toán -> Điền địa chỉ và Đặt hàng.
+2. Cách thanh toán: Hỗ trợ VietQR và COD (hoặc đặt cọc 30% cho đơn định kỳ).
+3. Cách tìm kiếm: Dùng thanh tìm kiếm hoặc gõ nhu cầu vào khung chat.
+
+XỬ LÝ YÊU CẦU:
+- Nếu hỏi HƯỚNG DẪN: Trả lời ngắn gọn theo HƯỚNG DẪN QUY TRÌNH HỆ THỐNG và trả về "product_ids": [].
+- Nếu TÌM SẢN PHẨM: Chọn các sản phẩm phù hợp nhất trong DANH_SACH.
+
+Định dạng trả về duy nhất JSON:
+{"reply": "Nội dung phản hồi", "product_ids": [danh sách masp số nguyên, tối đa 4]}`;
 
     const danhSachGoc = products.map((p) => ({
         masp: p.masp,
         ten: p.ten_san_pham,
+        mo_ta: p.mo_ta || '',
         gia: p.gia_du_kien != null ? Number(p.gia_du_kien) : Number(p.gia_ban),
         don_vi: p.don_vi,
     }));
 
-    const seasonNote = isSeasonMatch
-        ? '\n\nLƯU Ý: Các sản phẩm trong DANH_SACH bên trên CHÍNH LÀ sản phẩm đang thuộc mùa vụ mà khách hỏi. Hãy giới thiệu chúng như sản phẩm ĐÚNG MÙA, đừng nói là "chưa có sản phẩm cho mùa này".'
-        : '';
+    const fullPrompt = `DANH_SACH:\n${JSON.stringify(danhSachGoc)}\n\nCâu hỏi khách hàng: "${userMessage}"`;
 
-    const fullPrompt = `DANH_SACH:\n${JSON.stringify(danhSachGoc)}${seasonNote}\n\nCâu hỏi khách hàng: "${userMessage}"`;
-
-    // Duyệt qua từng key theo thứ tự xoay vòng — key nào hết quota (429) thì chuyển sang key kế tiếp
     for (let keyOffset = 0; keyOffset < GEMINI_API_KEYS.length; keyOffset++) {
         const keyPos = (currentKeyIndex + keyOffset) % GEMINI_API_KEYS.length;
         const apiKey = GEMINI_API_KEYS[keyPos];
@@ -230,14 +253,12 @@ Quy tắc:
                 if (res.status === 429) {
                     console.warn(`[askAI] key #${keyPos + 1} hết quota.`);
                     if (isLastKey) {
-                        console.warn('[askAI] tất cả key đều hết quota, dùng fallback');
                         return buildFallback(userMessage, products);
                     }
-                    break; // thoát vòng retry của key này, sang key kế tiếp
+                    break;
                 }
 
                 if (res.status === 503 && attempt === 1) {
-                    console.warn('[askAI] server quá tải, thử lại lần 2...');
                     await sleep(1200);
                     continue;
                 }
@@ -247,10 +268,7 @@ Quy tắc:
                 const parts = data?.candidates?.[0]?.content?.parts || [];
                 const text = parts.map(p => p.text || '').join('\n');
 
-                console.log('[askAI] raw text nhận được:', text);
-
                 const parsed = extractJson(text);
-
                 const validIds = new Set(products.map((p) => p.masp));
                 const product_ids = (parsed.product_ids || []).filter((id) => validIds.has(id));
 
@@ -260,19 +278,20 @@ Quy tắc:
                 };
 
                 cacheSet(cacheKey, result);
-                currentKeyIndex = keyPos; // lần gọi sau ưu tiên bắt đầu từ key đang dùng tốt này
+                currentKeyIndex = keyPos;
                 return result;
             } catch (err) {
                 console.error(`[askAI] key #${keyPos + 1} lỗi (lần ${attempt}):`, err.message);
                 if (attempt === 2 && isLastKey) return buildFallback(userMessage, products);
-                if (attempt === 2) break; // sang key kế tiếp
+                if (attempt === 2) break;
             }
         }
     }
 
     return buildFallback(userMessage, products);
 }
-// --- USER APIS (EXPORT TRỰC TIẾP) ---
+
+// --- USER APIS ---
 
 exports.getMyMessages = async (req, res) => {
     try {
@@ -298,14 +317,16 @@ exports.sendMyMessage = async (req, res) => {
         const mapc = await chatModel.getOrCreateSession(mand);
         await chatModel.sendMessage({ mapc, vai_tro: 'user', noi_dung });
 
-        const keywords = extractKeywords(noi_dung).slice(0, 6);
+        const userKeywords = extractKeywords(noi_dung);
+        const intentKeywords = mapIntentToKeywords(noi_dung);
+        const keywords = Array.from(new Set([...userKeywords, ...intentKeywords])).slice(0, 8);
 
         const seasons = await productModel.getActiveSeasons();
         const seasonIds = findMatchedSeasonIds(noi_dung, seasons);
 
-        const mentionsSeason = /mùa/i.test(noi_dung);
+        // ĐÃ BỎ LỌC THEO THÁNG: Chỉ truyền seasonIds trực tiếp nếu tìm thấy từ tên Mùa
         const contextProducts = await productModel.findProductsForChat(
-            { keywords, seasonIds, currentMonthFallback: mentionsSeason && seasonIds.length === 0 },
+            { keywords, seasonIds },
             10
         );
 
@@ -315,11 +336,11 @@ exports.sendMyMessage = async (req, res) => {
         console.log('[sendMyMessage] contextProducts:', contextProducts.map(p => `${p.masp}:${p.ten_san_pham}`));
 
         let finalProducts = contextProducts;
-        if (finalProducts.length === 0 && keywords.length === 0 && seasonIds.length === 0 && !mentionsSeason) {
+        if (finalProducts.length === 0 && keywords.length === 0 && seasonIds.length === 0) {
             finalProducts = await productModel.searchProductsForChat('', 8);
         }
 
-        const { reply, product_ids } = await askAI(noi_dung, finalProducts, seasonIds.length > 0);
+        const { reply, product_ids } = await askAI(noi_dung, finalProducts);
 
         await chatModel.sendMessage({
             mapc,
@@ -337,7 +358,7 @@ exports.sendMyMessage = async (req, res) => {
     }
 };
 
-// --- ADMIN APIS (EXPORT TRỰC TIẾP) ---
+// --- ADMIN APIS ---
 
 exports.getSessions = async (req, res) => {
     try {

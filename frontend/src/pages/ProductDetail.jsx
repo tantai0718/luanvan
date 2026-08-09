@@ -4,7 +4,7 @@ import { orderAPI, productAPI, reviewAPI, subscriptionAPI, promotionAPI } from '
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { pickProductImage } from '../utils/marketImages';
-import { Check, ShieldCheck, ChevronRight, ChevronLeft, Play, Minus, Plus, X, Eye } from 'lucide-react';
+import { Check, ShieldCheck, ChevronRight, ChevronLeft, Play, Minus, Plus, X, Eye, Tag, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 
 const isVideoUrl = url => /\.(mp4|webm|mov)$/i.test(url || '');
 const formatCurrency = value => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
@@ -128,13 +128,23 @@ export default function ProductDetail() {
   const [reviewMessage, setReviewMessage] = useState('');
   const [savingReview, setSavingReview] = useState(false);
 
-  const [preorderForm, setPreorderForm] = useState({ quantity: 1, ngay_giao_du_kien: '', dia_chi_giao: user?.address || '', ghi_chu: '', phuong_thuc_tt: 'tien_mat', loai_tien_coc: '30' });
+  const [preorderForm, setPreorderForm] = useState({ quantity: 1, ngay_giao_du_kien: '', dia_chi_giao: user?.address || '', ghi_chu: '', phuong_thuc_tt: 'banking', loai_tien_coc: '30' });
   const [preorderMessage, setPreorderMessage] = useState('');
   const [savingPreorder, setSavingPreorder] = useState(false);
 
-  const [subscriptionForm, setSubscriptionForm] = useState({ quantity: 1, tan_suat_giao: 'hang_tuan', so_ky_giao: 4, ngay_bat_dau: '', dia_chi_giao: user?.address || '', ghi_chu: '', phuong_thuc_tt: 'tien_mat', loai_tien_coc: '30' });
+  const [subscriptionForm, setSubscriptionForm] = useState({ quantity: 1, tan_suat_giao: 'hang_tuan', so_ky_giao: 4, ngay_bat_dau: '', dia_chi_giao: user?.address || '', ghi_chu: '', phuong_thuc_tt: 'banking', loai_tien_coc: '30' });
   const [subscriptionMessage, setSubscriptionMessage] = useState('');
   const [savingSubscription, setSavingSubscription] = useState(false);
+
+  const [preorderPromoCode, setPreorderPromoCode] = useState('');
+  const [preorderPromoInput, setPreorderPromoInput] = useState('');
+  const [preorderPromoResult, setPreorderPromoResult] = useState(null);
+  const [preorderPromoLoading, setPreorderPromoLoading] = useState(false);
+
+  const [subPromoCode, setSubPromoCode] = useState('');
+  const [subPromoInput, setSubPromoInput] = useState('');
+  const [subPromoResult, setSubPromoResult] = useState(null);
+  const [subPromoLoading, setSubPromoLoading] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -164,6 +174,42 @@ export default function ProductDetail() {
     setPreorderForm(prev => ({ ...prev, dia_chi_giao: user?.address || prev.dia_chi_giao }));
     setSubscriptionForm(prev => ({ ...prev, dia_chi_giao: user?.address || prev.dia_chi_giao }));
   }, [user]);
+
+  const handleApplyPreorderCode = async (code) => {
+    if (!code || !code.trim()) return;
+    setPreorderPromoLoading(true);
+    const subtotal = (product?.gia_ban || 0) * preorderForm.quantity;
+    try {
+      const res = await promotionAPI.validateCode({ ma_code: code.trim(), tong_tien: subtotal, so_luong: preorderForm.quantity, loai_don: 'dat_truoc' });
+      setPreorderPromoCode(code.trim());
+      setPreorderPromoResult({ ...res, error: null });
+    } catch (err) {
+      setPreorderPromoCode(code.trim());
+      setPreorderPromoResult({ tien_giam: 0, error: err.message });
+    } finally { setPreorderPromoLoading(false); }
+  };
+
+  const handleApplySubCode = async (code) => {
+    if (!code || !code.trim()) return;
+    setSubPromoLoading(true);
+    const subtotal = (product?.gia_ban || 0) * subscriptionForm.quantity;
+    try {
+      const res = await promotionAPI.validateCode({ ma_code: code.trim(), tong_tien: subtotal, so_luong: subscriptionForm.quantity, loai_don: 'dinh_ky' });
+      setSubPromoCode(code.trim());
+      setSubPromoResult({ ...res, error: null });
+    } catch (err) {
+      setSubPromoCode(code.trim());
+      setSubPromoResult({ tien_giam: 0, error: err.message });
+    } finally { setSubPromoLoading(false); }
+  };
+
+  useEffect(() => {
+    if (preorderPromoCode) handleApplyPreorderCode(preorderPromoCode);
+  }, [preorderForm.quantity]);
+
+  useEffect(() => {
+    if (subPromoCode) handleApplySubCode(subPromoCode);
+  }, [subscriptionForm.quantity]);
 
   const images = useMemo(() => {
     if (!product) return [];
@@ -243,7 +289,7 @@ export default function ProductDetail() {
     if (!user) return navigate('/login');
     setSavingPreorder(true); setPreorderMessage('');
     try {
-      const data = await orderAPI.createPreorder({ product_id: product.ma_san_pham, quantity: preorderForm.quantity, dia_chi_giao: preorderForm.dia_chi_giao, ghi_chu: preorderForm.ghi_chu, phuong_thuc_tt: preorderForm.phuong_thuc_tt, ngay_giao_du_kien: preorderForm.ngay_giao_du_kien, loai_tien_coc: preorderForm.phuong_thuc_tt === 'banking' ? preorderForm.loai_tien_coc : null });
+      const data = await orderAPI.createPreorder({ product_id: product.ma_san_pham, quantity: preorderForm.quantity, dia_chi_giao: preorderForm.dia_chi_giao, ghi_chu: preorderForm.ghi_chu, phuong_thuc_tt: preorderForm.phuong_thuc_tt, ngay_giao_du_kien: preorderForm.ngay_giao_du_kien, loai_tien_coc: preorderForm.phuong_thuc_tt === 'banking' ? preorderForm.loai_tien_coc : null, ma_code: preorderPromoCode });
       navigate(`/orders/${data.order.id}?success=1`);
     } catch (err) { setPreorderMessage(err.message || 'Không thể tạo đơn đặt trước.'); }
     finally { setSavingPreorder(false); }
@@ -254,7 +300,7 @@ export default function ProductDetail() {
     if (!user) return navigate('/login');
     setSavingSubscription(true); setSubscriptionMessage('');
     try {
-      const data = await subscriptionAPI.create({ product_id: product.ma_san_pham, quantity: subscriptionForm.quantity, dia_chi_giao: subscriptionForm.dia_chi_giao, ghi_chu: subscriptionForm.ghi_chu, phuong_thuc_tt: subscriptionForm.phuong_thuc_tt, ngay_bat_dau: subscriptionForm.ngay_bat_dau, tan_suat_giao: subscriptionForm.tan_suat_giao, so_ky_giao: subscriptionForm.so_ky_giao, loai_tien_coc: subscriptionForm.phuong_thuc_tt === 'banking' ? subscriptionForm.loai_tien_coc : null });
+      const data = await subscriptionAPI.create({ product_id: product.ma_san_pham, quantity: subscriptionForm.quantity, dia_chi_giao: subscriptionForm.dia_chi_giao, ghi_chu: subscriptionForm.ghi_chu, phuong_thuc_tt: subscriptionForm.phuong_thuc_tt, ngay_bat_dau: subscriptionForm.ngay_bat_dau, tan_suat_giao: subscriptionForm.tan_suat_giao, so_ky_giao: subscriptionForm.so_ky_giao, loai_tien_coc: subscriptionForm.phuong_thuc_tt === 'banking' ? subscriptionForm.loai_tien_coc : null, ma_code: subPromoCode });
       if (data.order_id) {
         navigate(`/orders/${data.order_id}?success=1`);
       } else {
@@ -430,9 +476,11 @@ export default function ProductDetail() {
           </aside>
         </section>
         {/* Pre-order & Subscription */}
-        <section className="grid gap-xl lg:grid-cols-2 mt-8 md:mt-12 items-start">
-          <div className="bg-card rounded-3xl p-5 md:p-xl border border-border shadow-card">
-            <h2 className="text-h3 text-text-primary mb-lg">Đặt trước sản phẩm</h2>
+        {product.trang_thai_hsd !== 'can_han' && product.trang_thai_hsd !== 'het_han' && (
+          <section className="flex flex-col items-center mt-8 md:mt-12">
+            {stock <= 0 && (
+            <div className="w-full max-w-3xl bg-card rounded-3xl p-5 md:p-xl border border-border shadow-card">
+            <h2 className="text-h3 text-text-primary mb-lg text-center">Đặt trước sản phẩm</h2>
             <form onSubmit={handlePreorder} className="space-y-4">
               
               {/* Ép buộc Số lượng và Ngày nhận luôn ở trên 1 hàng với grid-cols-2 */}
@@ -462,62 +510,123 @@ export default function ProductDetail() {
               <div className="flex flex-col gap-1.5">
                 <label className="text-[12px] font-medium text-text-secondary">Phương thức thanh toán</label>
                 <select value={preorderForm.phuong_thuc_tt} onChange={e => setPreorderForm({ ...preorderForm, phuong_thuc_tt: e.target.value })} className="bg-card border border-border rounded-xl px-4 py-3 text-body focus:ring-2 focus:ring-primary focus:border-primary outline-none">
-                  <option value="tien_mat">💵 Tiền mặt khi nhận hàng (COD)</option>
                   <option value="banking">🏦 Chuyển khoản ngân hàng (Sepay QR)</option>
                 </select>
               </div>
               
-              {preorderForm.phuong_thuc_tt === 'banking' && (
-                <div className="bg-primary-light/20 rounded-xl p-4 space-y-3">
-                  <p className="text-[12px] font-medium text-text-secondary">Hình thức thanh toán</p>
-                  <div className="flex gap-3">
-                    <label className={`flex-1 flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${preorderForm.loai_tien_coc === '30' ? 'border-primary bg-primary-light/30' : 'border-border hover:border-primary/40'}`}>
-                      <input type="radio" name="deposit_preorder" value="30" checked={preorderForm.loai_tien_coc === '30'} onChange={e => setPreorderForm({ ...preorderForm, loai_tien_coc: e.target.value })} className="accent-primary" />
-                      <div>
-                        <span className="text-body font-bold text-text-primary block">Cọc 30%</span>
-                        <span className="text-[12px] font-medium text-text-secondary">Thanh toán trước 30%, phần còn lại khi nhận hàng</span>
-                      </div>
-                    </label>
-                    <label className={`flex-1 flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${preorderForm.loai_tien_coc === '100' ? 'border-primary bg-primary-light/30' : 'border-border hover:border-primary/40'}`}>
-                      <input type="radio" name="deposit_preorder" value="100" checked={preorderForm.loai_tien_coc === '100'} onChange={e => setPreorderForm({ ...preorderForm, loai_tien_coc: e.target.value })} className="accent-primary" />
-                      <div>
-                        <span className="text-body font-bold text-text-primary block">Thanh toán toàn bộ</span>
-                        <span className="text-[12px] font-medium text-text-secondary">Trả trước 100% khi đặt hàng</span>
-                      </div>
-                    </label>
+              {/* MÃ GIẢM GIÁ CHO ĐẶT TRƯỚC */}
+              <div className="pt-1">
+                <span className="text-[13px] font-semibold text-text-primary flex items-center gap-1.5 mb-2.5">
+                  <Tag size={14} className="text-primary" /> Mã giảm giá
+                </span>
+                {!preorderPromoCode ? (
+                  <div className="flex gap-2">
+                    <input
+                      value={preorderPromoInput}
+                      onChange={e => setPreorderPromoInput(e.target.value.toUpperCase())}
+                      placeholder="Nhập mã giảm giá..."
+                      className="flex-1 bg-background border border-border rounded-xl px-3.5 py-2.5 text-body text-text-primary uppercase tracking-wider focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all placeholder:normal-case placeholder:tracking-normal"
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleApplyPreorderCode(preorderPromoInput); } }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPreorderCode(preorderPromoInput)}
+                      disabled={!preorderPromoInput.trim() || preorderPromoLoading}
+                      className="px-4 py-2.5 bg-primary text-white rounded-xl font-bold text-body hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 active:scale-95"
+                    >
+                      {preorderPromoLoading ? <Loader2 size={14} className="animate-spin" /> : null}
+                      Áp dụng
+                    </button>
                   </div>
-                  {(() => {
-                    const subtotal = (product.gia_ban || 0) * preorderForm.quantity;
-                    const { tienGiam: discount, mienPhiShip, appliedList } = calcPromotions(promotions, subtotal, preorderForm.quantity, 'dat_truoc');
-                    const expiryDiscount = calculateExpiryDiscount(product, preorderForm.quantity);
-                    const subtotalAfterDiscount = subtotal - discount - expiryDiscount;
-                    const shippingFee = mienPhiShip ? 0 : 30000;
-                    const finalTotal = subtotalAfterDiscount + shippingFee;
-                    const depositAmount = preorderForm.loai_tien_coc === '30' ? Math.round(finalTotal * 0.3) : finalTotal;
-                    const remaining = finalTotal - depositAmount;
-                    return (
-                      <div className="text-body space-y-1">
-                        {expiryDiscount > 0 && (
-                          <p className="text-xs text-orange-600 font-semibold">Giảm giá cận hạn: -{formatCurrency(expiryDiscount)}</p>
-                        )}
-                        {appliedList.map((item, i) => (
-                          <p key={i} className="text-xs text-[#16A34A] font-semibold">
-                            {item.label}
-                          </p>
-                        ))}
-                        {shippingFee === 0 ? (
-                          <p className="text-xs text-blue-600 font-semibold"> Miễn phí vận chuyển (Đơn từ 500.000đ)</p>
-                        ) : (
-                          <p className="text-xs text-text-secondary">Phí vận chuyển: +{formatCurrency(30000)}</p>
-                        )}
-                        <p className="text-text-primary">Tổng tiền (tạm tính): <strong>{formatCurrency(finalTotal)}</strong></p>
-                        <p className="text-primary font-bold">Số tiền cần chuyển khoản: {formatCurrency(depositAmount)}</p>
-                        {remaining > 0 && <p className="text-text-secondary text-[12px] font-medium">Phần còn lại ({formatCurrency(remaining)}) thanh toán khi nhận hàng</p>}
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between bg-background border border-border rounded-xl px-3.5 py-2.5">
+                      <span className="text-body font-bold text-text-primary tracking-wider">{preorderPromoCode}</span>
+                      <button type="button" onClick={() => { setPreorderPromoCode(''); setPreorderPromoResult(null); setPreorderPromoInput(''); }} className="text-text-secondary hover:text-danger transition-colors p-0.5">
+                        <X size={16} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {preorderPromoResult && (
+                  <div className={`mt-2.5 rounded-xl p-3 text-[12px] font-medium flex items-start gap-2 ${
+                    preorderPromoResult.error
+                      ? 'bg-red-50 border border-red-200 text-danger'
+                      : preorderPromoResult.used_code
+                        ? 'bg-green-50 border border-green-200 text-green-700'
+                        : 'bg-blue-50 border border-blue-200 text-blue-700'
+                  }`}>
+                    {preorderPromoResult.error ? (
+                      <><AlertCircle size={14} className="flex-shrink-0 mt-0.5" /><span>{preorderPromoResult.error}</span></>
+                    ) : (
+                      <><CheckCircle size={14} className="flex-shrink-0 mt-0.5" /><span>{preorderPromoResult.message}</span></>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-primary-light/20 rounded-xl p-4 space-y-3">
+                {preorderForm.phuong_thuc_tt === 'banking' && (
+                  <>
+                    <p className="text-[12px] font-medium text-text-secondary">Hình thức thanh toán</p>
+                    <div className="flex gap-3">
+                      <label className={`flex-1 flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${preorderForm.loai_tien_coc === '30' ? 'border-primary bg-primary-light/30' : 'border-border hover:border-primary/40'}`}>
+                        <input type="radio" name="deposit_preorder" value="30" checked={preorderForm.loai_tien_coc === '30'} onChange={e => setPreorderForm({ ...preorderForm, loai_tien_coc: e.target.value })} className="accent-primary" />
+                        <div>
+                          <span className="text-body font-bold text-text-primary block">Cọc 30%</span>
+                          <span className="text-[12px] font-medium text-text-secondary">Thanh toán trước 30%, phần còn lại khi nhận hàng</span>
+                        </div>
+                      </label>
+                      <label className={`flex-1 flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${preorderForm.loai_tien_coc === '100' ? 'border-primary bg-primary-light/30' : 'border-border hover:border-primary/40'}`}>
+                        <input type="radio" name="deposit_preorder" value="100" checked={preorderForm.loai_tien_coc === '100'} onChange={e => setPreorderForm({ ...preorderForm, loai_tien_coc: e.target.value })} className="accent-primary" />
+                        <div>
+                          <span className="text-body font-bold text-text-primary block">Thanh toán toàn bộ</span>
+                          <span className="text-[12px] font-medium text-text-secondary">Trả trước 100% khi đặt hàng</span>
+                        </div>
+                      </label>
+                    </div>
+                  </>
+                )}
+                {(() => {
+                  const subtotal = (product.gia_ban || 0) * preorderForm.quantity;
+                  const { tienGiam: autoDiscount, mienPhiShip: autoFreeship, appliedList } = calcPromotions(promotions, subtotal, preorderForm.quantity, 'dat_truoc');
+                  
+                  const hasCodeResult = preorderPromoResult && !preorderPromoResult.error && preorderPromoResult.tien_giam > 0;
+                  const finalDiscount = hasCodeResult ? Number(preorderPromoResult.tien_giam) : autoDiscount;
+                  const finalMienPhiShip = hasCodeResult ? preorderPromoResult.mien_phi_ship : autoFreeship;
+                  
+                  const subtotalAfterDiscount = Math.max(0, subtotal - finalDiscount - expiryDiscount);
+                  const shippingFee = finalMienPhiShip ? 0 : 30000;
+                  const finalTotal = subtotalAfterDiscount + shippingFee;
+                  
+                  const depositAmount = preorderForm.loai_tien_coc === '30' ? Math.round(subtotalAfterDiscount * 0.3) : finalTotal;
+                  const remaining = finalTotal - depositAmount;
+                  return (
+                    <div className="text-body space-y-1">
+                      {expiryDiscount > 0 && (
+                        <p className="text-xs text-orange-600 font-semibold">Giảm giá cận hạn: -{formatCurrency(expiryDiscount)}</p>
+                      )}
+                      {hasCodeResult ? (
+                        <p className="text-xs text-[#16A34A] font-semibold">{preorderPromoResult.message} (-{formatCurrency(finalDiscount)})</p>
+                      ) : appliedList.map((item, i) => (
+                        <p key={i} className="text-xs text-[#16A34A] font-semibold">{item.label}</p>
+                      ))}
+                      {shippingFee === 0 ? (
+                        <p className="text-xs text-blue-600 font-semibold">Miễn phí vận chuyển (Đơn từ 500.000đ hoặc từ mã)</p>
+                      ) : (
+                        <p className="text-xs text-text-secondary">Phí vận chuyển: +{formatCurrency(30000)}</p>
+                      )}
+                      <p className="text-text-primary mt-2">Tổng tiền: <strong className="text-primary text-h3">{formatCurrency(finalTotal)}</strong></p>
+                      {preorderForm.phuong_thuc_tt === 'banking' && (
+                        <>
+                          <p className="text-text-primary mt-1 font-bold">Số tiền cần chuyển khoản: {formatCurrency(depositAmount)}</p>
+                          {remaining > 0 && <p className="text-text-secondary text-[12px] font-medium">Phần còn lại ({formatCurrency(remaining)}) thanh toán khi nhận hàng</p>}
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
               
               {preorderMessage && <p className="text-body text-text-secondary">{preorderMessage}</p>}
               
@@ -526,9 +635,11 @@ export default function ProductDetail() {
               </button>
             </form>
           </div>
+          )}
 
-          <div className="bg-card rounded-3xl p-5 md:p-xl border border-border shadow-card">
-            <h2 className="text-h3 text-text-primary mb-lg">Giao định kỳ</h2>
+          {stock > 0 && (
+          <div className="w-full max-w-3xl bg-card rounded-3xl p-5 md:p-xl border border-border shadow-card">
+            <h2 className="text-h3 text-text-primary mb-lg text-center">Giao định kỳ</h2>
             <form onSubmit={handleSubscription} className="space-y-4">
               <div className="grid grid-cols-3 gap-3 sm:gap-4">
                 <div className="flex flex-col gap-1.5">
@@ -606,62 +717,142 @@ export default function ProductDetail() {
                   onChange={e => setSubscriptionForm({ ...subscriptionForm, phuong_thuc_tt: e.target.value })} 
                   className="bg-card border border-border rounded-xl px-4 py-3 text-body focus:ring-2 focus:ring-primary focus:border-primary outline-none"
                 >
-                  <option value="tien_mat">💵 Tiền mặt khi nhận hàng (COD)</option>
                   <option value="banking">🏦 Chuyển khoản ngân hàng (Sepay QR)</option>
                 </select>
               </div>
 
-              {subscriptionForm.phuong_thuc_tt === 'banking' && (
-                <div className="bg-primary-light/20 rounded-xl p-4 space-y-3">
-                  <p className="text-[12px] font-medium text-text-secondary">Hình thức thanh toán</p>
-                  <div className="flex gap-3">
-                    <label className={`flex-1 flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${subscriptionForm.loai_tien_coc === '30' ? 'border-primary bg-primary-light/30' : 'border-border hover:border-primary/40'}`}>
-                      <input type="radio" name="deposit_sub" value="30" checked={subscriptionForm.loai_tien_coc === '30'} onChange={e => setSubscriptionForm({ ...subscriptionForm, loai_tien_coc: e.target.value })} className="accent-primary" />
-                      <div>
-                        <span className="text-body font-bold text-text-primary block">Cọc 30%</span>
-                        <span className="text-[12px] font-medium text-text-secondary">Trả trước 30% mỗi kỳ, phần còn lại khi nhận</span>
-                      </div>
-                    </label>
-                    <label className={`flex-1 flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${subscriptionForm.loai_tien_coc === '100' ? 'border-primary bg-primary-light/30' : 'border-border hover:border-primary/40'}`}>
-                      <input type="radio" name="deposit_sub" value="100" checked={subscriptionForm.loai_tien_coc === '100'} onChange={e => setSubscriptionForm({ ...subscriptionForm, loai_tien_coc: e.target.value })} className="accent-primary" />
-                      <div>
-                        <span className="text-body font-bold text-text-primary block">Thanh toán toàn bộ</span>
-                        <span className="text-[12px] font-medium text-text-secondary">Trả trước 100% khi đăng ký</span>
-                      </div>
-                    </label>
+              {/* MÃ GIẢM GIÁ CHO ĐĂNG KÝ ĐỊNH KỲ */}
+              <div className="pt-1">
+                <span className="text-[13px] font-semibold text-text-primary flex items-center gap-1.5 mb-2.5">
+                  <Tag size={14} className="text-primary" /> Mã giảm giá
+                </span>
+                {!subPromoCode ? (
+                  <div className="flex gap-2">
+                    <input
+                      value={subPromoInput}
+                      onChange={e => setSubPromoInput(e.target.value.toUpperCase())}
+                      placeholder="Nhập mã giảm giá..."
+                      className="flex-1 bg-background border border-border rounded-xl px-3.5 py-2.5 text-body text-text-primary uppercase tracking-wider focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all placeholder:normal-case placeholder:tracking-normal"
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleApplySubCode(subPromoInput); } }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleApplySubCode(subPromoInput)}
+                      disabled={!subPromoInput.trim() || subPromoLoading}
+                      className="px-4 py-2.5 bg-primary text-white rounded-xl font-bold text-body hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 active:scale-95"
+                    >
+                      {subPromoLoading ? <Loader2 size={14} className="animate-spin" /> : null}
+                      Áp dụng
+                    </button>
                   </div>
-                  {(() => {
-                    const subtotal = (product.gia_ban || 0) * subscriptionForm.quantity;
-                    const { tienGiam: discount, mienPhiShip, appliedList } = calcPromotions(promotions, subtotal, subscriptionForm.quantity, 'dinh_ky');
-                    const expiryDiscount = calculateExpiryDiscount(product, subscriptionForm.quantity);
-                    const subtotalAfterDiscount = subtotal - discount - expiryDiscount;
-                    const shippingFee = mienPhiShip ? 0 : 30000;
-                    const finalPerCycle = subtotalAfterDiscount + shippingFee;
-                    const depositAmount = subscriptionForm.loai_tien_coc === '30' ? Math.round(finalPerCycle * 0.3) : finalPerCycle;
-                    const remaining = finalPerCycle - depositAmount;
-                    return (
-                      <div className="text-body space-y-1">
-                        {expiryDiscount > 0 && (
-                          <p className="text-xs text-orange-600 font-semibold">Giảm giá cận hạn: -{formatCurrency(expiryDiscount)}</p>
-                        )}
-                        {appliedList.map((item, i) => (
-                          <p key={i} className="text-xs text-[#16A34A] font-semibold">
-                            {item.label}
-                          </p>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between bg-background border border-border rounded-xl px-3.5 py-2.5">
+                      <span className="text-body font-bold text-text-primary tracking-wider">{subPromoCode}</span>
+                      <button type="button" onClick={() => { setSubPromoCode(''); setSubPromoResult(null); setSubPromoInput(''); }} className="text-text-secondary hover:text-danger transition-colors p-0.5">
+                        <X size={16} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {subPromoResult && (
+                  <div className={`mt-2.5 rounded-xl p-3 text-[12px] font-medium flex items-start gap-2 ${
+                    subPromoResult.error
+                      ? 'bg-red-50 border border-red-200 text-danger'
+                      : subPromoResult.used_code
+                        ? 'bg-green-50 border border-green-200 text-green-700'
+                        : 'bg-blue-50 border border-blue-200 text-blue-700'
+                  }`}>
+                    {subPromoResult.error ? (
+                      <><AlertCircle size={14} className="flex-shrink-0 mt-0.5" /><span>{subPromoResult.error}</span></>
+                    ) : (
+                      <><CheckCircle size={14} className="flex-shrink-0 mt-0.5" /><span>{subPromoResult.message}</span></>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-primary-light/20 rounded-xl p-4 space-y-3">
+                {subscriptionForm.phuong_thuc_tt === 'banking' && (
+                  <>
+                    <p className="text-[12px] font-medium text-text-secondary">Hình thức thanh toán</p>
+                    <div className="flex gap-3">
+                      <label className={`flex-1 flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${subscriptionForm.loai_tien_coc === '30' ? 'border-primary bg-primary-light/30' : 'border-border hover:border-primary/40'}`}>
+                        <input type="radio" name="deposit_sub" value="30" checked={subscriptionForm.loai_tien_coc === '30'} onChange={e => setSubscriptionForm({ ...subscriptionForm, loai_tien_coc: e.target.value })} className="accent-primary" />
+                        <div>
+                          <span className="text-body font-bold text-text-primary block">Cọc 30%</span>
+                          <span className="text-[12px] font-medium text-text-secondary">Chuyển khoản cọc khi đăng ký. Tiền cọc sẽ được trừ trực tiếp vào tiền thanh toán của kỳ cuối cùng.</span>
+                        </div>
+                      </label>
+                      <label className={`flex-1 flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${subscriptionForm.loai_tien_coc === '100' ? 'border-primary bg-primary-light/30' : 'border-border hover:border-primary/40'}`}>
+                        <input type="radio" name="deposit_sub" value="100" checked={subscriptionForm.loai_tien_coc === '100'} onChange={e => setSubscriptionForm({ ...subscriptionForm, loai_tien_coc: e.target.value })} className="accent-primary" />
+                        <div>
+                          <span className="text-body font-bold text-text-primary block">Thanh toán toàn bộ</span>
+                          <span className="text-[12px] font-medium text-text-secondary">Trả trước 100% khi đăng ký</span>
+                        </div>
+                      </label>
+                    </div>
+                  </>
+                )}
+                {(() => {
+                  const subtotal = (product.gia_ban || 0) * subscriptionForm.quantity;
+                  const { tienGiam: autoDiscount, mienPhiShip: autoFreeship, appliedList } = calcPromotions(promotions, subtotal, subscriptionForm.quantity, 'dinh_ky');
+                  
+                  const hasCodeResult = subPromoResult && !subPromoResult.error && subPromoResult.tien_giam > 0;
+                  const finalDiscountFirstCycle = hasCodeResult ? Number(subPromoResult.tien_giam) : autoDiscount;
+                  const finalMienPhiShipFirstCycle = hasCodeResult ? subPromoResult.mien_phi_ship : autoFreeship;
+                  
+                  const expiryDiscount = calculateExpiryDiscount(product, subscriptionForm.quantity);
+                  const subtotalAfterDiscountFirst = Math.max(0, subtotal - finalDiscountFirstCycle - expiryDiscount);
+                  const shippingFeeFirst = finalMienPhiShipFirstCycle ? 0 : 30000;
+                  const finalTotalFirstCycle = subtotalAfterDiscountFirst + shippingFeeFirst;
+
+                  const subtotalAfterDiscountNext = Math.max(0, subtotal - autoDiscount - expiryDiscount);
+                  const shippingFeeNext = autoFreeship ? 0 : 30000;
+                  const finalTotalNextCycles = subtotalAfterDiscountNext + shippingFeeNext;
+                  
+                  const depositAmount = subscriptionForm.loai_tien_coc === '30' ? Math.round(subtotalAfterDiscountFirst * 0.3) : finalTotalFirstCycle;
+                  const remaining = finalTotalFirstCycle - depositAmount;
+                  return (
+                    <div className="text-body space-y-1">
+                      {expiryDiscount > 0 && (
+                        <p className="text-xs text-orange-600 font-semibold">Giảm giá cận hạn: -{formatCurrency(expiryDiscount)}</p>
+                      )}
+                      
+                      <div className="mb-2 p-2 rounded-lg bg-white border border-border">
+                        <p className="font-semibold text-[13px] text-text-primary mb-1">Kỳ đầu tiên:</p>
+                        {hasCodeResult ? (
+                          <p className="text-xs text-[#16A34A] font-semibold">{subPromoResult.message} (-{formatCurrency(finalDiscountFirstCycle)})</p>
+                        ) : appliedList.map((item, i) => (
+                          <p key={`first-${i}`} className="text-xs text-[#16A34A] font-semibold">{item.label}</p>
                         ))}
-                        {shippingFee === 0 ? (
-                          <p className="text-xs text-blue-600 font-semibold"> Miễn phí vận chuyển (Đơn từ 500.000đ)</p>
+                        {shippingFeeFirst === 0 ? (
+                          <p className="text-xs text-blue-600 font-semibold">Miễn phí vận chuyển (Đơn từ 500.000đ hoặc từ mã)</p>
                         ) : (
                           <p className="text-xs text-text-secondary">Phí vận chuyển: +{formatCurrency(30000)}</p>
                         )}
-                        <p className="text-text-primary">Giá mỗi kỳ (tạm tính): <strong>{formatCurrency(finalPerCycle)}</strong></p>
-                        <p className="text-primary font-bold">Số tiền cần chuyển khoản: {formatCurrency(depositAmount)}</p>
-                        {remaining > 0 && <p className="text-text-secondary text-[12px] font-medium">Phần còn lại ({formatCurrency(remaining)}) thanh toán khi nhận hàng</p>}
+                        <p className="text-text-primary mt-1">Giá kỳ đầu: <strong className="text-primary text-h3">{formatCurrency(finalTotalFirstCycle)}</strong></p>
+                        {subscriptionForm.phuong_thuc_tt === 'banking' && (
+                          <div className="mt-1 border-t border-border/50 pt-1">
+                            <p className="text-text-primary text-[13px] font-bold">Cần chuyển khoản: {formatCurrency(depositAmount)}</p>
+                            {remaining > 0 && <p className="text-text-secondary text-[12px] font-medium">Phần còn lại ({formatCurrency(remaining)}) TT khi nhận</p>}
+                          </div>
+                        )}
                       </div>
-                    );
-                  })()}
-                </div>
-              )}
+
+                      {finalTotalFirstCycle !== finalTotalNextCycles && (
+                        <div className="p-2 rounded-lg bg-background/50 border border-border border-dashed">
+                          <p className="font-semibold text-[13px] text-text-primary mb-1">Các kỳ tiếp theo (tự động tính):</p>
+                          {appliedList.map((item, i) => (
+                            <p key={`next-${i}`} className="text-xs text-[#16A34A] font-semibold">{item.label}</p>
+                          ))}
+                          <p className="text-text-secondary mt-1 text-[13px]">Giá dự kiến: <strong>{formatCurrency(finalTotalNextCycles)}</strong>/kỳ</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
 
               {subscriptionMessage && <p className="text-body text-primary">{subscriptionMessage}</p>}
               <button disabled={savingSubscription} className="w-full bg-primary text-white rounded-xl px-5 py-3 font-bold transition-all active:scale-95">
@@ -669,7 +860,9 @@ export default function ProductDetail() {
               </button>
             </form>
           </div>
+          )}
         </section>
+        )}
 
         {/* Reviews */}
         <section className="grid gap-xl lg:grid-cols-[1fr_360px]">

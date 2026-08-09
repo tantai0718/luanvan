@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const ctrl = require('../controllers/baiVietController');
+const ctrl = require('../controllers/articleController');
 const { auth, role } = require('../middlewares/auth');
 
 // Admin (static before dynamic)

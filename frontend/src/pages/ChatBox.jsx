@@ -92,13 +92,12 @@ export default function ChatBox() {
           <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-3">
             {messages.map((m, idx) => (
               <div key={m.matnc || idx} className={`max-w-[92%] ${m.vai_tro === 'user' ? 'self-end' : 'self-start'}`}>
-                <div
-                  className={`rounded-lg px-3 py-2 text-sm ${
-                    m.vai_tro === 'user' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-800'
-                  }`}
-                >
-                  {m.noi_dung}
-                </div>
+                  <div
+                    className={`rounded-lg px-3 py-2 text-sm whitespace-pre-line ${m.vai_tro === 'user' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-800'
+                       }`}
+                      >
+                        {m.noi_dung}
+                  </div>
 
                 {m.products?.length > 0 && (
                   <div className="mt-2 flex flex-col gap-2">
