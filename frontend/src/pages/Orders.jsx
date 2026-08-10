@@ -55,19 +55,21 @@ export function OrderList() {
   const [cancelingSubscriptionId, setCancelingSubscriptionId] = useState(null);
   const [cancelModal, setCancelModal] = useState({ isOpen: false, id: null, tienCoc: 0, type: null });
 
-  const fetchData = () => {
-    setLoading(true);
-    Promise.allSettled([orderAPI.getAll(), subscriptionAPI.getAll()])
-      .then(([ordersResult, subscriptionsResult]) => {
-        setOrders(ordersResult.status === "fulfilled" ? ordersResult.value.orders || [] : []);
-        setSubscriptions(subscriptionsResult.status === "fulfilled" ? subscriptionsResult.value.subscriptions || [] : []);
+ const fetchData = () => {
+  setLoading(true);
+  Promise.allSettled([orderAPI.getAll(), subscriptionAPI.getAll()])
+    .then(([ordersResult, subscriptionsResult]) => {
+      const allOrders = ordersResult.status === "fulfilled" ? ordersResult.value.orders || [] : [];
+      const regularOrders = allOrders.filter((o) => o.loai_don !== "dinh_ky");
+      setOrders(regularOrders);
+      setSubscriptions(subscriptionsResult.status === "fulfilled" ? subscriptionsResult.value.subscriptions || [] : []);
 
-        if ((ordersResult.value?.orders || []).length === 0 && (subscriptionsResult.value?.subscriptions || []).length > 0) {
-          setActiveTab("subscriptions");
-        }
-      })
-      .finally(() => setLoading(false));
-  };
+      if (regularOrders.length === 0 && (subscriptionsResult.value?.subscriptions || []).length > 0) {
+        setActiveTab("subscriptions");
+      }
+    })
+    .finally(() => setLoading(false));
+};
 
   useEffect(() => {
     fetchData();
