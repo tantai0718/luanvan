@@ -21,13 +21,10 @@ function ProductCard({ product }) {
     e.preventDefault(); e.stopPropagation();
     if (!user) return navigate('/login');
     if (user.role !== 'buyer') return alert('Chỉ tài khoản người mua mới có thể thêm vào giỏ hàng.');
-    try {
-      await addToCart(product.ma_san_pham, 1);
+    const res = await addToCart(product.ma_san_pham, 1);
+    if (res?.success) {
       setAdded(true);
       setTimeout(() => setAdded(false), 1200);
-    } catch (err) {
-      console.error(err);
-      alert('Có lỗi xảy ra, không thể thêm vào giỏ hàng.');
     }
   };
 

@@ -15,18 +15,21 @@ const request = async (method, path, body) => {
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     });
   } catch {
-    throw { message: 'Không kết nối được tới server. Hãy chắc backend đang chạy ở cổng 5000.' };
+    throw new Error('Không kết nối được tới server. Hãy chắc backend đang chạy ở cổng 5000.');
   }
 
   let data;
   try {
     data = await response.json();
   } catch {
-    throw { message: `Lỗi server (${response.status})` };
+    throw new Error(`Lỗi server (${response.status})`);
   }
 
   if (!response.ok) {
-    throw { message: data?.message || `Lỗi ${response.status}` };
+    const err = new Error(data?.message || `Lỗi ${response.status}`);
+    err.status = response.status;
+    err.data = data;
+    throw err;
   }
 
   return data;

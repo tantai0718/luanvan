@@ -136,7 +136,7 @@ async function addToCart(mand, masp, quantity = 1) {
 async function updateCartItem(mand, masp, quantity) {
     if (quantity <= 0) return removeFromCart(mand, masp);
     const [[sp]] = await db.query('SELECT so_luong_ton FROM san_pham WHERE masp = ?', [masp]);
-    if (sp && quantity > sp.so_luong_ton) throw new Error(`Chỉ còn ${sp.so_luong_ton} trong kho`);
+    if (sp && quantity > sp.so_luong_ton) throw new Error(`Chỉ còn ${sp.so_luong_ton} sản phẩm trong kho`);
     const magh = await getOrCreateCart(mand);
     await db.query(
         'UPDATE chi_tiet_gio_hang SET so_luong = ? WHERE magh = ? AND masp = ?',

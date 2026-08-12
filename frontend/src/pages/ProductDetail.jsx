@@ -111,7 +111,7 @@ export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { addToCart } = useCart();
+  const { addToCart, showToast } = useCart();
 
   const [product, setProduct] = useState(null);
   const [reviews, setReviews] = useState([]);
@@ -251,9 +251,10 @@ export default function ProductDetail() {
       return;
     }
     if (stock <= 0) return;
-    try { await addToCart(product.ma_san_pham, quantity); setAdded(true); setTimeout(() => setAdded(false), 1400); } catch (err) {
-      console.error(err);
-      alert('Có lỗi xảy ra, không thể thêm vào giỏ hàng.');
+    const res = await addToCart(product.ma_san_pham, quantity);
+    if (res?.success) {
+      setAdded(true);
+      setTimeout(() => setAdded(false), 1400);
     }
   };
 
@@ -264,9 +265,9 @@ export default function ProductDetail() {
       return;
     }
     if (stock <= 0) return;
-    try { await addToCart(product.ma_san_pham, quantity); navigate('/cart'); } catch (err) {
-      console.error(err);
-      alert('Có lỗi xảy ra, không thể mua ngay.');
+    const res = await addToCart(product.ma_san_pham, quantity);
+    if (res?.success) {
+      navigate('/cart');
     }
   };
 
@@ -442,9 +443,41 @@ export default function ProductDetail() {
               <span className="text-body text-text-primary block mb-3">Số lượng</span>
               <div className="flex items-center gap-4">
                 <div className="flex h-12 overflow-hidden rounded-2xl border border-border bg-card">
-                  <button onClick={() => setQuantity(p => Math.max(1, p - 1))} className="flex w-12 items-center justify-center hover:bg-background transition-all text-text-primary"><Minus size={16} /></button>
-                  <span className="flex w-16 items-center justify-center font-bold text-h3 text-text-primary">{quantity}</span>
-                  <button onClick={() => setQuantity(p => Math.min(maxQuantity, p + 1))} className="flex w-12 items-center justify-center hover:bg-background transition-all text-text-primary"><Plus size={16} /></button>
+                  <button onClick={() => setQuantity(p => Math.max(1, Number(p) - 1))} className="flex w-12 items-center justify-center hover:bg-background transition-all text-text-primary"><Minus size={16} /></button>
+                  <input
+                    type="number"
+                    min="1"
+                    max={maxQuantity}
+                    value={quantity}
+                    onChange={e => {
+                      const val = e.target.value;
+                      if (val === '') {
+                        setQuantity('');
+                        return;
+                      }
+                      const num = parseInt(val, 10);
+                      if (!isNaN(num)) {
+                        if (stock > 0 && num > stock) {
+                          setQuantity(stock);
+                          showToast(`Chỉ còn ${stock} ${product?.don_vi || 'sản phẩm'} trong kho`, 'warning');
+                        } else {
+                          setQuantity(Math.max(1, num));
+                        }
+                      }
+                    }}
+                    onBlur={() => {
+                      if (!quantity || Number(quantity) < 1) setQuantity(1);
+                    }}
+                    className="w-16 text-center font-bold text-h3 text-text-primary bg-transparent outline-none border-x border-border focus:bg-background/80 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <button onClick={() => setQuantity(p => {
+                    const next = Number(p || 0) + 1;
+                    if (stock > 0 && next > stock) {
+                      showToast(`Chỉ còn ${stock} ${product?.don_vi || 'sản phẩm'} trong kho`, 'warning');
+                      return stock;
+                    }
+                    return next;
+                  })} className="flex w-12 items-center justify-center hover:bg-background transition-all text-text-primary"><Plus size={16} /></button>
                 </div>
                 <span className="text-body text-text-secondary">Còn {stock} trong kho</span>
               </div>

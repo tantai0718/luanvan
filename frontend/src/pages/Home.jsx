@@ -35,13 +35,10 @@ function ProductCard({ product }) {
       return;
     }
     if (stock <= 0) return;
-    try {
-      await addToCart(product.ma_san_pham, 1);
+    const res = await addToCart(product.ma_san_pham, 1);
+    if (res?.success) {
       setAdded(true);
       setTimeout(() => setAdded(false), 1200);
-    } catch (err) {
-      console.error(err);
-      alert('Có lỗi xảy ra, không thể thêm vào giỏ hàng.');
     }
   };
 

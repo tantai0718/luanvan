@@ -46,7 +46,7 @@ function StepBadge({ step, color }) {
 }
 
 export default function Cart() {
-  const { items, updateItem, removeItem, clearCart, totalPrice, summary, promoCode, promoResult, promoLoading, applyCode, clearCode } = useCart();
+  const { items, updateItem, removeItem, clearCart, totalPrice, summary, promoCode, promoResult, promoLoading, applyCode, clearCode, showToast } = useCart();
   const [codeInput, setCodeInput] = useState('');
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -326,8 +326,30 @@ export default function Cart() {
                           <span className="text-body font-bold text-primary">{formatCurrency(item.quantity * Number(item.product?.price || 0))}</span>
                           <div className="flex items-center gap-1.5 border border-border rounded-lg p-0.5 bg-background">
                             <button onClick={() => (item.quantity > 1 ? updateItem(item.product_id, item.quantity - 1) : removeItem(item.product_id))} className="w-6 h-6 rounded-md bg-card text-text-primary flex items-center justify-center hover:bg-border transition-colors"><Minus size={12} /></button>
-                            <span className="text-xs font-semibold px-1">{item.quantity}</span>
-                            <button onClick={() => updateItem(item.product_id, item.quantity + 1)} className="w-6 h-6 rounded-md bg-card text-text-primary flex items-center justify-center hover:bg-border transition-colors"><Plus size={12} /></button>
+                            <input
+                              type="number"
+                              min="1"
+                              value={item.quantity}
+                              onChange={e => {
+                                const val = parseInt(e.target.value, 10);
+                                if (!isNaN(val) && val > 0) {
+                                  if (item.product?.stock != null && val > item.product.stock) {
+                                    showToast(`Chỉ còn ${item.product.stock} ${item.product.unit || 'sản phẩm'} trong kho`, 'warning');
+                                    updateItem(item.product_id, item.product.stock);
+                                  } else {
+                                    updateItem(item.product_id, val);
+                                  }
+                                }
+                              }}
+                              className="w-10 text-center text-xs font-semibold bg-transparent text-text-primary outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                            <button onClick={() => {
+                              if (item.product?.stock != null && item.quantity >= item.product.stock) {
+                                showToast(`Chỉ còn ${item.product.stock} ${item.product.unit || 'sản phẩm'} trong kho`, 'warning');
+                                return;
+                              }
+                              updateItem(item.product_id, item.quantity + 1);
+                            }} className="w-6 h-6 rounded-md bg-card text-text-primary flex items-center justify-center hover:bg-border transition-colors"><Plus size={12} /></button>
                           </div>
                         </div>
                       </div>
