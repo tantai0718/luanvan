@@ -1,5 +1,6 @@
 const chatModel = require('../models/chatModel');
 const productModel = require('../models/productModel');
+const promotionModel = require('../models/promotionModel');
 
 function removeDiacritics(str = '') {
     return str
@@ -62,6 +63,11 @@ function mapIntentToKeywords(userText) {
     }
 
     return extraKeywords;
+}
+
+function isPromotionQuestion(userText) {
+    const norm = removeDiacritics(userText.toLowerCase());
+    return /khuyen mai|giam gia|uu dai|voucher|coupon|ma giam|freeship|mien phi ship|sale|co giam|discount|promo|su kien|chuong trinh|dang co gi|co gi hot|co gi moi|uu dai gi|khuyen mai gi|giam gi/.test(norm);
 }
 
 function findMatchedSeasonIds(userText, seasons) {
@@ -197,14 +203,61 @@ async function callGemini(apiKey, systemPrompt, fullPrompt) {
     return { res, data };
 }
 
-async function askAI(userMessage, products) {
+async function askAI(userMessage, products, promotions = []) {
     if (!GEMINI_API_KEYS.length) return buildFallback(userMessage, products);
 
-    const cacheKey = `${userMessage.trim().toLowerCase()}::${products.map((p) => p.masp).sort().join(',')}`;
+    const promoKey = promotions.map(p => p.makm).sort().join(',');
+    const cacheKey = `${userMessage.trim().toLowerCase()}::${products.map((p) => p.masp).sort().join(',')}::promo:${promoKey}`;
     const cached = cacheGet(cacheKey);
     if (cached) {
         console.log('[askAI] cache hit');
         return cached;
+    }
+
+    let promoSection = '';
+    if (promotions.length > 0) {
+        const formatDate = (d) => {
+            if (!d) return null;
+            const dt = new Date(d);
+            return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
+        };
+
+        const promoData = promotions.map(p => {
+            const item = {
+                ten: p.ten_km,
+                trang_thai: p.trang_thai_km === 'sap_toi' ? 'Sắp diễn ra' : 'Đang diễn ra',
+            };
+            if (p.ma_code) item.ma_code = p.ma_code;
+            if (p.phan_tram_giam) item.giam = Number(p.phan_tram_giam) + '%';
+            if (p.loai_uu_dai === 'mien_phi_ship') {
+                item.loai = 'Freeship';
+                item.dieu_kien = 'Đơn từ ' + Number(p.dieu_kien_toi_thieu).toLocaleString('vi-VN') + 'đ';
+            } else {
+                item.loai = 'Giảm giá';
+                item.dieu_kien = 'Từ ' + Number(p.dieu_kien_toi_thieu) + ' sản phẩm';
+            }
+            item.ap_dung = p.ap_dung_cho === 'tat_ca' ? 'Tất cả đơn hàng'
+                : p.ap_dung_cho === 'thuong_va_dat_truoc' ? 'Đơn thường & Đặt trước'
+                : p.ap_dung_cho === 'dinh_ky' ? 'Đăng ký giao định kỳ' : p.ap_dung_cho;
+            const bd = formatDate(p.ngay_bat_dau);
+            const kt = formatDate(p.ngay_ket_thuc);
+            if (bd && kt) item.thoi_gian = bd + ' - ' + kt;
+            else if (bd) item.thoi_gian = 'Từ ' + bd;
+            else if (kt) item.thoi_gian = 'Đến ' + kt;
+            else item.thoi_gian = 'Không giới hạn';
+            return item;
+        });
+
+        promoSection = `
+KHUYẾN MÃI & SỰ KIỆN (gợi ý khi khách hỏi về khuyến mãi/giảm giá/ưu đãi/sự kiện):
+QUY TẮC BẮT BUỘC KHI TRẢ LỜI VỀ KHUYẾN MÃI:
+1. Liệt kê TẤT CẢ chương trình trong DANH_SACH_KHUYEN_MAI bên dưới.
+2. Mỗi chương trình PHẢI ghi rõ: tên chương trình, mức giảm, điều kiện, thời gian hiệu lực.
+3. Nếu có "ma_code" thì BẮT BUỘC ghi rõ: "Nhập mã: [MA_CODE]" để khách dùng.
+4. Phân biệt rõ chương trình "Đang diễn ra" và "Sắp diễn ra".
+5. KHÔNG tự bịa khuyến mãi ngoài danh sách.
+DANH_SACH_KHUYEN_MAI:
+${JSON.stringify(promoData)}`;
     }
 
     const systemPrompt = `Bạn là trợ lý bán hàng thông minh của sàn "Chợ Nông Sản".
@@ -213,7 +266,7 @@ Nhiệm vụ: Tư vấn sản phẩm và hướng dẫn khách hàng thân thi�
 QUY TẮC ĐỊNH DẠNG BẮT BUỘC:
 1. Mỗi sản phẩm NẰM TRÊN 1 DÒNG RIÊNG.
 2. Cấu trúc mỗi sản phẩm: [STT]. [Tên sản phẩm]: [Miêu tả công dụng/vị ngon ngắn gọn trong 1-2 câu lấy từ mo_ta].
-3. Dùng 1-2 dấu xuống dòng (\\n\\n) giữa các phần.
+3. Dùng 1-2 dấu xuống dòng (\n\n) giữa các phần.
 4. KHÔNG dùng cú pháp Markdown như **, *, #, _.
 5. CHỈ DÙNG SẢN PHẨM CÓ TRONG DANH_SACH, không tự bịa sản phẩm ngoài danh sách.
 6. LỜI CHÚC VÀ HƯỚNG DẪN Ở CUỐI: Kèm câu hướng dẫn đặt hàng và lời chúc ở cuối.
@@ -226,6 +279,7 @@ HƯỚNG DẪN QUY TRÌNH HỆ THỐNG:
 XỬ LÝ YÊU CẦU:
 - Nếu hỏi HƯỚNG DẪN: Trả lời ngắn gọn theo HƯỚNG DẪN QUY TRÌNH HỆ THỐNG và trả về "product_ids": [].
 - Nếu TÌM SẢN PHẨM: Chọn các sản phẩm phù hợp nhất trong DANH_SACH.
+- Nếu hỏi về KHUYẾN MÃI/GIẢM GIÁ/ƯU ĐÃI/SỰ KIỆN: Liệt kê TẤT CẢ chương trình trong DANH_SACH_KHUYEN_MAI, ghi rõ mã code (nếu có), thời gian, điều kiện. Trả về "product_ids": [].${promoSection}
 
 Định dạng trả về duy nhất JSON:
 {"reply": "Nội dung phản hồi", "product_ids": [danh sách masp số nguyên, tối đa 4]}`;
@@ -340,13 +394,28 @@ exports.sendMyMessage = async (req, res) => {
             finalProducts = await productModel.searchProductsForChat('', 8);
         }
 
-        const { reply, product_ids } = await askAI(noi_dung, finalProducts);
+        // Kiểm tra xem khách hỏi về khuyến mãi/giảm giá không
+        let activePromotions = [];
+        if (isPromotionQuestion(noi_dung)) {
+            activePromotions = await promotionModel.getActivePromotionsForChat();
+            console.log('[sendMyMessage] Khách hỏi khuyến mãi, tìm thấy:', activePromotions.length, 'chương trình đang hoạt động');
+        }
+
+        const { reply, product_ids } = await askAI(noi_dung, finalProducts, activePromotions);
+
+        // Xác định loại gợi ý: khuyến mãi nếu có promo, sản phẩm nếu có product_ids
+        let loai_gui_y = null;
+        if (activePromotions.length > 0 && isPromotionQuestion(noi_dung)) {
+            loai_gui_y = 'khuyen_mai';
+        } else if (product_ids.length) {
+            loai_gui_y = 'san_pham';
+        }
 
         await chatModel.sendMessage({
             mapc,
             vai_tro: 'bot',
             noi_dung: reply,
-            loai_gui_y: product_ids.length ? 'san_pham' : null,
+            loai_gui_y,
             product_ids,
             isSeason: seasonIds.length > 0, 
         });

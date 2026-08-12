@@ -340,8 +340,37 @@ async function deletePromotion(makm) {
   return result.affectedRows > 0;
 }
 
+/**
+ * Lấy danh sách khuyến mãi cho chatbot:
+ * - trang_thai = 1 (đang bật)
+ * - Chưa hết hạn (ngay_ket_thuc IS NULL hoặc >= NOW())
+ * - Bao gồm cả khuyến mãi SẮP TỚI (ngay_bat_dau > NOW())
+ * - Chưa hết lượt dùng
+ */
+async function getActivePromotionsForChat() {
+  const [rows] = await db.query(
+    `SELECT makm, ten_km, ma_code, loai_uu_dai, loai_ap_dung,
+            dieu_kien_toi_thieu, phan_tram_giam, gia_tri_giam_toi_da,
+            ap_dung_cho, ngay_bat_dau, ngay_ket_thuc, so_luong_toi_da, da_su_dung,
+            CASE
+              WHEN ngay_bat_dau IS NOT NULL AND ngay_bat_dau > NOW() THEN 'sap_toi'
+              ELSE 'dang_dien_ra'
+            END AS trang_thai_km
+     FROM khuyen_mai
+     WHERE trang_thai = 1
+       AND (ngay_ket_thuc IS NULL OR ngay_ket_thuc >= NOW())
+       AND (so_luong_toi_da IS NULL OR da_su_dung < so_luong_toi_da)
+     ORDER BY trang_thai_km ASC, ngay_bat_dau ASC`
+  );
+  return rows.map(r => ({
+    ...r,
+    ten_km: formatPromoTitle(r.ten_km, r.phan_tram_giam, r.loai_uu_dai),
+  }));
+}
+
 module.exports = {
   getActivePromotions,
+  getActivePromotionsForChat,
   getAllPromotions,
   getPromotionById,
   createPromotion,
