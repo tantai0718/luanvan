@@ -23,9 +23,14 @@ async function getOrCreateSession(mand) {
     return result.insertId;
 }
 
-async function sendMessage({ mapc, vai_tro, noi_dung, loai_gui_y = null, product_ids = null, isSeason = false }) {
+async function sendMessage({ mapc, vai_tro, noi_dung, loai_gui_y = null, product_ids = null, disabled_ids = [], product_cards = [], isSeason = false }) {
     const loai_phien_only = product_ids && product_ids.length
-        ? JSON.stringify({ suggested_ids: product_ids, is_season: isSeason })
+        ? JSON.stringify({
+            suggested_ids: product_ids,
+            disabled_ids,
+            product_cards,
+            is_season: isSeason,
+        })
         : null;
 
     const [result] = await db.query(
@@ -50,13 +55,13 @@ async function attachProducts(messages) {
     }
 
     let productMap = {};
-    let seasonProductMap = {}; 
-
     if (idSet.size) {
         const ids = Array.from(idSet);
 
         const [rows] = await db.query(
-            `SELECT sp.masp, sp.ten_san_pham, sp.gia_ban, sp.don_vi, hav.duong_dan AS hinh_chinh
+            `SELECT sp.masp, sp.ten_san_pham, sp.gia_ban, sp.don_vi, sp.so_luong_ton,
+                    sp.han_su_dung, sp.so_ngay_can_han, sp.phan_tram_giam_can_han,
+                    hav.duong_dan AS hinh_chinh
              FROM san_pham sp
              LEFT JOIN hinh_anh_video hav
                ON hav.masp = sp.masp AND hav.la_chinh = 1 AND hav.loai = 'hinh_anh'
@@ -69,21 +74,12 @@ async function attachProducts(messages) {
                 ten_san_pham: r.ten_san_pham,
                 gia_ban: Number(r.gia_ban || 0),
                 don_vi: r.don_vi,
+                ton_kho: Number(r.so_luong_ton || 0),
+                han_su_dung: r.han_su_dung,
+                so_ngay_can_han: Number(r.so_ngay_can_han || 0),
+                phan_tram_giam_can_han: Number(r.phan_tram_giam_can_han || 0),
                 hinh_anh: r.hinh_chinh ? `/upload/${r.hinh_chinh}` : null,
             };
-        });
-
-        const [seasonRows] = await db.query(
-            `SELECT sp.masp, MIN(spmv.gia_du_kien) AS gia_du_kien
-             FROM san_pham sp
-             JOIN san_pham_mua_vu spmv ON spmv.masp = sp.masp
-             JOIN mua_vu mv ON mv.mamv = spmv.mamv AND mv.trang_thai = 1
-             WHERE sp.masp IN (?)
-             GROUP BY sp.masp`,
-            [ids]
-        );
-        seasonRows.forEach(r => {
-            if (r.gia_du_kien != null) seasonProductMap[r.masp] = Number(r.gia_du_kien);
         });
     }
 
@@ -95,16 +91,22 @@ async function attachProducts(messages) {
                     ? JSON.parse(m.loai_phien_only)
                     : m.loai_phien_only;
 
-                const isSeason = !!parsed.is_season;
+                const cardMap = new Map((parsed.product_cards || []).map(card => [Number(card.masp), card]));
+                const disabledIds = new Set((parsed.disabled_ids || []).map(Number));
 
                 products = (parsed.suggested_ids || [])
                     .map(id => {
                         const base = productMap[id];
                         if (!base) return null;
-                        if (isSeason && seasonProductMap[id] != null) {
-                            return { ...base, gia_ban: seasonProductMap[id] }; 
-                        }
-                        return base; 
+                        const card = cardMap.get(Number(id));
+                        const isPreview = card?.trang_thai === 'sap_toi' || disabledIds.has(Number(id));
+                        return {
+                            ...base,
+                            gia_du_kien: isPreview && card?.gia_du_kien != null ? Number(card.gia_du_kien) : null,
+                            ten_mua: card?.ten_mua || null,
+                            la_du_bao: isPreview,
+                            co_the_mua: !isPreview && base.ton_kho > 0,
+                        };
                     })
                     .filter(Boolean);
             } catch { /* bỏ qua */ }

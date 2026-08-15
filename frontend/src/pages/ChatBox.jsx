@@ -10,15 +10,35 @@ const formatCurrency = v => `${Number(v || 0).toLocaleString('vi-VN')}đ`;
 function ProductCard({ product, onClick }) {
   const img = product.hinh_anh ? `${BACKEND}${product.hinh_anh}` : '/images/placeholder.png';
   const discounted = getExpiryDiscountPrice(product);
+  const isPreview = product.la_du_bao;
+  const displayedPrice = isPreview
+    ? product.gia_du_kien
+    : (discounted != null ? discounted : product.gia_ban);
+
+  if (isPreview) {
+    return (
+      <div className="flex w-full items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 p-2 text-left">
+        <img src={img} alt={product.ten_san_pham} className="h-12 w-12 flex-shrink-0 rounded-md object-cover opacity-80" />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-text-primary">{product.ten_san_pham}</p>
+          <p className="text-xs font-medium text-amber-800">Sắp vào mùa · chỉ tham khảo</p>
+          <p className="text-sm font-semibold text-primary">Dự kiến: {displayedPrice != null ? formatCurrency(displayedPrice) : 'Đang cập nhật'}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-lg border border-border bg-white p-2 text-left transition hover:border-primary hover:shadow"
+      disabled={!product.co_the_mua}
+      className="flex w-full items-center gap-3 rounded-lg border border-border bg-white p-2 text-left transition hover:border-primary hover:shadow disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-border disabled:hover:shadow-none"
     >
       <img src={img} alt={product.ten_san_pham} className="h-12 w-12 flex-shrink-0 rounded-md object-cover" />
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-text-primary">{product.ten_san_pham}</p>
-        <p className="text-sm font-semibold text-primary">{formatCurrency(discounted != null ? discounted : product.gia_ban)}</p>
+        <p className="text-sm font-semibold text-primary">{formatCurrency(displayedPrice)}</p>
+        {!product.co_the_mua && <p className="text-xs text-text-secondary">Tạm hết hàng</p>}
       </div>
     </button>
   );

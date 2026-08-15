@@ -30,6 +30,15 @@ function calculateHsdStatus(hanSuDung, soNgayCanHan, ngaySanXuat = null) {
     return 'con_han';
 }
 
+// kiểm tra tháng chỉ định có nằm trong khoảng mùa vụ hay không (xử lý cả trường hợp mùa vắt qua năm mới)
+function isMonthInSeasonRange(month, thangBatDau, thangKetThuc, quaNam) {
+    if (thangBatDau == null || thangKetThuc == null) return false;
+    if (quaNam) {
+        return month >= thangBatDau || month <= thangKetThuc;
+    }
+    return month >= thangBatDau && month <= thangKetThuc;
+}
+
 const mapProduct = (row) => ({
     ma_san_pham: row.masp,
     ten_san_pham: row.ten_san_pham,
@@ -58,9 +67,9 @@ async function listProducts({ q = '', category = '', sort = 'moi_nhat', inStock 
     const conditions = ['sp.trang_thai = 1'];
     const params = [];
 
-    if (q) { 
-        conditions.push('(sp.ten_san_pham LIKE ? OR sp.mo_ta LIKE ?)'); 
-        params.push(`%${q}%`, `%${q}%`); 
+    if (q) {
+        conditions.push('(sp.ten_san_pham LIKE ? OR sp.mo_ta LIKE ?)');
+        params.push(`%${q}%`, `%${q}%`);
     }
     if (category) { conditions.push('sp.madm = ?'); params.push(Number(category)); }
     if (inStock === '1') { conditions.push('sp.so_luong_ton > 0'); }
@@ -208,11 +217,11 @@ async function autoHideExpiredProducts() {
 }
 
 async function listAllProducts({ q = '', category = '' } = {}) {
-    const conditions = ['1=1']; 
+    const conditions = ['1=1'];
     const params = [];
-    if (q) { 
-        conditions.push('(sp.ten_san_pham LIKE ? OR sp.mo_ta LIKE ?)'); 
-        params.push(`%${q}%`, `%${q}%`); 
+    if (q) {
+        conditions.push('(sp.ten_san_pham LIKE ? OR sp.mo_ta LIKE ?)');
+        params.push(`%${q}%`, `%${q}%`);
     }
     if (category) { conditions.push('sp.madm = ?'); params.push(Number(category)); }
 
@@ -239,47 +248,41 @@ async function listAllProducts({ q = '', category = '' } = {}) {
     return {
         products: rows.map(r => ({
             ...mapProduct(r),
-            con_hoat_dong: r.trang_thai === 1, 
+            con_hoat_dong: r.trang_thai === 1,
         })),
     };
 }
 
 async function getActiveSeasons() {
     const [rows] = await db.query(
-        `SELECT mamv, ten_mua FROM mua_vu WHERE trang_thai = 1`
+        `SELECT mamv, ten_mua, thang_bat_dau, thang_ket_thuc, qua_nam, mo_ta FROM mua_vu WHERE trang_thai = 1`
     );
     return rows;
 }
 
-// ĐÃ CẬP NHẬT: Lấy thêm trường sp.mo_ta và kiểm tra từ khóa khớp ở cả Tên & Mô tả
-async function findProductsForChat({ keywords = [], seasonIds = [], currentMonthFallback = false } = {}, limit = 8) {
-    if (!keywords.length && !seasonIds.length && currentMonthFallback) {
-        const month = new Date().getMonth() + 1;
-        const [rows] = await db.query(
-            `SELECT DISTINCT sp.masp, sp.ten_san_pham, sp.mo_ta, sp.gia_ban, sp.don_vi,
-                    spmv.gia_du_kien,
-                    hav.duong_dan AS hinh_anh
-             FROM san_pham_mua_vu spmv
-             JOIN mua_vu mv ON mv.mamv = spmv.mamv AND mv.trang_thai = 1
-             JOIN san_pham sp ON sp.masp = spmv.masp AND sp.trang_thai = 1
-             LEFT JOIN hinh_anh_video hav ON hav.masp = sp.masp AND hav.la_chinh = 1
-             WHERE (mv.qua_nam = 0 AND ? BETWEEN mv.thang_bat_dau AND mv.thang_ket_thuc)
-                OR (mv.qua_nam = 1 AND (? >= mv.thang_bat_dau OR ? <= mv.thang_ket_thuc))
-             LIMIT ?`,
-            [month, month, month, limit]
-        );
-        return rows;
-    }
+// Lấy TẤT CẢ mùa vụ đang áp dụng có chứa 1 tháng chỉ định.
+async function getSeasonsByMonth(month) {
+    const seasons = await getActiveSeasons();
+    return seasons.filter(s =>
+        isMonthInSeasonRange(month, s.thang_bat_dau, s.thang_ket_thuc, s.qua_nam)
+    );
+}
 
-    if (!keywords.length && !seasonIds.length) return [];
+ 
+async function findProductsForChat({ keywords = [], seasonIds = [], targetMonth = null, isFutureQuery = false } = {}, limit = 8) {
+    const currentMonth = new Date().getMonth() + 1;
 
-    // THÊM: sp.mo_ta trong câu lệnh SELECT
+    // Đã có ý định rõ ràng về tháng/mùa -> chế độ nghiêm ngặt, không dùng từ khoá tự do
+    const strictSeasonMode = targetMonth != null || isFutureQuery;
+
     const [rows] = await db.query(
-        `SELECT DISTINCT sp.masp, sp.ten_san_pham, sp.mo_ta, sp.gia_ban, sp.don_vi,
+        `SELECT DISTINCT sp.masp, sp.ten_san_pham, sp.mo_ta, sp.gia_ban, sp.don_vi, sp.so_luong_ton,
                 spmv.mamv, spmv.gia_du_kien,
+                mv.thang_bat_dau, mv.thang_ket_thuc, mv.qua_nam, mv.ten_mua,
                 hav.duong_dan AS hinh_anh
          FROM san_pham sp
          LEFT JOIN san_pham_mua_vu spmv ON spmv.masp = sp.masp
+         LEFT JOIN mua_vu mv ON mv.mamv = spmv.mamv AND mv.trang_thai = 1
          LEFT JOIN hinh_anh_video hav ON hav.masp = sp.masp AND hav.la_chinh = 1
          WHERE sp.trang_thai = 1`
     );
@@ -293,20 +296,78 @@ async function findProductsForChat({ keywords = [], seasonIds = [], currentMonth
         const descNormalized = removeDiacritics(row.mo_ta || '');
         const fullTextPadded = ` ${nameNormalized} ${descNormalized} `;
 
-        // SO SÁNH: Quét từ khóa xuất hiện ở Tên HOẶC Mô tả
-        const matchesKeyword = normalizedKeywords.some((kw) => fullTextPadded.includes(kw));
+        // Trong chế độ nghiêm ngặt (đã biết rõ tháng/mùa), KHÔNG xét match theo từ khoá tự do
+        const matchesKeyword = !strictSeasonMode && normalizedKeywords.some((kw) => fullTextPadded.includes(kw));
         const matchesSeason = row.mamv != null && seasonIdSet.has(row.mamv);
 
-        if (!matchesKeyword && !matchesSeason) continue;
+        let matchesTargetMonth = false;
+        if (targetMonth != null && row.mamv != null) {
+            matchesTargetMonth = isMonthInSeasonRange(targetMonth, row.thang_bat_dau, row.thang_ket_thuc, row.qua_nam);
+        }
+
+        // Câu hỏi "sắp tới có gì" mà chưa nêu tháng cụ thể -> lấy sản phẩm thuộc mùa
+        // có tháng bắt đầu SAU tháng hiện tại (mùa kế tiếp gần nhất)
+        let matchesFutureSeason = false;
+        let futureDistance = null;
+        if (isFutureQuery && targetMonth == null && row.mamv != null) {
+            // ví dụ đang tháng 12 thì mùa bắt đầu tháng 1 có khoảng cách 1 tháng.
+            const startMonth = Number(row.thang_bat_dau);
+            if (startMonth >= 1 && startMonth <= 12) {
+                futureDistance = (startMonth - currentMonth + 12) % 12;
+                matchesFutureSeason = futureDistance > 0;
+            }
+        }
+
+        if (!matchesKeyword && !matchesSeason && !matchesTargetMonth && !matchesFutureSeason) continue;
+
+        let trangThaiMuaVu = 'thuong';
+        if (row.mamv != null) {
+            const isCurrentlyInSeason = isMonthInSeasonRange(currentMonth, row.thang_bat_dau, row.thang_ket_thuc, row.qua_nam);
+
+            if (isFutureQuery) {
+                trangThaiMuaVu = 'sap_toi';
+            } else if (targetMonth != null) {
+                trangThaiMuaVu = targetMonth === currentMonth && isCurrentlyInSeason ? 'dang_ban' : 'sap_toi';
+            } else {
+                trangThaiMuaVu = isCurrentlyInSeason ? 'dang_ban' : 'sap_toi';
+            }
+        }
+        row.trang_thai_mua_vu = trangThaiMuaVu;
+        row.futureDistance = futureDistance;
+
+        const isHighPriority = matchesTargetMonth || matchesSeason || matchesFutureSeason;
+        row.isHighPriority = isHighPriority;
 
         const existing = matched.get(row.masp);
-        if (!existing || (matchesSeason && existing.gia_du_kien == null)) {
+        if (
+            !existing ||
+            (isFutureQuery && targetMonth == null && futureDistance != null &&
+                (existing.futureDistance == null || futureDistance < existing.futureDistance)) ||
+            (isHighPriority && !existing.isHighPriority)
+        ) {
             matched.set(row.masp, row);
         }
-        if (matched.size >= limit && !matched.has(row.masp)) break;
     }
 
-    return Array.from(matched.values());
+    let resultList = Array.from(matched.values());
+
+    // Với câu hỏi chung "sắp tới có mùa nào", chỉ trả về MÙA KẾ TIẾP GẦN NHẤT,
+    // không trả về mùa đang diễn ra hoặc tất cả mùa của các tháng sau đó.
+    if (isFutureQuery && targetMonth == null) {
+        const distances = resultList
+            .map(row => row.futureDistance)
+            .filter(distance => distance != null && distance > 0);
+        if (distances.length) {
+            const nearestDistance = Math.min(...distances);
+            resultList = resultList.filter(row => row.futureDistance === nearestDistance);
+        }
+    }
+
+    resultList.sort((a, b) =>
+        (a.futureDistance ?? Number.MAX_SAFE_INTEGER) - (b.futureDistance ?? Number.MAX_SAFE_INTEGER) ||
+        (b.isHighPriority ? 1 : 0) - (a.isHighPriority ? 1 : 0)
+    );
+    return resultList.slice(0, limit);
 }
 
 async function searchProductsForChat(keyword, limit = 6) {
@@ -317,6 +378,6 @@ async function searchProductsForChat(keyword, limit = 6) {
 module.exports = {
     listProducts, listAllProducts, getProductById,
     listCategories, createProduct, updateProduct, toggleProduct,
-    searchProductsForChat, getActiveSeasons, findProductsForChat,
+    searchProductsForChat, getActiveSeasons, getSeasonsByMonth, findProductsForChat,
     calculateHsdStatus, autoHideExpiredProducts,
 };

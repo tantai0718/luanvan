@@ -15,7 +15,7 @@ const CACHE_MAX = 200;
 const CACHE_TTL = 10 * 60 * 1000;
 
 const GEMINI_API_KEYS = [process.env.GEMINI_API_KEY, process.env.GEMINI_API_KEY_2].filter(Boolean);
-let currentKeyIndex = 0; 
+let currentKeyIndex = 0;
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -37,7 +37,7 @@ const STOPWORDS = [
     'tôi', 'muốn', 'tìm', 'mùa', 'có', 'không', 'gì', 'sản', 'phẩm', 'cho', 'xem', 'ơi',
     'nhé', 'là', 'loại', 'giúp', 'với', 'shop', 'của', 'hàng', 'vậy', 'nào', 'giá', 'bao', 'nhiêu',
     'ship', 'giao', 'nay', 'hiện', 'đang', 'em', 'anh', 'chị', 'cái', 'về', 'và', 'hay', 'hoặc',
-    'trái', 'quả', 'ạ', 'nha', 'nhỉ', 'đó', 'này',
+    'trái', 'quả', 'cây', 'ạ', 'nha', 'nhỉ', 'đó', 'này', 'tháng', 'sắp', 'tới', 'kế', 'tiếp',
 ];
 
 const STOPWORDS_NORMALIZED = new Set(STOPWORDS.map(removeDiacritics));
@@ -48,7 +48,7 @@ function extractKeywords(text) {
         .normalize('NFC')
         .replace(/[?!.,]/g, '')
         .split(/\s+/)
-        .filter((w) => w.length >= 2 && !STOPWORDS_NORMALIZED.has(removeDiacritics(w))); 
+        .filter((w) => w.length >= 2 && !STOPWORDS_NORMALIZED.has(removeDiacritics(w)));
 }
 
 function mapIntentToKeywords(userText) {
@@ -63,6 +63,42 @@ function mapIntentToKeywords(userText) {
     }
 
     return extraKeywords;
+}
+
+const MONTH_WORD_MAP = {
+    'thang mot': 1, 'thang 1': 1, 'thang hai': 2, 'thang ba': 3, 'thang tu': 4,
+    'thang nam': 5, 'thang sau': 6, 'thang bay': 7, 'thang tam': 8, 'thang chin': 9,
+    'thang muoi mot': 11, 'thang muoi hai': 12, 'thang muoi': 10,
+};
+
+// Phân tích ý định hỏi theo tháng/mùa:
+function parseSeasonQuery(userText) {
+    const norm = removeDiacritics(userText.toLowerCase());
+    const currentMonth = new Date().getMonth() + 1;
+    const isFutureQuery = /sap toi|tuong lai|mua moi|sap co|du bao|du kien|sap vao mua|mua ke tiep|mua sau/i.test(norm)
+        || (/thang sau\b/i.test(norm) && !/thang nay/i.test(norm));
+
+    let targetMonth = null;
+
+    // Ưu tiên dạng số: "tháng 8", "t8"
+    const numMatch = norm.match(/(?:thang|t)\s*([1-9]|1[0-2])\b/);
+    if (numMatch) {
+        targetMonth = parseInt(numMatch[1], 10);
+    } else {
+        // Dạng chữ: "tháng tám", "tháng mười hai"...
+        for (const [key, val] of Object.entries(MONTH_WORD_MAP)) {
+            if (norm.includes(key)) { targetMonth = val; break; }
+        }
+    }
+
+    if (targetMonth == null) {
+        if (/thang nay|hien tai|dang vao|dang ban|vao mua|dang la mua|dang mua gi/i.test(norm)
+            || /an qua gi ngon nhat/i.test(norm)) {
+            targetMonth = currentMonth;
+        }
+    }
+
+    return { targetMonth, isFutureQuery };
 }
 
 function isPromotionQuestion(userText) {
@@ -113,27 +149,35 @@ function buildFallback(userMessage, products) {
         return {
             reply: 'Xin lỗi, mình chưa tìm thấy sản phẩm phù hợp. Bạn thử từ khoá khác nhé! 😊',
             product_ids: [],
+            disabled_ids: [],
         };
     }
 
-    if (/mùa|theo mùa|đang mùa/i.test(text)) {
+    if (/mùa|theo mùa|đang mùa|sắp tới|tương lai|dự báo|trái mùa/i.test(text)) {
+        const product_ids = products.slice(0, 4).map((p) => p.masp);
         return {
             reply: `Mình tìm thấy ${products.length} sản phẩm thuộc mùa vụ mà bạn quan tâm 🌱`,
-            product_ids: products.slice(0, 4).map((p) => p.masp),
+            product_ids,
+            disabled_ids: products.filter(p => product_ids.includes(p.masp) && p.trang_thai_mua_vu === 'sap_toi').map(p => p.masp),
         };
     }
 
     if (/giá|bao nhiêu|rẻ|đắt/i.test(text)) {
-        const cheapest = [...products].sort((a, b) => Number(a.gia_ban) - Number(b.gia_ban))[0];
+        const sellingNow = products.filter(p => p.trang_thai_mua_vu !== 'sap_toi');
+        const pool = sellingNow.length ? sellingNow : products;
+        const cheapest = [...pool].sort((a, b) => Number(a.gia_ban) - Number(b.gia_ban))[0];
         return {
             reply: `Sản phẩm giá tốt nhất là ${cheapest.ten_san_pham} — ${Number(cheapest.gia_ban).toLocaleString('vi-VN')}đ/${cheapest.don_vi} thôi! 🎉`,
-            product_ids: products.slice(0, 4).map((p) => p.masp),
+            product_ids: sellingNow.slice(0, 4).map((p) => p.masp),
+            disabled_ids: [],
         };
     }
 
+    const sellingNow = products.filter(p => p.trang_thai_mua_vu !== 'sap_toi');
     return {
         reply: `Mình tìm thấy ${products.length} sản phẩm có thể bạn quan tâm:`,
-        product_ids: products.slice(0, 4).map((p) => p.masp),
+        product_ids: sellingNow.slice(0, 4).map((p) => p.masp),
+        disabled_ids: [],
     };
 }
 
@@ -169,7 +213,7 @@ function repairTruncatedJson(partial) {
     const quoteCount = (result.match(/(?<!\\)"/g) || []).length;
     if (quoteCount % 2 !== 0) result += '"';
 
-    result = result.replace(/,\s*$/, ''); 
+    result = result.replace(/,\s*$/, '');
 
     const missingBrackets = (result.match(/\[/g) || []).length - (result.match(/\]/g) || []).length;
     const missingBraces = (result.match(/\{/g) || []).length - (result.match(/\}/g) || []).length;
@@ -207,7 +251,7 @@ async function askAI(userMessage, products, promotions = []) {
     if (!GEMINI_API_KEYS.length) return buildFallback(userMessage, products);
 
     const promoKey = promotions.map(p => p.makm).sort().join(',');
-    const cacheKey = `${userMessage.trim().toLowerCase()}::${products.map((p) => p.masp).sort().join(',')}::promo:${promoKey}`;
+    const cacheKey = `${userMessage.trim().toLowerCase()}::${products.map((p) => `${p.masp}:${p.trang_thai_mua_vu || ''}`).sort().join(',')}::promo:${promoKey}`;
     const cached = cacheGet(cacheKey);
     if (cached) {
         console.log('[askAI] cache hit');
@@ -219,7 +263,7 @@ async function askAI(userMessage, products, promotions = []) {
         const formatDate = (d) => {
             if (!d) return null;
             const dt = new Date(d);
-            return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
+            return `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear()}`;
         };
 
         const promoData = promotions.map(p => {
@@ -271,15 +315,24 @@ QUY TẮC ĐỊNH DẠNG BẮT BUỘC:
 5. CHỈ DÙNG SẢN PHẨM CÓ TRONG DANH_SACH, không tự bịa sản phẩm ngoài danh sách.
 6. LỜI CHÚC VÀ HƯỚNG DẪN Ở CUỐI: Kèm câu hướng dẫn đặt hàng và lời chúc ở cuối.
 
+QUY TẮC BẮT BUỘC VỀ TRẠNG THÁI MÙA VỤ — MỖI SẢN PHẨM TRONG DANH_SACH CÓ TRƯỜNG "trang_thai_mua_vu":
+- "dang_ban": sản phẩm đang bán thật, khách có thể mua ngay. Trình bày bình thường, dùng giá trong trường "gia". Nếu có trường "ten_mua", có thể nhắc tên mùa (VD "đang vào Mùa Hè"). Nếu nhiều sản phẩm có "ten_mua" KHÁC NHAU cùng trong danh sách, hãy nhắc rõ TỪNG tên mùa tương ứng với từng sản phẩm, không gộp chung thành 1 mùa.
+- "sap_toi": sản phẩm THUỘC MÙA VỤ SẮP TỚI, CHƯA BÁN, chỉ mang tính DỰ BÁO/THAM KHẢO. Bắt buộc phải:
+  + Ghi rõ nhãn "(Sắp vào mùa - Dự kiến)" ngay sau tên sản phẩm.
+  + Không mời khách "mua ngay" cho sản phẩm này — chỉ nói giá dự kiến, thời điểm dự kiến có hàng (dựa vào "ten_mua" nếu có).
+  + VẪN ĐƯỢC đưa masp của sản phẩm "sap_toi" vào mảng "product_ids" — hệ thống sẽ tự hiển thị dạng xem trước, không cho đặt hàng ngay.
+- "thuong": sản phẩm bán bình thường, không gắn với mùa vụ cụ thể — trình bày như "dang_ban".
+
+XỬ LÝ YÊU CẦU:
+- Nếu hỏi HƯỚNG DẪN: Trả lời ngắn gọn theo HƯỚNG DẪN QUY TRÌNH HỆ THỐNG và trả về "product_ids": [].
+- Nếu TÌM SẢN PHẨM: Chọn các sản phẩm phù hợp nhất trong DANH_SACH, tuân thủ đúng quy tắc trạng thái mùa vụ ở trên.
+- Nếu hỏi về KHUYẾN MÃI/GIẢM GIÁ/ƯU ĐÃI/SỰ KIỆN: Liệt kê TẤT CẢ chương trình trong DANH_SACH_KHUYEN_MAI, ghi rõ mã code (nếu có), thời gian, điều kiện. Trả về "product_ids": [].
+
 HƯỚNG DẪN QUY TRÌNH HỆ THỐNG:
 1. Cách đặt hàng: Chọn sản phẩm -> Thêm vào giỏ -> Bấm Thanh toán -> Điền địa chỉ và Đặt hàng.
 2. Cách thanh toán: Hỗ trợ VietQR và COD (hoặc đặt cọc 30% cho đơn định kỳ).
 3. Cách tìm kiếm: Dùng thanh tìm kiếm hoặc gõ nhu cầu vào khung chat.
-
-XỬ LÝ YÊU CẦU:
-- Nếu hỏi HƯỚNG DẪN: Trả lời ngắn gọn theo HƯỚNG DẪN QUY TRÌNH HỆ THỐNG và trả về "product_ids": [].
-- Nếu TÌM SẢN PHẨM: Chọn các sản phẩm phù hợp nhất trong DANH_SACH.
-- Nếu hỏi về KHUYẾN MÃI/GIẢM GIÁ/ƯU ĐÃI/SỰ KIỆN: Liệt kê TẤT CẢ chương trình trong DANH_SACH_KHUYEN_MAI, ghi rõ mã code (nếu có), thời gian, điều kiện. Trả về "product_ids": [].${promoSection}
+${promoSection}
 
 Định dạng trả về duy nhất JSON:
 {"reply": "Nội dung phản hồi", "product_ids": [danh sách masp số nguyên, tối đa 4]}`;
@@ -288,8 +341,11 @@ XỬ LÝ YÊU CẦU:
         masp: p.masp,
         ten: p.ten_san_pham,
         mo_ta: p.mo_ta || '',
-        gia: p.gia_du_kien != null ? Number(p.gia_du_kien) : Number(p.gia_ban),
+        // 'sap_toi' -> giá dự kiến; các trạng thái khác -> LUÔN giá bán thực tế, mặc kệ giá dự kiến
+        gia: p.trang_thai_mua_vu === 'sap_toi' && p.gia_du_kien != null ? Number(p.gia_du_kien) : Number(p.gia_ban),
         don_vi: p.don_vi,
+        trang_thai_mua_vu: p.trang_thai_mua_vu || 'thuong',
+        ten_mua: p.ten_mua || null,
     }));
 
     const fullPrompt = `DANH_SACH:\n${JSON.stringify(danhSachGoc)}\n\nCâu hỏi khách hàng: "${userMessage}"`;
@@ -324,11 +380,17 @@ XỬ LÝ YÊU CẦU:
 
                 const parsed = extractJson(text);
                 const validIds = new Set(products.map((p) => p.masp));
+                const sapToiIds = new Set(products.filter(p => p.trang_thai_mua_vu === 'sap_toi').map(p => p.masp));
+
+                // Giữ lại cả sản phẩm sap_toi trong product_ids (để hiện card xem trước),
+                // nhưng tách riêng disabled_ids để frontend biết cái nào KHOÁ click / không cho đặt hàng.
                 const product_ids = (parsed.product_ids || []).filter((id) => validIds.has(id));
+                const disabled_ids = product_ids.filter((id) => sapToiIds.has(id));
 
                 const result = {
                     reply: parsed.reply || 'Mình đã tìm thấy vài gợi ý cho bạn.',
                     product_ids,
+                    disabled_ids,
                 };
 
                 cacheSet(cacheKey, result);
@@ -371,39 +433,42 @@ exports.sendMyMessage = async (req, res) => {
         const mapc = await chatModel.getOrCreateSession(mand);
         await chatModel.sendMessage({ mapc, vai_tro: 'user', noi_dung });
 
-        const userKeywords = extractKeywords(noi_dung);
-        const intentKeywords = mapIntentToKeywords(noi_dung);
-        const keywords = Array.from(new Set([...userKeywords, ...intentKeywords])).slice(0, 8);
-
         const seasons = await productModel.getActiveSeasons();
         const seasonIds = findMatchedSeasonIds(noi_dung, seasons);
+        const { targetMonth, isFutureQuery } = parseSeasonQuery(noi_dung);
 
-        // ĐÃ BỎ LỌC THEO THÁNG: Chỉ truyền seasonIds trực tiếp nếu tìm thấy từ tên Mùa
+        // tránh các từ chung chung (đã lỡ lọt qua stopword) khớp nhầm sản phẩm không liên quan.
+        const hasExplicitSeasonIntent = targetMonth !== null || isFutureQuery || seasonIds.length > 0;
+
+        const userKeywords = extractKeywords(noi_dung);
+        const intentKeywords = mapIntentToKeywords(noi_dung);
+        const keywords = hasExplicitSeasonIntent
+            ? []
+            : Array.from(new Set([...userKeywords, ...intentKeywords])).slice(0, 8);
+
         const contextProducts = await productModel.findProductsForChat(
-            { keywords, seasonIds },
+            { keywords, seasonIds, targetMonth, isFutureQuery },
             10
         );
 
         console.log('[sendMyMessage] noi_dung:', noi_dung);
-        console.log('[sendMyMessage] keywords:', keywords);
-        console.log('[sendMyMessage] seasonIds:', seasonIds);
-        console.log('[sendMyMessage] contextProducts:', contextProducts.map(p => `${p.masp}:${p.ten_san_pham}`));
+        console.log('[sendMyMessage] hasExplicitSeasonIntent:', hasExplicitSeasonIntent, 'keywords:', keywords);
+        console.log('[sendMyMessage] seasonIds:', seasonIds, 'targetMonth:', targetMonth, 'isFutureQuery:', isFutureQuery);
+        console.log('[sendMyMessage] contextProducts:', contextProducts.map(p => `${p.masp}:${p.ten_san_pham}:${p.trang_thai_mua_vu}`));
 
         let finalProducts = contextProducts;
-        if (finalProducts.length === 0 && keywords.length === 0 && seasonIds.length === 0) {
+        if (finalProducts.length === 0 && keywords.length === 0 && seasonIds.length === 0 && targetMonth === null) {
             finalProducts = await productModel.searchProductsForChat('', 8);
         }
 
-        // Kiểm tra xem khách hỏi về khuyến mãi/giảm giá không
         let activePromotions = [];
         if (isPromotionQuestion(noi_dung)) {
             activePromotions = await promotionModel.getActivePromotionsForChat();
             console.log('[sendMyMessage] Khách hỏi khuyến mãi, tìm thấy:', activePromotions.length, 'chương trình đang hoạt động');
         }
 
-        const { reply, product_ids } = await askAI(noi_dung, finalProducts, activePromotions);
+        const { reply, product_ids, disabled_ids } = await askAI(noi_dung, finalProducts, activePromotions);
 
-        // Xác định loại gợi ý: khuyến mãi nếu có promo, sản phẩm nếu có product_ids
         let loai_gui_y = null;
         if (activePromotions.length > 0 && isPromotionQuestion(noi_dung)) {
             loai_gui_y = 'khuyen_mai';
@@ -417,7 +482,17 @@ exports.sendMyMessage = async (req, res) => {
             noi_dung: reply,
             loai_gui_y,
             product_ids,
-            isSeason: seasonIds.length > 0, 
+            disabled_ids,
+            product_cards: product_ids.map(masp => {
+                const product = finalProducts.find(item => item.masp === masp);
+                return {
+                    masp,
+                    trang_thai: disabled_ids.includes(masp) ? 'sap_toi' : 'dang_ban',
+                    gia_du_kien: disabled_ids.includes(masp) ? Number(product?.gia_du_kien) : null,
+                    ten_mua: product?.ten_mua || null,
+                };
+            }),
+            isSeason: seasonIds.length > 0 || targetMonth !== null,
         });
 
         res.status(201).json({ message: 'Đã gửi' });
@@ -459,6 +534,7 @@ exports.adminSendMessage = async (req, res) => {
             noi_dung,
             loai_gui_y: null,
             product_ids: [],
+            disabled_ids: [],
         });
         res.status(201).json({ message: 'Đã gửi' });
     } catch (err) {
