@@ -74,9 +74,9 @@ https://<ngrok-url>/api/webhook/sepay
 
 | Vai tro   | Email                     | Mat khau |
 |-----------|---------------------------|----------|
-| Admin     | minhgiau.admin@gmail.com  | 123456   |
-| Nguoi mua | thimua.user@gmail.com     | 123456   |
-| Nguoi mua | vankhach.user@gmail.com   | 123456   |
+| Admin     | admin@gmail.com           | 123456   |
+| Nguoi mua | thimua@gmail.com          | 123456   |
+| Nguoi mua | vankhach@gmail.com        | 123456   |
 
 ## Cong nghe
 
