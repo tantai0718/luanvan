@@ -321,15 +321,20 @@ async function findProductsForChat({ keywords = [], seasonIds = [], targetMonth 
         if (!matchesKeyword && !matchesSeason && !matchesTargetMonth && !matchesFutureSeason) continue;
 
         let trangThaiMuaVu = 'thuong';
+        const conHang = Number(row.so_luong_ton) > 0;
         if (row.mamv != null) {
-            const isCurrentlyInSeason = isMonthInSeasonRange(currentMonth, row.thang_bat_dau, row.thang_ket_thuc, row.qua_nam);
-
-            if (isFutureQuery) {
-                trangThaiMuaVu = 'sap_toi';
-            } else if (targetMonth != null) {
-                trangThaiMuaVu = targetMonth === currentMonth && isCurrentlyInSeason ? 'dang_ban' : 'sap_toi';
+            if (conHang) {
+                trangThaiMuaVu = 'dang_ban';
             } else {
-                trangThaiMuaVu = isCurrentlyInSeason ? 'dang_ban' : 'sap_toi';
+                const isCurrentlyInSeason = isMonthInSeasonRange(currentMonth, row.thang_bat_dau, row.thang_ket_thuc, row.qua_nam);
+
+                if (isFutureQuery) {
+                    trangThaiMuaVu = 'sap_toi';
+                } else if (targetMonth != null) {
+                    trangThaiMuaVu = targetMonth === currentMonth && isCurrentlyInSeason ? 'dang_ban' : 'sap_toi';
+                } else {
+                    trangThaiMuaVu = isCurrentlyInSeason ? 'dang_ban' : 'sap_toi';
+                }
             }
         }
         row.trang_thai_mua_vu = trangThaiMuaVu;

@@ -82,6 +82,6 @@ https://<ngrok-url>/api/webhook/sepay
 
 - **Backend**: Node.js, Express, MySQL2, JWT, Socket.IO
 - **Frontend**: React, React Router, Tailwind CSS, Recharts
-- **Database**: MySQL 8.4 (WAMP)
+- **Database**: MySQL (WAMP)
 - **Thanh toan**: Sepay webhook (QR chuyen khoan)
-- **Anh upload**: Base64 / file upload
+

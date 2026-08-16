@@ -53,9 +53,9 @@ export function OrderList() {
   const [loading, setLoading] = useState(true);
   const [cancelingOrderId, setCancelingOrderId] = useState(null);
   const [cancelingSubscriptionId, setCancelingSubscriptionId] = useState(null);
-  const [cancelModal, setCancelModal] = useState({ isOpen: false, id: null, tienCoc: 0, type: null });
+  const [cancelModal, setCancelModal] = useState({ isOpen: false, id: null, tienCoc: 0, tongTien: 0, type: null });
 
- const fetchData = () => {
+  const fetchData = () => {
   setLoading(true);
   Promise.allSettled([orderAPI.getAll(), subscriptionAPI.getAll()])
     .then(([ordersResult, subscriptionsResult]) => {
@@ -81,10 +81,10 @@ export function OrderList() {
     setCancelModal({ isOpen: true, id: orderId, tienCoc: 0, type: 'order' });
   };
 
-  const handleCancelSubscription = (event, id, tienCoc = 0) => {
+  const handleCancelSubscription = (event, id, tienCoc = 0, tongTien = 0) => {
     event.preventDefault();
     event.stopPropagation();
-    setCancelModal({ isOpen: true, id, tienCoc, type: 'subscription' });
+    setCancelModal({ isOpen: true, id, tienCoc, tongTien, type: 'subscription' });
   };
 
   const executeCancel = async () => {
@@ -98,7 +98,7 @@ export function OrderList() {
         );
       } finally {
         setCancelingSubscriptionId(null);
-        setCancelModal({ isOpen: false, id: null, tienCoc: 0, type: null });
+        setCancelModal({ isOpen: false, id: null, tienCoc: 0, tongTien: 0, type: null });
       }
     } else if (type === 'order') {
       setCancelingOrderId(id);
@@ -109,7 +109,7 @@ export function OrderList() {
         );
       } finally {
         setCancelingOrderId(null);
-        setCancelModal({ isOpen: false, id: null, tienCoc: 0, type: null });
+        setCancelModal({ isOpen: false, id: null, tienCoc: 0, tongTien: 0, type: null });
       }
     }
   };
@@ -263,7 +263,7 @@ export function OrderList() {
                         </div>
                         {["dang_hoat_dong", "tam_dung"].includes(subscription.trang_thai) && (
                           <button
-                            onClick={(e) => handleCancelSubscription(e, subscription.ma_dang_ky, tienCoc)}
+                            onClick={(e) => handleCancelSubscription(e, subscription.ma_dang_ky, tienCoc, Number(subscription.order_tong_tien || 0))}
                             disabled={cancelingSubscriptionId === subscription.ma_dang_ky}
                             className="text-sm font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 px-4 py-2.5 rounded-xl transition disabled:opacity-50"
                           >
@@ -295,7 +295,7 @@ export function OrderList() {
             <p className="text-text-secondary text-base leading-relaxed">
               {cancelModal.type === 'subscription' ? (
                 <>
-                  Nếu hủy gói đăng ký lúc này, khoản tiền cọc 30%
+                  Nếu hủy gói đăng ký lúc này, khoản tiền cọc {cancelModal.tongTien > 0 && cancelModal.tienCoc >= cancelModal.tongTien ? 100 : 30}%
                   {cancelModal.tienCoc > 0 ? <strong className="text-rose-600"> {formatCurrency(cancelModal.tienCoc)}</strong> : ''} đã thanh toán ban đầu sẽ <strong className="text-rose-600">không được hoàn trả</strong> theo quy định.
                   <br /><br />
                   Bạn có chắc chắn muốn hủy gói không?
@@ -707,7 +707,7 @@ export function OrderDetail() {
               </p>
               <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">
                 <button
-                  onClick={() => setCancelModal({ isOpen: false, id: null, tienCoc: 0, type: null })}
+                onClick={() => setCancelModal({ isOpen: false, id: null, tienCoc: 0, tongTien: 0, type: null })}
                   className="px-5 py-2.5 rounded-xl text-text-secondary bg-slate-100 hover:bg-slate-200 font-medium transition duration-200"
                 >
                   Hủy bỏ
@@ -1059,7 +1059,7 @@ export function SubscriptionDetail() {
           <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl space-y-4 animate-in fade-in zoom-in duration-200">
             <h3 className="text-xl font-semibold text-text-primary">Xác nhận hủy đăng ký định kỳ?</h3>
             <p className="text-text-secondary text-base leading-relaxed">
-              Nếu hủy gói đăng ký lúc này, khoản tiền cọc 30%
+              Nếu hủy gói đăng ký lúc này, khoản tiền cọc {depositPercent}%
               {Number(subscription.order_tien_coc || 0) > 0 ? <strong className="text-rose-600"> {formatCurrency(Number(subscription.order_tien_coc))}</strong> : ''} đã thanh toán ban đầu sẽ <strong className="text-rose-600">không được hoàn trả</strong> theo quy định.
               <br /><br />
               Bạn có chắc chắn muốn hủy gói không?
