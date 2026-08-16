@@ -331,6 +331,7 @@ export function OrderDetail() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [canceling, setCanceling] = useState(false);
+  const [cancelModal, setCancelModal] = useState({ isOpen: false, id: null, tienCoc: 0, type: null });
   const [polling, setPolling] = useState(false);
   const success = searchParams.get("success");
 
@@ -361,9 +362,12 @@ export function OrderDetail() {
     return () => { clearInterval(interval); setPolling(false); };
   }, [data?.order?.trang_thai_tt, id]);
 
-  const handleCancel = async () => {
+  const handleCancel = () => {
     if (!data?.order || !canCancelOrder(data.order.trang_thai)) return;
-    if (!window.confirm("Bạn có chắc muốn hủy đơn hàng này không?")) return;
+    setCancelModal({ isOpen: true, id: id, tienCoc: 0, type: 'order' });
+  };
+
+  const executeCancel = async () => {
     setCanceling(true);
     try {
       await orderAPI.cancel(id, {});
@@ -373,6 +377,7 @@ export function OrderDetail() {
       }));
     } finally {
       setCanceling(false);
+      setCancelModal({ isOpen: false, id: null, tienCoc: 0, type: null });
     }
   };
 
@@ -400,6 +405,8 @@ export function OrderDetail() {
 
   const isFinalDeliveryOrder = order.loai_don === 'dinh_ky' && order.trang_thai === 'da_giao' && Number(order.tien_coc || 0) > 0;
   const khauTruCocOrder = isFinalDeliveryOrder ? Number(order.tien_coc || 0) : 0;
+  const orderTongTien = Number(order.tong_thanh_toan || 0);
+  const depositPercent = orderTongTien > 0 && Number(order.tien_coc || 0) >= orderTongTien ? 100 : 30;
 
   const giamGia = Number(order.giam_gia || 0) || Math.max(0, subtotal + 30000 - Number(order.tong_thanh_toan || 0) - khauTruCocOrder);
   const shippingFee = Math.max(0, Number(order.tong_thanh_toan || 0) - subtotal + giamGia + khauTruCocOrder);
@@ -513,7 +520,7 @@ export function OrderDetail() {
           </div>
           {khauTruCocOrder > 0 && (
             <div className="flex justify-between text-[#16A34A] font-semibold">
-              <span>Khấu trừ tiền cọc gói (30%)</span>
+              <span>Khấu trừ tiền cọc gói ({depositPercent}%)</span>
               <span>-{formatCurrency(khauTruCocOrder)}</span>
             </div>
           )}
@@ -689,6 +696,34 @@ export function OrderDetail() {
           )}
         </div>
 
+        {cancelModal.isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm transition-opacity">
+            <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl space-y-4 animate-in fade-in zoom-in duration-200">
+              <h3 className="text-xl font-semibold text-text-primary">
+                {cancelModal.type === 'subscription' ? 'Xác nhận hủy đăng ký định kỳ?' : 'Xác nhận hủy đơn hàng?'}
+              </h3>
+              <p className="text-text-secondary text-base leading-relaxed">
+                Bạn có chắc chắn muốn hủy đơn hàng này không?
+              </p>
+              <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">
+                <button
+                  onClick={() => setCancelModal({ isOpen: false, id: null, tienCoc: 0, type: null })}
+                  className="px-5 py-2.5 rounded-xl text-text-secondary bg-slate-100 hover:bg-slate-200 font-medium transition duration-200"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  onClick={executeCancel}
+                  disabled={canceling}
+                  className="px-5 py-2.5 rounded-xl text-white bg-rose-600 hover:bg-rose-700 font-medium transition duration-200 shadow-sm shadow-rose-200"
+                >
+                  {canceling ? "Đang hủy..." : "Đồng ý hủy"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div >
   );
@@ -784,6 +819,10 @@ export function SubscriptionDetail() {
   const phiVanChuyen = tienSanPham >= 500000 ? 0 : 30000;
   const tongTienMoiKy = tienSanPham + phiVanChuyen;
 
+  const orderTienCoc = Number(subscription.order_tien_coc || 0);
+  const orderTongTien = Number(subscription.order_tong_tien || 0);
+  const depositPercent = orderTongTien > 0 && orderTienCoc >= orderTongTien ? 100 : 30;
+
   const imageUrl = subscription.hinh_san_pham
     ? subscription.hinh_san_pham.startsWith("/upload/")
       ? `http://localhost:5000${subscription.hinh_san_pham}`
@@ -876,7 +915,7 @@ export function SubscriptionDetail() {
           </div>
           {soKyDaGiao >= soKyGiao - 1 && Number(subscription.order_tien_coc || 0) > 0 && (
             <div className="flex justify-between text-[#16A34A] font-semibold">
-              <span>Khấu trừ tiền cọc gói (30%)</span>
+              <span>Khấu trừ tiền cọc gói ({depositPercent}%)</span>
               <span>-{formatCurrency(subscription.order_tien_coc)}</span>
             </div>
           )}

@@ -265,8 +265,8 @@ async function cancelOrder(madh, mand) {
     [madh, mand],
   );
   if (!dh) throw new Error("Khong tim thay don hang.");
-  if (dh.trang_thai !== "cho_xac_nhan")
-    throw new Error("Chi co the huy don dang cho xac nhan.");
+  if (!["cho_xac_nhan", "da_xac_nhan"].includes(dh.trang_thai))
+    throw new Error("Chi co the huy don khi chua giao hang.");
   const [items] = await db.query(
     "SELECT masp, so_luong FROM chi_tiet_don_hang WHERE madh = ?",
     [madh],

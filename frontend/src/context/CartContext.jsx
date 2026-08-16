@@ -128,7 +128,7 @@ export function CartProvider({ children }) {
   // Re-validate mã khi giỏ hàng thay đổi
   useEffect(() => { if (promoCode) revalidateCode(); }, [items.length]);
 
-  const totalItems = items.reduce((s,i) => s + i.quantity, 0);
+  const totalItems = items.length;
   const totalPrice = items.reduce((s,i) => s + i.quantity * (i.product?.price || 0), 0);
 
   return (

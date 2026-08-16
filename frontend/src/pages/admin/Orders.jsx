@@ -237,6 +237,8 @@ function SubscriptionDetailModal({ detail, subscriptionId, onClose, onDeliver, i
   const soKyGiao = Number(detail.so_ky_giao || 0);
   const isLastCycle = soKyDaGiao >= soKyGiao - 1;
   const tienCoc = Number(detail.order_tien_coc || 0);
+  const tongTienOrder = Number(detail.order_tong_tien || 0);
+  const depositPercent = tongTienOrder > 0 && tienCoc >= tongTienOrder ? 100 : 30;
 
   const donGiaGoc = Number(detail.gia_ban || detail.product?.price || 0);
   const tienTamTinh = Number(detail.gia_tam_tinh || 0) * Number(detail.so_luong || 0);
@@ -276,7 +278,7 @@ function SubscriptionDetailModal({ detail, subscriptionId, onClose, onDeliver, i
             </div>
             {tienCoc > 0 && (
               <p className="text-xs text-green-700 font-semibold bg-green-50 px-2.5 py-1 rounded-md border border-green-200 inline-block">
-                ✓ Khách đã cọc {formatCurrency(tienCoc)} (30%) khi đăng ký
+                ✓ Khách đã cọc {formatCurrency(tienCoc)} ({depositPercent}%) khi đăng ký
               </p>
             )}
             <p className="text-slate-600 font-medium">Tần suất giao: <span className="font-extrabold text-slate-900 text-lg">{frequencyMap[detail.tan_suat_giao] || detail.tan_suat_giao}</span></p>
@@ -334,7 +336,7 @@ function SubscriptionDetailModal({ detail, subscriptionId, onClose, onDeliver, i
                   <span className="font-bold text-slate-800">{formatCurrency(tongTienChuaCoc)}</span>
                 </div>
                 <div className="flex justify-between text-green-600 font-semibold">
-                  <span>Khấu trừ tiền cọc gói (30%):</span>
+                  <span>Khấu trừ tiền cọc gói ({depositPercent}%):</span>
                   <span>-{formatCurrency(tienCoc)}</span>
                 </div>
                 <div className="flex justify-between pt-4 border-t border-slate-200 text-slate-900 font-black items-baseline">
