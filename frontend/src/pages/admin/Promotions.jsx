@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { promotionAPI } from '../../services/api';
 import { Badge, Btn, Input, Loading, Modal, PageHero, Table } from '../../components/ui/AdminUI';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const emptyForm = {
   ten_km: '',
@@ -37,6 +38,7 @@ export default function AdminPromotions() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', confirmText: 'Đồng ý', type: 'danger', onConfirm: null });
 
   const fetchPromotions = async () => {
     setLoading(true);
@@ -103,13 +105,21 @@ export default function AdminPromotions() {
   };
 
   const deletePromo = async id => {
-    if (!window.confirm('Bạn có chắc muốn xóa chương trình khuyến mãi này không?')) return;
-    try {
-      await promotionAPI.remove(id);
-      fetchPromotions();
-    } catch (err) {
-      setError(err.message || 'Không xóa được khuyến mãi.');
-    }
+    setConfirmModal({
+      open: true,
+      title: 'Xác nhận xóa khuyến mãi',
+      message: 'Bạn có chắc muốn xóa chương trình khuyến mãi này không? Hành động này không thể hoàn tác.',
+      confirmText: 'Xóa khuyến mãi',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          await promotionAPI.remove(id);
+          fetchPromotions();
+        } catch (err) {
+          setError(err.message || 'Không xóa được khuyến mãi.');
+        }
+      },
+    });
   };
 
   const formatTarget = val => {
@@ -376,6 +386,15 @@ export default function AdminPromotions() {
           </div>
         </Modal>
       )}
+      <ConfirmModal
+        isOpen={confirmModal.open}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        type={confirmModal.type}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, open: false }))}
+        onConfirm={confirmModal.onConfirm}
+      />
     </div>
   );
 }

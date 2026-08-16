@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { bannerAPI } from '../../services/api';
 import { Upload, ArrowLeft, ArrowRight, Image as ImageIcon, Eye, EyeOff } from 'lucide-react';
 import { Badge, Btn, Loading, PageHero, StatCard } from '../../components/ui/AdminUI';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const readFileAsDataUrl = file =>
   new Promise((resolve, reject) => {
@@ -62,6 +63,7 @@ export default function AdminBanners() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', confirmText: 'Đồng ý', type: 'danger', onConfirm: null });
 
   const fetchBanners = async () => {
     setLoading(true);
@@ -120,11 +122,19 @@ export default function AdminBanners() {
   };
 
   const deleteBanner = async id => {
-    if (!window.confirm('Bạn có chắc muốn xóa banner này không?')) return;
-    setSaving(true); setError('');
-    try { await bannerAPI.delete(id); setBanners(prev => prev.filter(item => item.id !== id)); }
-    catch (err) { setError(err.message || 'Không xóa được banner.'); }
-    finally { setSaving(false); }
+    setConfirmModal({
+      open: true,
+      title: 'Xác nhận xóa banner',
+      message: 'Bạn có chắc muốn xóa banner này không?',
+      confirmText: 'Xóa banner',
+      type: 'danger',
+      onConfirm: async () => {
+        setSaving(true); setError('');
+        try { await bannerAPI.delete(id); setBanners(prev => prev.filter(item => item.id !== id)); }
+        catch (err) { setError(err.message || 'Không xóa được banner.'); }
+        finally { setSaving(false); }
+      },
+    });
   };
 
   return (
@@ -154,6 +164,15 @@ export default function AdminBanners() {
           <div className="mt-5"><UploadButton multiple label="+ Chọn nhiều ảnh" disabled={saving} onFiles={addBanners} /></div>
         </div>
       )}
+      <ConfirmModal
+        isOpen={confirmModal.open}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        type={confirmModal.type}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, open: false }))}
+        onConfirm={confirmModal.onConfirm}
+      />
     </div>
   );
 }

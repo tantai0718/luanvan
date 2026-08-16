@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, categoryAPI, productAPI } from '../../services/api';
 import { AlertCircle, Info, DollarSign, Timer, ImagePlus, Video, Save, Plus, Image as ImageIcon, Film, Download, Package, Eye, AlertTriangle } from 'lucide-react';
 import { Badge, Btn, Input, Loading, Modal, PageHero, SearchBar, Select, StatCard } from '../../components/ui/AdminUI';
+import ConfirmModal from '../../components/ConfirmModal';
 import * as XLSX from 'xlsx';
 
 const emptyForm = {
@@ -261,6 +262,7 @@ export default function AdminProducts() {
   const [loading, setLoading] = useState(true);
   const [editingProduct, setEditingProduct] = useState(null);
   const [search, setSearch] = useState('');
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', confirmText: 'Đồng ý', type: 'danger', onConfirm: null });
 
   const fetchData = async () => {
     setLoading(true);
@@ -301,9 +303,17 @@ export default function AdminProducts() {
   };
 
   const deleteProduct = async id => {
-    if (!window.confirm('Bạn có chắc muốn xóa sản phẩm này không?')) return;
-    await productAPI.delete(id);
-    setProducts(prev => prev.filter(item => item.ma_san_pham !== id));
+    setConfirmModal({
+      open: true,
+      title: 'Xác nhận xóa sản phẩm',
+      message: 'Bạn có chắc muốn xóa sản phẩm này không? Hành động này không thể hoàn tác.',
+      confirmText: 'Xóa sản phẩm',
+      type: 'danger',
+      onConfirm: async () => {
+        await productAPI.delete(id);
+        setProducts(prev => prev.filter(item => item.ma_san_pham !== id));
+      },
+    });
   };
 
   const exportExcel = async () => {
@@ -371,6 +381,15 @@ export default function AdminProducts() {
       {editingProduct !== null && (
         <ProductFormModal categories={categories} initialData={editingProduct.ma_san_pham ? editingProduct : null} onClose={() => setEditingProduct(null)} onDone={() => { setEditingProduct(null); fetchData(); }} />
       )}
+      <ConfirmModal
+        isOpen={confirmModal.open}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        type={confirmModal.type}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, open: false }))}
+        onConfirm={confirmModal.onConfirm}
+      />
     </div>
   );
 }

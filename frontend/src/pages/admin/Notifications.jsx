@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { notificationAPI } from '../../services/api';
 import { X, ImagePlus, Search } from 'lucide-react';
 import { Badge, Btn, Loading, Modal, PageHero, Table } from '../../components/ui/AdminUI';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const SERVER = 'http://localhost:5000';
 
@@ -164,6 +165,7 @@ export default function AdminNotifications() {
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
   const histLimit = 15;
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', confirmText: 'Đồng ý', type: 'danger', onConfirm: null });
 
   const loadGlobals = () => {
     setLoading(true);
@@ -203,9 +205,17 @@ export default function AdminNotifications() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Xóa thông báo này?')) return;
-    await notificationAPI.adminDelete(id);
-    await loadGlobals();
+    setConfirmModal({
+      open: true,
+      title: 'Xóa thông báo',
+      message: 'Bạn có chắc muốn xóa thông báo này không?',
+      confirmText: 'Xóa',
+      type: 'danger',
+      onConfirm: async () => {
+        await notificationAPI.adminDelete(id);
+        await loadGlobals();
+      },
+    });
   };
 
   const openAdd = () => { setEditing(null); setModalOpen(true); };
@@ -332,6 +342,15 @@ export default function AdminNotifications() {
           saving={saving}
         />
       )}
+      <ConfirmModal
+        isOpen={confirmModal.open}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        type={confirmModal.type}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, open: false }))}
+        onConfirm={confirmModal.onConfirm}
+      />
     </div>
   );
 }

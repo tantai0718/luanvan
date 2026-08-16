@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { baiVietAPI, categoryAPI } from '../../services/api';
 import { Plus, FileText, CheckCircle, Edit3, Eye, Edit, Trash2, X, ImagePlus, Upload, Save, Loader2, Bold, List, Image as ImageIcon, Type, Search } from 'lucide-react';
 import { Btn, Loading } from '../../components/ui/AdminUI';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const emptyForm = { tieu_de: '', tom_tat: '', noi_dung: '', hinh_anh: '', madm: 4, trang_thai: 1 };
 
@@ -35,6 +36,7 @@ export default function AdminArticles() {
   const [msg, setMsg] = useState('');
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', confirmText: 'Đồng ý', type: 'danger', onConfirm: null });
 
   const fetchItems = () => {
     setLoading(true);
@@ -78,8 +80,16 @@ export default function AdminArticles() {
   };
 
   const handleDelete = async id => {
-    if (!window.confirm('Xóa bài viết này?')) return;
-    try { await baiVietAPI.remove(id); fetchItems(); } catch (err) { alert(err.message); }
+    setConfirmModal({
+      open: true,
+      title: 'Xác nhận xóa bài viết',
+      message: 'Bạn có chắc muốn xóa bài viết này không?',
+      confirmText: 'Xóa bài viết',
+      type: 'danger',
+      onConfirm: async () => {
+        try { await baiVietAPI.remove(id); fetchItems(); } catch (err) { alert(err.message); }
+      },
+    });
   };
 
   const handleToggle = async id => {
@@ -333,6 +343,15 @@ export default function AdminArticles() {
           </div>
         </div>
       )}
+      <ConfirmModal
+        isOpen={confirmModal.open}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        type={confirmModal.type}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, open: false }))}
+        onConfirm={confirmModal.onConfirm}
+      />
     </div>
   );
 }

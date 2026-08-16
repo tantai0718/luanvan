@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, seasonAPI } from '../../services/api';
 import { Badge, Btn, Input, Loading, Modal, PageHero, Table } from '../../components/ui/AdminUI';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const emptyForm = { ten_mua: '', thang_bat_dau: 1, thang_ket_thuc: 3, qua_nam: 0, mo_ta: '' };
 const emptyProductForm = { masp: '', so_luong_du_kien: '', gia_du_kien: '', ghi_chu: '' };
@@ -97,6 +98,7 @@ export default function AdminSeasons() {
   const [productsLoading, setProductsLoading] = useState(false);
   const [productForm, setProductForm] = useState(emptyProductForm);
   const [savingProduct, setSavingProduct] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', confirmText: 'Đồng ý', type: 'danger', onConfirm: null });
 
   const fetchSeasons = async () => {
     setLoading(true); setError('');
@@ -126,9 +128,17 @@ export default function AdminSeasons() {
   };
 
   const deleteSeason = async id => {
-    if (!window.confirm('Bạn có chắc muốn xóa mùa vụ này không?')) return;
-    try { await seasonAPI.remove(id); fetchSeasons(); }
-    catch (err) { setError(err.message || 'Không xóa được mùa vụ.'); }
+    setConfirmModal({
+      open: true,
+      title: 'Xác nhận xóa mùa vụ',
+      message: 'Bạn có chắc muốn xóa mùa vụ này không? Các sản phẩm gắn kèm sẽ không bị xóa.',
+      confirmText: 'Xóa mùa vụ',
+      type: 'danger',
+      onConfirm: async () => {
+        try { await seasonAPI.remove(id); fetchSeasons(); }
+        catch (err) { setError(err.message || 'Không xóa được mùa vụ.'); }
+      },
+    });
   };
 
   const openProducts = async season => {
@@ -158,12 +168,20 @@ export default function AdminSeasons() {
   };
 
   const handleRemoveProduct = async masp => {
-    if (!window.confirm('Gỡ sản phẩm này khỏi mùa vụ?')) return;
-    try {
-      await seasonAPI.removeProduct(selectedSeason.mamv, masp);
-      setSeasonProducts(prev => prev.filter(p => p.masp !== masp));
-      fetchSeasons();
-    } catch (err) { setError(err.message || 'Không gỡ được sản phẩm.'); }
+    setConfirmModal({
+      open: true,
+      title: 'Gỡ sản phẩm khỏi mùa vụ',
+      message: 'Bạn có chắc muốn gỡ sản phẩm này khỏi mùa vụ? Sản phẩm sẽ không bị xóa khỏi hệ thống.',
+      confirmText: 'Gỡ sản phẩm',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          await seasonAPI.removeProduct(selectedSeason.mamv, masp);
+          setSeasonProducts(prev => prev.filter(p => p.masp !== masp));
+          fetchSeasons();
+        } catch (err) { setError(err.message || 'Không gỡ được sản phẩm.'); }
+      },
+    });
   };
 
   const monthLabel = (start, end, quaNam) => quaNam ? `Tháng ${start} → Tháng ${end} (năm sau)` : `Tháng ${start} → Tháng ${end}`;
@@ -238,6 +256,15 @@ export default function AdminSeasons() {
           onRemove={handleRemoveProduct}
         />
       )}
+      <ConfirmModal
+        isOpen={confirmModal.open}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        type={confirmModal.type}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, open: false }))}
+        onConfirm={confirmModal.onConfirm}
+      />
     </div>
   );
 }

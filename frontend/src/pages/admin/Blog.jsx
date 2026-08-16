@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { blogAPI } from '../../services/api';
 import { Plus, FileText, CheckCircle, Edit3, Eye, Edit, Trash2, X, Search } from 'lucide-react';
 import { Btn, Loading } from '../../components/ui/AdminUI';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const emptyForm = { tieu_de: '', tom_tat: '', noi_dung: '', hinh_anh: '', madm: 5, trang_thai: 1 };
 
@@ -19,6 +20,7 @@ export default function AdminBlog() {
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', confirmText: 'Đồng ý', type: 'danger', onConfirm: null });
 
   const fetchPosts = () => {
     setLoading(true);
@@ -47,8 +49,16 @@ export default function AdminBlog() {
   };
 
   const handleDelete = async (mabv) => {
-    if (!window.confirm('Ẩn bài viết này?')) return;
-    try { await blogAPI.remove(mabv); fetchPosts(); } catch (err) { alert(err.message); }
+    setConfirmModal({
+      open: true,
+      title: 'Xác nhận ẩn bài viết',
+      message: 'Bạn có chắc muốn ẩn bài viết này? Bài viết sẽ không hiển thị trên trang công khai.',
+      confirmText: 'Ẩn bài viết',
+      type: 'danger',
+      onConfirm: async () => {
+        try { await blogAPI.remove(mabv); fetchPosts(); } catch (err) { alert(err.message); }
+      },
+    });
   };
 
   const handleToggle = async (mabv) => {
@@ -256,6 +266,15 @@ export default function AdminBlog() {
           </div>
         </div>
       )}
+      <ConfirmModal
+        isOpen={confirmModal.open}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        type={confirmModal.type}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, open: false }))}
+        onConfirm={confirmModal.onConfirm}
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, productAPI } from '../../services/api';
 import { Download } from 'lucide-react';
 import { Badge, Btn, Input, Loading, Modal, PageHero, Table } from '../../components/ui/AdminUI';
+import ConfirmModal from '../../components/ConfirmModal';
 import * as XLSX from 'xlsx';
 
 const emptyForm = { ten_danh_muc: '', mo_ta: '', loai: 'san_pham', con_hoat_dong: 1 };
@@ -51,6 +52,7 @@ export default function AdminCategories() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [categoryProducts, setCategoryProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', confirmText: 'Đồng ý', type: 'danger', onConfirm: null });
 
   const fetchCategories = async () => {
     setLoading(true); setError('');
@@ -112,9 +114,17 @@ export default function AdminCategories() {
   };
 
   const deleteCategory = async id => {
-    if (!window.confirm('Bạn có chắc muốn xóa danh mục này không?')) return;
-    try { await api.delete(`/admin/categories/${id}`); fetchCategories(); }
-    catch (err) { setError(err.message || 'Không xóa được danh mục.'); }
+    setConfirmModal({
+      open: true,
+      title: 'Xác nhận xóa danh mục',
+      message: 'Bạn có chắc muốn xóa danh mục này không? Các sản phẩm trong danh mục sẽ không bị xóa.',
+      confirmText: 'Xóa danh mục',
+      type: 'danger',
+      onConfirm: async () => {
+        try { await api.delete(`/admin/categories/${id}`); fetchCategories(); }
+        catch (err) { setError(err.message || 'Không xóa được danh mục.'); }
+      },
+    });
   };
 
   const toggleProduct = async id => {
@@ -123,9 +133,17 @@ export default function AdminCategories() {
   };
 
   const deleteProduct = async id => {
-    if (!window.confirm('Bạn có chắc muốn xóa sản phẩm này không?')) return;
-    try { await productAPI.delete(id); setCategoryProducts(prev => prev.filter(item => item.ma_san_pham !== id)); }
-    catch (err) { setError(err.message || 'Không xóa được sản phẩm.'); }
+    setConfirmModal({
+      open: true,
+      title: 'Xác nhận xóa sản phẩm',
+      message: 'Bạn có chắc muốn xóa sản phẩm này không?',
+      confirmText: 'Xóa sản phẩm',
+      type: 'danger',
+      onConfirm: async () => {
+        try { await productAPI.delete(id); setCategoryProducts(prev => prev.filter(item => item.ma_san_pham !== id)); }
+        catch (err) { setError(err.message || 'Không xóa được sản phẩm.'); }
+      },
+    });
   };
 
   return (
@@ -180,6 +198,15 @@ export default function AdminCategories() {
         </Modal>
       )}
       {selectedCategory && <CategoryProductsModal category={selectedCategory} products={categoryProducts} loading={productsLoading} onClose={() => setSelectedCategory(null)} onToggle={toggleProduct} onDelete={deleteProduct} />}
+      <ConfirmModal
+        isOpen={confirmModal.open}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        type={confirmModal.type}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, open: false }))}
+        onConfirm={confirmModal.onConfirm}
+      />
     </div>
   );
 }

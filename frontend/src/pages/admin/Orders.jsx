@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, orderAPI, subscriptionAPI } from '../../services/api';
 import { Download, Calendar, Repeat, Banknote, Info, ChevronRight } from 'lucide-react';
 import { Badge, Btn, Loading, Modal, PageHero, Pagination, SearchBar, Table } from '../../components/ui/AdminUI';
+import ConfirmModal from '../../components/ConfirmModal';
 import { pickProductImage } from '../../utils/marketImages';
 import * as XLSX from 'xlsx';
 
@@ -540,6 +541,7 @@ export default function AdminOrders() {
   const [subSummaryLoading, setSubSummaryLoading] = useState(false);
   const [selectedSubGroup, setSelectedSubGroup] = useState(null);
   const [subGroupItems, setSubGroupItems] = useState([]);
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', confirmText: 'Đồng ý', type: 'danger', onConfirm: null });
   const [subGroupLoading, setSubGroupLoading] = useState(false);
 
   const isSummaryMode = (tab === 'dat_truoc' || tab === 'subscription') && preorderView === 'summary';
@@ -763,38 +765,62 @@ const handleAdvanceStatus = async (id, currentStatus) => {
 };
 
   const handleCancel = async id => {
-    if (!window.confirm('Bạn có chắc muốn hủy đơn hàng này không?')) return;
-    await orderAPI.adminUpdateStatus(id, { trang_thai: 'da_huy' });
-    setOrders(prev => prev.map(order => order.ma_don_hang === id ? { ...order, trang_thai: 'da_huy' } : order));
+    setConfirmModal({
+      open: true,
+      title: 'Hủy đơn hàng',
+      message: 'Bạn có chắc muốn hủy đơn hàng này không?',
+      confirmText: 'Hủy đơn hàng',
+      type: 'danger',
+      onConfirm: async () => {
+        await orderAPI.adminUpdateStatus(id, { trang_thai: 'da_huy' });
+        setOrders(prev => prev.map(order => order.ma_don_hang === id ? { ...order, trang_thai: 'da_huy' } : order));
+      },
+    });
   };
 
   const handleConfirmBankingPayment = async id => {
-    if (!window.confirm('Xác nhận đã nhận được tiền chuyển khoản cho đơn hàng này?')) return;
-    await api.patch('/orders/admin/' + id + '/confirm-banking');
-    setOrders(prev => prev.map(order => order.ma_don_hang === id ? { ...order, trang_thai_thanh_toan: 'da_thanh_toan', trang_thai_tt: 'da_tt' } : order));
-    if (selectedId === id && detail) {
-      setDetail(prev => ({ ...prev, order: { ...prev.order, trang_thai_thanh_toan: 'da_thanh_toan', trang_thai_tt: 'da_tt' } }));
-    }
+    setConfirmModal({
+      open: true,
+      title: 'Xác nhận thanh toán',
+      message: 'Xác nhận đã nhận được tiền chuyển khoản cho đơn hàng này?',
+      confirmText: 'Xác nhận',
+      type: 'info',
+      onConfirm: async () => {
+        await api.patch('/orders/admin/' + id + '/confirm-banking');
+        setOrders(prev => prev.map(order => order.ma_don_hang === id ? { ...order, trang_thai_thanh_toan: 'da_thanh_toan', trang_thai_tt: 'da_tt' } : order));
+        if (selectedId === id && detail) {
+          setDetail(prev => ({ ...prev, order: { ...prev.order, trang_thai_thanh_toan: 'da_thanh_toan', trang_thai_tt: 'da_tt' } }));
+        }
+      },
+    });
   };
 
   const handleDeliverSubscription = async id => {
-    if (!window.confirm('Ghi nhận đã giao một kỳ cho đăng ký này?')) return;
-    setDeliveringSubscriptionId(id);
-    try {
-      const response = await subscriptionAPI.adminDeliver(id);
+    setConfirmModal({
+      open: true,
+      title: 'Ghi nhận giao định kỳ',
+      message: 'Bạn có chắc muốn ghi nhận đã giao một kỳ cho đăng ký này?',
+      confirmText: 'Xác nhận giao',
+      type: 'info',
+      onConfirm: async () => {
+        setDeliveringSubscriptionId(id);
+        try {
+          const response = await subscriptionAPI.adminDeliver(id);
 
-      setSubscriptions(prev => prev.map(sub => sub.ma_dang_ky === id ? { ...sub, so_ky_da_giao: response.subscription.so_ky_da_giao, ngay_giao_tiep_theo: response.subscription.ngay_giao_tiep_theo, trang_thai: response.subscription.trang_thai } : sub));
+          setSubscriptions(prev => prev.map(sub => sub.ma_dang_ky === id ? { ...sub, so_ky_da_giao: response.subscription.so_ky_da_giao, ngay_giao_tiep_theo: response.subscription.ngay_giao_tiep_theo, trang_thai: response.subscription.trang_thai } : sub));
 
-      if (selectedSub && selectedSub.ma_dang_ky === id) {
-        setSelectedSub(prev => ({ ...prev, so_ky_da_giao: response.subscription.so_ky_da_giao, ngay_giao_tiep_theo: response.subscription.ngay_giao_tiep_theo, trang_thai: response.subscription.trang_thai }));
-      }
+          if (selectedSub && selectedSub.ma_dang_ky === id) {
+            setSelectedSub(prev => ({ ...prev, so_ky_da_giao: response.subscription.so_ky_da_giao, ngay_giao_tiep_theo: response.subscription.ngay_giao_tiep_theo, trang_thai: response.subscription.trang_thai }));
+          }
 
-      if (response.stock_warning) {
-        setStockWarning(response.stock_warning);
-      }
-    } catch (err) {
-      alert(err.message || 'Lỗi khi ghi nhận giao định kỳ');
-    } finally { setDeliveringSubscriptionId(null); }
+          if (response.stock_warning) {
+            setStockWarning(response.stock_warning);
+          }
+        } catch (err) {
+          alert(err.message || 'Lỗi khi ghi nhận giao định kỳ');
+        } finally { setDeliveringSubscriptionId(null); }
+      },
+    });
   };
 
   return (
@@ -1083,6 +1109,15 @@ const handleAdvanceStatus = async (id, currentStatus) => {
           </div>
         </div>
       )}
+      <ConfirmModal
+        isOpen={confirmModal.open}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        type={confirmModal.type}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, open: false }))}
+        onConfirm={confirmModal.onConfirm}
+      />
     </div>
   );
 }
