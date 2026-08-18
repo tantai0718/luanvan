@@ -273,7 +273,7 @@ async function findProductsForChat({ keywords = [], seasonIds = [], targetMonth 
     const currentMonth = new Date().getMonth() + 1;
 
     // Đã có ý định rõ ràng về tháng/mùa -> chế độ nghiêm ngặt, không dùng từ khoá tự do
-    const strictSeasonMode = targetMonth != null || isFutureQuery;
+    const strictSeasonMode = targetMonth != null || isFutureQuery || seasonIds.length > 0;
 
     const [rows] = await db.query(
         `SELECT DISTINCT sp.masp, sp.ten_san_pham, sp.mo_ta, sp.gia_ban, sp.don_vi, sp.so_luong_ton,
@@ -323,18 +323,18 @@ async function findProductsForChat({ keywords = [], seasonIds = [], targetMonth 
         let trangThaiMuaVu = 'thuong';
         const conHang = Number(row.so_luong_ton) > 0;
         if (row.mamv != null) {
-            if (conHang) {
+            const isCurrentlyInSeason = isMonthInSeasonRange(currentMonth, row.thang_bat_dau, row.thang_ket_thuc, row.qua_nam);
+            if (isFutureQuery) {
+                trangThaiMuaVu = 'sap_toi';
+            } else if (targetMonth != null && targetMonth !== currentMonth) {
+                trangThaiMuaVu = 'sap_toi';
+            } else if (matchesSeason) {
+                // Nếu hỏi tên mùa cụ thể (VD: "Mùa đông"): mùa đang diễn ra -> dang_ban, mùa ở tương lai -> sap_toi
+                trangThaiMuaVu = (isCurrentlyInSeason && conHang) ? 'dang_ban' : 'sap_toi';
+            } else if (conHang) {
                 trangThaiMuaVu = 'dang_ban';
             } else {
-                const isCurrentlyInSeason = isMonthInSeasonRange(currentMonth, row.thang_bat_dau, row.thang_ket_thuc, row.qua_nam);
-
-                if (isFutureQuery) {
-                    trangThaiMuaVu = 'sap_toi';
-                } else if (targetMonth != null) {
-                    trangThaiMuaVu = targetMonth === currentMonth && isCurrentlyInSeason ? 'dang_ban' : 'sap_toi';
-                } else {
-                    trangThaiMuaVu = isCurrentlyInSeason ? 'dang_ban' : 'sap_toi';
-                }
+                trangThaiMuaVu = isCurrentlyInSeason ? 'dang_ban' : 'sap_toi';
             }
         }
         row.trang_thai_mua_vu = trangThaiMuaVu;

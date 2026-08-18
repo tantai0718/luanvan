@@ -114,6 +114,18 @@ export default function AdminSeasons() {
 
   const handleSave = async () => {
     setSaving(true); setError('');
+    const startM = Number(form.thang_bat_dau);
+    const endM = Number(form.thang_ket_thuc);
+    if (!startM || startM < 1 || startM > 12 || !endM || endM < 1 || endM > 12) {
+      setError('Tháng phải nằm trong khoảng từ 1 đến 12.');
+      setSaving(false);
+      return;
+    }
+    if (!form.qua_nam && startM > endM) {
+      setError('Tháng kết thúc không được nhỏ hơn tháng bắt đầu (trừ khi chọn "Mùa vụ vắt qua năm").');
+      setSaving(false);
+      return;
+    }
     try {
       if (modal === 'add') await seasonAPI.create(form);
       else await seasonAPI.update(form.mamv, form);
@@ -226,11 +238,56 @@ export default function AdminSeasons() {
           <div className="space-y-4">
             <Input label="Tên mùa vụ" value={form.ten_mua} onChange={e => setForm({ ...form, ten_mua: e.target.value })} />
             <div className="grid grid-cols-2 gap-3">
-              <Input label="Tháng bắt đầu (1-12)" type="number" min="1" max="12" value={form.thang_bat_dau} onChange={e => setForm({ ...form, thang_bat_dau: e.target.value })} />
-              <Input label="Tháng kết thúc (1-12)" type="number" min="1" max="12" value={form.thang_ket_thuc} onChange={e => setForm({ ...form, thang_ket_thuc: e.target.value })} />
+              <Input
+                label="Tháng bắt đầu (1-12)"
+                type="number"
+                min="1"
+                max="12"
+                value={form.thang_bat_dau}
+                onChange={e => {
+                  const newStart = Number(e.target.value);
+                  setForm(prev => {
+                    let nextEnd = prev.thang_ket_thuc;
+                    if (!prev.qua_nam && Number(nextEnd) < newStart) {
+                      nextEnd = newStart;
+                    }
+                    return { ...prev, thang_bat_dau: e.target.value, thang_ket_thuc: nextEnd };
+                  });
+                }}
+              />
+              <Input
+                label="Tháng kết thúc (1-12)"
+                type="number"
+                min={!form.qua_nam ? (form.thang_bat_dau || 1) : 1}
+                max="12"
+                value={form.thang_ket_thuc}
+                onChange={e => {
+                  const newEnd = Number(e.target.value);
+                  setForm(prev => {
+                    let finalEnd = e.target.value;
+                    if (!prev.qua_nam && prev.thang_bat_dau && newEnd < Number(prev.thang_bat_dau)) {
+                      finalEnd = prev.thang_bat_dau;
+                    }
+                    return { ...prev, thang_ket_thuc: finalEnd };
+                  });
+                }}
+              />
             </div>
             <label className="flex items-center gap-2 text-body text-text-secondary">
-              <input type="checkbox" checked={!!form.qua_nam} onChange={e => setForm({ ...form, qua_nam: e.target.checked ? 1 : 0 })} />
+              <input
+                type="checkbox"
+                checked={!!form.qua_nam}
+                onChange={e => {
+                  const isQuaNam = e.target.checked ? 1 : 0;
+                  setForm(prev => {
+                    let nextEnd = prev.thang_ket_thuc;
+                    if (!isQuaNam && Number(nextEnd) < Number(prev.thang_bat_dau)) {
+                      nextEnd = prev.thang_bat_dau;
+                    }
+                    return { ...prev, qua_nam: isQuaNam, thang_ket_thuc: nextEnd };
+                  });
+                }}
+              />
               Mùa vụ vắt qua năm (ví dụ tháng 11 → tháng 3 năm sau)
             </label>
             <Input label="Mô tả" value={form.mo_ta} onChange={e => setForm({ ...form, mo_ta: e.target.value })} />

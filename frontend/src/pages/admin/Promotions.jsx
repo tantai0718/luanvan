@@ -21,7 +21,9 @@ const emptyForm = {
 const formatDate = (d) => {
   if (!d) return '—';
   const date = new Date(d);
-  return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const dateStr = date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const timeStr = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return `${dateStr} ${timeStr}`;
 };
 
 const toDatetimeLocal = (d) => {
@@ -64,13 +66,18 @@ export default function AdminPromotions() {
   };
 
   const openEdit = promo => {
+    const startStr = toDatetimeLocal(promo.ngay_bat_dau);
+    let endStr = toDatetimeLocal(promo.ngay_ket_thuc);
+    if (startStr && endStr && new Date(endStr) <= new Date(startStr)) {
+      endStr = startStr;
+    }
     setForm({
       ...promo,
       ma_code: promo.ma_code || '',
       gia_tri_giam_toi_da: promo.gia_tri_giam_toi_da || '',
       phan_tram_giam: promo.phan_tram_giam || '',
-      ngay_bat_dau: toDatetimeLocal(promo.ngay_bat_dau),
-      ngay_ket_thuc: toDatetimeLocal(promo.ngay_ket_thuc),
+      ngay_bat_dau: startStr,
+      ngay_ket_thuc: endStr,
       so_luong_toi_da: promo.so_luong_toi_da || '',
       gioi_han_moi_user: promo.gioi_han_moi_user ?? 1,
     });
@@ -81,6 +88,11 @@ export default function AdminPromotions() {
     setSaving(true);
     setError('');
     try {
+      if (form.ngay_bat_dau && form.ngay_ket_thuc && new Date(form.ngay_ket_thuc) <= new Date(form.ngay_bat_dau)) {
+        setError('Thời gian kết thúc (ngày và giờ) phải sau (lớn hơn) thời gian bắt đầu.');
+        setSaving(false);
+        return;
+      }
       if (modal === 'add') {
         await promotionAPI.create(form);
       } else {
@@ -255,7 +267,16 @@ export default function AdminPromotions() {
                     <input
                       type="datetime-local"
                       value={form.ngay_bat_dau}
-                      onChange={e => setForm({ ...form, ngay_bat_dau: e.target.value })}
+                      onChange={e => {
+                        const newStart = e.target.value;
+                        setForm(prev => {
+                          let nextEnd = prev.ngay_ket_thuc;
+                          if (nextEnd && newStart && new Date(nextEnd) <= new Date(newStart)) {
+                            nextEnd = newStart;
+                          }
+                          return { ...prev, ngay_bat_dau: newStart, ngay_ket_thuc: nextEnd };
+                        });
+                      }}
                       className="bg-card border border-border rounded-btn px-4 py-2.5 text-body focus:ring-2 focus:ring-primary outline-none"
                     />
                   </div>
@@ -263,8 +284,18 @@ export default function AdminPromotions() {
                     <label className="text-caption font-bold text-text-secondary">Ngày kết thúc</label>
                     <input
                       type="datetime-local"
+                      min={form.ngay_bat_dau || undefined}
                       value={form.ngay_ket_thuc}
-                      onChange={e => setForm({ ...form, ngay_ket_thuc: e.target.value })}
+                      onChange={e => {
+                        const newEnd = e.target.value;
+                        setForm(prev => {
+                          let finalEnd = newEnd;
+                          if (prev.ngay_bat_dau && newEnd && new Date(newEnd) <= new Date(prev.ngay_bat_dau)) {
+                            finalEnd = prev.ngay_bat_dau;
+                          }
+                          return { ...prev, ngay_ket_thuc: finalEnd };
+                        });
+                      }}
                       className="bg-card border border-border rounded-btn px-4 py-2.5 text-body focus:ring-2 focus:ring-primary outline-none"
                     />
                   </div>

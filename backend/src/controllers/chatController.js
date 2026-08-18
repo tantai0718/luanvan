@@ -317,9 +317,10 @@ QUY TẮC ĐỊNH DẠNG BẮT BUỘC:
 
 QUY TẮC BẮT BUỘC VỀ TRẠNG THÁI MÙA VỤ — MỖI SẢN PHẨM TRONG DANH_SACH CÓ TRƯỜNG "trang_thai_mua_vu":
 - "dang_ban": sản phẩm đang bán thật, khách có thể mua ngay. Trình bày bình thường, dùng giá trong trường "gia". Nếu có trường "ten_mua", có thể nhắc tên mùa (VD "đang vào Mùa Hè"). Nếu nhiều sản phẩm có "ten_mua" KHÁC NHAU cùng trong danh sách, hãy nhắc rõ TỪNG tên mùa tương ứng với từng sản phẩm, không gộp chung thành 1 mùa.
-- "sap_toi": sản phẩm THUỘC MÙA VỤ SẮP TỚI, CHƯA BÁN, chỉ mang tính DỰ BÁO/THAM KHẢO. Bắt buộc phải:
+- "sap_toi": sản phẩm THUỘC MÙA VỤ SẮP TỚI, CHƯA BÁN VỤ MỚI, chỉ mang tính DỰ BÁO/THAM KHẢO. Bắt buộc phải:
   + Ghi rõ nhãn "(Sắp vào mùa - Dự kiến)" ngay sau tên sản phẩm.
-  + Không mời khách "mua ngay" cho sản phẩm này — chỉ nói giá dự kiến, thời điểm dự kiến có hàng (dựa vào "ten_mua" nếu có).
+  + Không mời khách "mua ngay" cho đợt mùa vụ sắp tới — chỉ nói giá dự kiến, thời điểm dự kiến có hàng (dựa vào "ten_mua" nếu có).
+  + Nếu trường "co_san_hien_tai" là true: Hãy nhắc thêm ngắn gọn cho khách biết: "(Hiện tại sản phẩm này cũng đang có sẵn hàng với giá [gia_hien_tai]đ/[don_vi], bạn có thể mua ngay nếu cần nhé!)".
   + VẪN ĐƯỢC đưa masp của sản phẩm "sap_toi" vào mảng "product_ids" — hệ thống sẽ tự hiển thị dạng xem trước, không cho đặt hàng ngay.
 - "thuong": sản phẩm bán bình thường, không gắn với mùa vụ cụ thể — trình bày như "dang_ban".
 
@@ -346,6 +347,8 @@ ${promoSection}
         don_vi: p.don_vi,
         trang_thai_mua_vu: p.trang_thai_mua_vu || 'thuong',
         ten_mua: p.ten_mua || null,
+        co_san_hien_tai: Number(p.so_luong_ton || 0) > 0,
+        gia_hien_tai: Number(p.gia_ban || 0),
     }));
 
     const fullPrompt = `DANH_SACH:\n${JSON.stringify(danhSachGoc)}\n\nCâu hỏi khách hàng: "${userMessage}"`;

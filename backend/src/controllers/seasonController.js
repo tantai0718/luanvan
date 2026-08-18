@@ -56,10 +56,19 @@ exports.create = async (req, res) => {
         if (!ten_mua?.trim()) return res.status(400).json({ message: 'Tên mùa vụ không được để trống.' });
         if (!thang_bat_dau || !thang_ket_thuc) return res.status(400).json({ message: 'Vui lòng chọn tháng bắt đầu và kết thúc.' });
 
+        const startM = Number(thang_bat_dau);
+        const endM = Number(thang_ket_thuc);
+        if (startM < 1 || startM > 12 || endM < 1 || endM > 12) {
+            return res.status(400).json({ message: 'Tháng phải nằm trong khoảng từ 1 đến 12.' });
+        }
+        if (!qua_nam && startM > endM) {
+            return res.status(400).json({ message: 'Tháng kết thúc không được nhỏ hơn tháng bắt đầu (trừ khi chọn Mùa vụ vắt qua năm).' });
+        }
+
         const [result] = await db.query(
             `INSERT INTO mua_vu (ten_mua, thang_bat_dau, thang_ket_thuc, qua_nam, mo_ta, trang_thai)
              VALUES (?, ?, ?, ?, ?, 1)`,
-            [ten_mua.trim(), Number(thang_bat_dau), Number(thang_ket_thuc), qua_nam ? 1 : 0, mo_ta]
+            [ten_mua.trim(), startM, endM, qua_nam ? 1 : 0, mo_ta]
         );
         res.status(201).json({ message: 'Tạo mùa vụ thành công', id: result.insertId });
     } catch (err) {
@@ -70,11 +79,21 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
     try {
         const { ten_mua, thang_bat_dau, thang_ket_thuc, qua_nam, mo_ta } = req.body;
+
+        const startM = Number(thang_bat_dau);
+        const endM = Number(thang_ket_thuc);
+        if (startM < 1 || startM > 12 || endM < 1 || endM > 12) {
+            return res.status(400).json({ message: 'Tháng phải nằm trong khoảng từ 1 đến 12.' });
+        }
+        if (!qua_nam && startM > endM) {
+            return res.status(400).json({ message: 'Tháng kết thúc không được nhỏ hơn tháng bắt đầu (trừ khi chọn Mùa vụ vắt qua năm).' });
+        }
+
         await db.query(
             `UPDATE mua_vu
              SET ten_mua = ?, thang_bat_dau = ?, thang_ket_thuc = ?, qua_nam = ?, mo_ta = ?
              WHERE mamv = ?`,
-            [ten_mua, Number(thang_bat_dau), Number(thang_ket_thuc), qua_nam ? 1 : 0, mo_ta || '', req.params.id]
+            [ten_mua, startM, endM, qua_nam ? 1 : 0, mo_ta || '', req.params.id]
         );
         res.json({ message: 'Cập nhật mùa vụ thành công' });
     } catch (err) {

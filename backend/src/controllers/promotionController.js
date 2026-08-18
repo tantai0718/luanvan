@@ -71,6 +71,10 @@ exports.adminCreate = async (req, res) => {
       return res.status(400).json({ message: "Vui lòng nhập đầy đủ tên, loại ưu đãi và điều kiện tối thiểu." });
     }
 
+    if (ngay_bat_dau && ngay_ket_thuc && new Date(ngay_ket_thuc) <= new Date(ngay_bat_dau)) {
+      return res.status(400).json({ message: "Thời gian kết thúc (ngày và giờ) phải sau thời gian bắt đầu." });
+    }
+
     const promo = await promotionModel.createPromotion({
       ten_km,
       ma_code: ma_code || null,
@@ -119,6 +123,12 @@ exports.adminUpdate = async (req, res) => {
       gioi_han_moi_user,
       trang_thai,
     } = req.body;
+
+    const startVal = ngay_bat_dau !== undefined ? ngay_bat_dau : existing.ngay_bat_dau;
+    const endVal = ngay_ket_thuc !== undefined ? ngay_ket_thuc : existing.ngay_ket_thuc;
+    if (startVal && endVal && new Date(endVal) <= new Date(startVal)) {
+      return res.status(400).json({ message: "Thời gian kết thúc (ngày và giờ) phải sau thời gian bắt đầu." });
+    }
 
     const updated = await promotionModel.updatePromotion(makm, {
       ten_km: ten_km || existing.ten_km,
