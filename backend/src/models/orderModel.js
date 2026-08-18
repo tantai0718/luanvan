@@ -267,16 +267,22 @@ async function cancelOrder(madh, mand) {
   if (!dh) throw new Error("Khong tim thay don hang.");
   if (!["cho_xac_nhan", "da_xac_nhan"].includes(dh.trang_thai))
     throw new Error("Chi co the huy don khi chua giao hang.");
-  const [items] = await db.query(
-    "SELECT masp, so_luong FROM chi_tiet_don_hang WHERE madh = ?",
-    [madh],
-  );
-  for (const item of items) {
-    await db.query(
-      "UPDATE san_pham SET so_luong_ton = so_luong_ton + ? WHERE masp = ?",
-      [item.so_luong, item.masp],
+
+  // Đơn hàng thường khi đặt mới trừ tồn kho, nên khi hủy mới cộng lại tồn kho.
+  // Đơn hàng đặt trước (dat_truoc) khi tạo KHÔNG trừ tồn kho, nên khi hủy KHÔNG cộng lại tồn kho.
+  if (dh.loai_don_hang !== 'dat_truoc') {
+    const [items] = await db.query(
+      "SELECT masp, so_luong FROM chi_tiet_don_hang WHERE madh = ?",
+      [madh],
     );
+    for (const item of items) {
+      await db.query(
+        "UPDATE san_pham SET so_luong_ton = so_luong_ton + ? WHERE masp = ?",
+        [item.so_luong, item.masp],
+      );
+    }
   }
+
   await db.query("UPDATE don_hang SET trang_thai = 'da_huy' WHERE madh = ?", [
     madh,
   ]);
@@ -321,7 +327,8 @@ async function updateOrderStatus(madh, trang_thai) {
   ];
   if (!valid.includes(trang_thai)) throw new Error("Trang thai khong hop le.");
 
-  const [[dh]] = await db.query("SELECT mand, madk, loai_don_hang FROM don_hang WHERE madh = ?", [madh]);
+  const [[dh]] = await db.query("SELECT mand, madk, loai_don_hang, trang_thai FROM don_hang WHERE madh = ?", [madh]);
+  const oldStatus = dh?.trang_thai;
 
   await db.query("UPDATE don_hang SET trang_thai = ? WHERE madh = ?", [
     trang_thai,
@@ -337,7 +344,21 @@ async function updateOrderStatus(madh, trang_thai) {
        WHERE madh=?`,
       [madh],
     );
-}
+  } else if (trang_thai === "da_huy" && oldStatus !== "da_huy") {
+    // Chỉ hoàn lại tồn kho nếu không phải đơn đặt trước
+    if (dh && dh.loai_don_hang !== 'dat_truoc') {
+      const [items] = await db.query(
+        "SELECT masp, so_luong FROM chi_tiet_don_hang WHERE madh = ?",
+        [madh],
+      );
+      for (const item of items) {
+        await db.query(
+          "UPDATE san_pham SET so_luong_ton = so_luong_ton + ? WHERE masp = ?",
+          [item.so_luong, item.masp],
+        );
+      }
+    }
+  }
 
   if (dh && dh.loai_don_hang === 'dat_truoc' && dh.madk) {
     if (trang_thai === 'da_giao') {

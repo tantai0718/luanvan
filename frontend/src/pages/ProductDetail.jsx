@@ -4,7 +4,8 @@ import { orderAPI, productAPI, reviewAPI, subscriptionAPI, promotionAPI } from '
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { pickProductImage } from '../utils/marketImages';
-import { Check, ShieldCheck, ChevronRight, ChevronLeft, Play, Minus, Plus, X, Eye, Tag, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import { getAddresses, addAddress, setDefaultAddress, removeAddress } from '../utils/addressBook';
+import { Check, ShieldCheck, ChevronRight, ChevronLeft, Play, Minus, Plus, X, Eye, Tag, Loader2, AlertCircle, CheckCircle, Star, Trash2 } from 'lucide-react';
 
 const isVideoUrl = url => /\.(mp4|webm|mov)$/i.test(url || '');
 const formatCurrency = value => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
@@ -128,6 +129,11 @@ export default function ProductDetail() {
   const [reviewMessage, setReviewMessage] = useState('');
   const [savingReview, setSavingReview] = useState(false);
 
+  const userId = user?.id;
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [preorderSaveNote, setPreorderSaveNote] = useState('');
+  const [subSaveNote, setSubSaveNote] = useState('');
+
   const [preorderForm, setPreorderForm] = useState({ quantity: 1, ngay_giao_du_kien: '', dia_chi_giao: user?.address || '', ghi_chu: '', phuong_thuc_tt: 'banking', loai_tien_coc: '30' });
   const [preorderMessage, setPreorderMessage] = useState('');
   const [savingPreorder, setSavingPreorder] = useState(false);
@@ -145,6 +151,60 @@ export default function ProductDetail() {
   const [subPromoInput, setSubPromoInput] = useState('');
   const [subPromoResult, setSubPromoResult] = useState(null);
   const [subPromoLoading, setSubPromoLoading] = useState(false);
+
+  useEffect(() => {
+    if (!userId) return;
+    const list = getAddresses(userId);
+    setSavedAddresses(list);
+    const def = list.find(a => a.is_default) || list[0] || null;
+    if (def) {
+      setPreorderForm(prev => ({ ...prev, dia_chi_giao: prev.dia_chi_giao || def.dia_chi }));
+      setSubscriptionForm(prev => ({ ...prev, dia_chi_giao: prev.dia_chi_giao || def.dia_chi }));
+    }
+  }, [userId]);
+
+  const refreshAddresses = () => {
+    if (userId) setSavedAddresses(getAddresses(userId));
+  };
+
+  const handleSavePreorderAddress = () => {
+    const val = preorderForm.dia_chi_giao.trim();
+    if (!val) { setPreorderSaveNote('Vui lòng nhập địa chỉ trước khi lưu.'); return; }
+    if ((getAddresses(userId) || []).some(a => a.dia_chi.trim() === val)) { setPreorderSaveNote('Địa chỉ này đã có trong sổ.'); return; }
+    addAddress(userId, { dia_chi: val });
+    refreshAddresses();
+    setPreorderSaveNote('Đã lưu vào sổ địa chỉ.');
+  };
+
+  const handleSaveSubAddress = () => {
+    const val = subscriptionForm.dia_chi_giao.trim();
+    if (!val) { setSubSaveNote('Vui lòng nhập địa chỉ trước khi lưu.'); return; }
+    if ((getAddresses(userId) || []).some(a => a.dia_chi.trim() === val)) { setSubSaveNote('Địa chỉ này đã có trong sổ.'); return; }
+    addAddress(userId, { dia_chi: val });
+    refreshAddresses();
+    setSubSaveNote('Đã lưu vào sổ địa chỉ.');
+  };
+
+  const handleMakeDefaultAddress = (addr) => {
+    setDefaultAddress(userId, addr.id);
+    refreshAddresses();
+  };
+
+  const handleDeletePreorderAddress = (addr) => {
+    removeAddress(userId, addr.id);
+    const remaining = getAddresses(userId);
+    const next = remaining.find(a => a.is_default) || remaining[0];
+    refreshAddresses();
+    setPreorderForm(prev => ({ ...prev, dia_chi_giao: next ? next.dia_chi : '' }));
+  };
+
+  const handleDeleteSubAddress = (addr) => {
+    removeAddress(userId, addr.id);
+    const remaining = getAddresses(userId);
+    const next = remaining.find(a => a.is_default) || remaining[0];
+    refreshAddresses();
+    setSubscriptionForm(prev => ({ ...prev, dia_chi_giao: next ? next.dia_chi : '' }));
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -288,9 +348,15 @@ export default function ProductDetail() {
   const handlePreorder = async event => {
     event.preventDefault();
     if (!user) return navigate('/login');
+    const finalAddress = preorderForm.dia_chi_giao.trim();
+    if (!finalAddress) { setPreorderMessage('Vui lòng nhập địa chỉ giao hàng.'); return; }
     setSavingPreorder(true); setPreorderMessage('');
     try {
-      const data = await orderAPI.createPreorder({ product_id: product.ma_san_pham, quantity: preorderForm.quantity, dia_chi_giao: preorderForm.dia_chi_giao, ghi_chu: preorderForm.ghi_chu, phuong_thuc_tt: preorderForm.phuong_thuc_tt, ngay_giao_du_kien: preorderForm.ngay_giao_du_kien, loai_tien_coc: preorderForm.phuong_thuc_tt === 'banking' ? preorderForm.loai_tien_coc : null, ma_code: preorderPromoCode });
+      if (userId && !(getAddresses(userId) || []).some(a => a.dia_chi.trim() === finalAddress)) {
+        addAddress(userId, { dia_chi: finalAddress });
+        refreshAddresses();
+      }
+      const data = await orderAPI.createPreorder({ product_id: product.ma_san_pham, quantity: preorderForm.quantity, dia_chi_giao: finalAddress, ghi_chu: preorderForm.ghi_chu, phuong_thuc_tt: preorderForm.phuong_thuc_tt, ngay_giao_du_kien: preorderForm.ngay_giao_du_kien, loai_tien_coc: preorderForm.phuong_thuc_tt === 'banking' ? preorderForm.loai_tien_coc : null, ma_code: preorderPromoCode });
       navigate(`/orders/${data.order.id}?success=1`);
     } catch (err) { setPreorderMessage(err.message || 'Không thể tạo đơn đặt trước.'); }
     finally { setSavingPreorder(false); }
@@ -299,9 +365,15 @@ export default function ProductDetail() {
   const handleSubscription = async event => {
     event.preventDefault();
     if (!user) return navigate('/login');
+    const finalAddress = subscriptionForm.dia_chi_giao.trim();
+    if (!finalAddress) { setSubscriptionMessage('Vui lòng nhập địa chỉ giao hàng.'); return; }
     setSavingSubscription(true); setSubscriptionMessage('');
     try {
-      const data = await subscriptionAPI.create({ product_id: product.ma_san_pham, quantity: subscriptionForm.quantity, dia_chi_giao: subscriptionForm.dia_chi_giao, ghi_chu: subscriptionForm.ghi_chu, phuong_thuc_tt: subscriptionForm.phuong_thuc_tt, ngay_bat_dau: subscriptionForm.ngay_bat_dau, tan_suat_giao: subscriptionForm.tan_suat_giao, so_ky_giao: subscriptionForm.so_ky_giao, loai_tien_coc: subscriptionForm.phuong_thuc_tt === 'banking' ? subscriptionForm.loai_tien_coc : null, ma_code: subPromoCode });
+      if (userId && !(getAddresses(userId) || []).some(a => a.dia_chi.trim() === finalAddress)) {
+        addAddress(userId, { dia_chi: finalAddress });
+        refreshAddresses();
+      }
+      const data = await subscriptionAPI.create({ product_id: product.ma_san_pham, quantity: subscriptionForm.quantity, dia_chi_giao: finalAddress, ghi_chu: subscriptionForm.ghi_chu, phuong_thuc_tt: subscriptionForm.phuong_thuc_tt, ngay_bat_dau: subscriptionForm.ngay_bat_dau, tan_suat_giao: subscriptionForm.tan_suat_giao, so_ky_giao: subscriptionForm.so_ky_giao, loai_tien_coc: subscriptionForm.phuong_thuc_tt === 'banking' ? subscriptionForm.loai_tien_coc : null, ma_code: subPromoCode });
       if (data.order_id) {
         navigate(`/orders/${data.order_id}?success=1`);
       } else {
@@ -530,9 +602,50 @@ export default function ProductDetail() {
               
               <p className="text-[12px] font-medium text-text-secondary">Chọn trong khoảng 3–60 ngày tới. Nếu không chọn, hệ thống sẽ tự đặt ngày giao dự kiến sau 7 ngày.</p>
               
+              {savedAddresses.length > 0 && (
+                <div className="flex flex-col gap-1.5 mb-1">
+                  <span className="text-[12px] font-medium text-text-secondary">Sổ địa chỉ của bạn</span>
+                  <div className="space-y-2">
+                    {savedAddresses.map(addr => {
+                      const active = preorderForm.dia_chi_giao.trim() === addr.dia_chi.trim();
+                      return (
+                        <div key={addr.id} className={`rounded-xl border p-3 transition-all ${active ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-background hover:border-primary/40'}`}>
+                          <label className="flex items-start gap-2.5 cursor-pointer">
+                            <input type="radio" checked={active} onChange={() => { setPreorderForm({ ...preorderForm, dia_chi_giao: addr.dia_chi }); setPreorderSaveNote(''); }} className="mt-0.5 h-4 w-4 accent-primary cursor-pointer flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-xs font-medium leading-relaxed ${active ? 'text-primary' : 'text-text-primary'}`}>{addr.dia_chi}</p>
+                              <div className="flex items-center gap-3 mt-1.5">
+                                {addr.is_default ? (
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-primary bg-primary/10 rounded-full px-2 py-0.5">
+                                    <Star size={11} className="fill-primary" /> Mặc định
+                                  </span>
+                                ) : (
+                                  <button type="button" onClick={() => handleMakeDefaultAddress(addr)} className="text-[11px] font-semibold text-text-secondary hover:text-primary inline-flex items-center gap-1 transition-colors">
+                                    <Star size={11} /> Đặt làm mặc định
+                                  </button>
+                                )}
+                                <button type="button" onClick={() => handleDeletePreorderAddress(addr)} className="text-[11px] font-semibold text-danger/70 hover:text-danger inline-flex items-center gap-1 transition-colors">
+                                  <Trash2 size={11} /> Xóa
+                                </button>
+                              </div>
+                            </div>
+                          </label>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-col gap-1.5">
                 <label className="text-[12px] font-medium text-text-secondary">Địa chỉ giao hàng</label>
-                <textarea rows={3} value={preorderForm.dia_chi_giao} onChange={e => setPreorderForm({ ...preorderForm, dia_chi_giao: e.target.value })} placeholder="Ví dụ: 12 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP.HCM" className="bg-card border border-border rounded-xl w-full resize-none px-4 py-3 text-body focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+                <textarea rows={3} value={preorderForm.dia_chi_giao} onChange={e => { setPreorderForm({ ...preorderForm, dia_chi_giao: e.target.value }); setPreorderSaveNote(''); }} placeholder="Ví dụ: 12 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP.HCM" className="bg-card border border-border rounded-xl w-full resize-none px-4 py-3 text-body focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+                <div className="flex items-center gap-3">
+                  <button type="button" onClick={handleSavePreorderAddress} className="text-[12px] font-semibold text-primary hover:text-primary/80 inline-flex items-center gap-1 transition-colors">
+                    <Plus size={14} /> Lưu địa chỉ này vào sổ
+                  </button>
+                  {preorderSaveNote && <span className="text-[12px] font-medium text-text-secondary">{preorderSaveNote}</span>}
+                </div>
               </div>
               
               <div className="flex flex-col gap-1.5">
@@ -723,15 +836,56 @@ export default function ProductDetail() {
                 />
               </div>
 
+              {savedAddresses.length > 0 && (
+                <div className="flex flex-col gap-1.5 mb-1">
+                  <span className="text-[12px] font-medium text-text-secondary">Sổ địa chỉ của bạn</span>
+                  <div className="space-y-2">
+                    {savedAddresses.map(addr => {
+                      const active = subscriptionForm.dia_chi_giao.trim() === addr.dia_chi.trim();
+                      return (
+                        <div key={addr.id} className={`rounded-xl border p-3 transition-all ${active ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-background hover:border-primary/40'}`}>
+                          <label className="flex items-start gap-2.5 cursor-pointer">
+                            <input type="radio" checked={active} onChange={() => { setSubscriptionForm({ ...subscriptionForm, dia_chi_giao: addr.dia_chi }); setSubSaveNote(''); }} className="mt-0.5 h-4 w-4 accent-primary cursor-pointer flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-xs font-medium leading-relaxed ${active ? 'text-primary' : 'text-text-primary'}`}>{addr.dia_chi}</p>
+                              <div className="flex items-center gap-3 mt-1.5">
+                                {addr.is_default ? (
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-primary bg-primary/10 rounded-full px-2 py-0.5">
+                                    <Star size={11} className="fill-primary" /> Mặc định
+                                  </span>
+                                ) : (
+                                  <button type="button" onClick={() => handleMakeDefaultAddress(addr)} className="text-[11px] font-semibold text-text-secondary hover:text-primary inline-flex items-center gap-1 transition-colors">
+                                    <Star size={11} /> Đặt làm mặc định
+                                  </button>
+                                )}
+                                <button type="button" onClick={() => handleDeleteSubAddress(addr)} className="text-[11px] font-semibold text-danger/70 hover:text-danger inline-flex items-center gap-1 transition-colors">
+                                  <Trash2 size={11} /> Xóa
+                                </button>
+                              </div>
+                            </div>
+                          </label>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-col gap-1.5">
                 <label className="text-[12px] font-medium text-text-secondary">Địa chỉ giao hàng</label>
                 <textarea 
                   rows={3} 
                   value={subscriptionForm.dia_chi_giao} 
-                  onChange={e => setSubscriptionForm({ ...subscriptionForm, dia_chi_giao: e.target.value })} 
+                  onChange={e => { setSubscriptionForm({ ...subscriptionForm, dia_chi_giao: e.target.value }); setSubSaveNote(''); }} 
                   placeholder="Ví dụ: 12 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP.HCM" 
                   className="bg-card border border-border rounded-xl w-full resize-none px-4 py-3 text-body focus:ring-2 focus:ring-primary focus:border-primary outline-none" 
                 />
+                <div className="flex items-center gap-3">
+                  <button type="button" onClick={handleSaveSubAddress} className="text-[12px] font-semibold text-primary hover:text-primary/80 inline-flex items-center gap-1 transition-colors">
+                    <Plus size={14} /> Lưu địa chỉ này vào sổ
+                  </button>
+                  {subSaveNote && <span className="text-[12px] font-medium text-text-secondary">{subSaveNote}</span>}
+                </div>
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-[12px] font-medium text-text-secondary">Ghi chú (không bắt buộc)</label>
