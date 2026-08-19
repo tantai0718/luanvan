@@ -53,7 +53,7 @@ export function OrderList() {
   const [loading, setLoading] = useState(true);
   const [cancelingOrderId, setCancelingOrderId] = useState(null);
   const [cancelingSubscriptionId, setCancelingSubscriptionId] = useState(null);
-  const [cancelModal, setCancelModal] = useState({ isOpen: false, id: null, tienCoc: 0, tongTien: 0, type: null });
+  const [cancelModal, setCancelModal] = useState({ isOpen: false, id: null, tienCoc: 0, tongTien: 0, loaiDon: null, type: null });
 
   const fetchData = () => {
   setLoading(true);
@@ -75,10 +75,17 @@ export function OrderList() {
     fetchData();
   }, []);
 
-  const handleCancelOrder = (event, orderId) => {
+  const handleCancelOrder = (event, order) => {
     event.preventDefault();
     event.stopPropagation();
-    setCancelModal({ isOpen: true, id: orderId, tienCoc: 0, type: 'order' });
+    setCancelModal({
+      isOpen: true,
+      id: order.ma_don_hang,
+      tienCoc: Number(order.tien_coc || 0),
+      tongTien: Number(order.tong_thanh_toan || 0),
+      loaiDon: order.loai_don,
+      type: 'order'
+    });
   };
 
   const handleCancelSubscription = (event, id, tienCoc = 0, tongTien = 0) => {
@@ -98,7 +105,7 @@ export function OrderList() {
         );
       } finally {
         setCancelingSubscriptionId(null);
-        setCancelModal({ isOpen: false, id: null, tienCoc: 0, tongTien: 0, type: null });
+        setCancelModal({ isOpen: false, id: null, tienCoc: 0, tongTien: 0, loaiDon: null, type: null });
       }
     } else if (type === 'order') {
       setCancelingOrderId(id);
@@ -109,7 +116,7 @@ export function OrderList() {
         );
       } finally {
         setCancelingOrderId(null);
-        setCancelModal({ isOpen: false, id: null, tienCoc: 0, tongTien: 0, type: null });
+        setCancelModal({ isOpen: false, id: null, tienCoc: 0, tongTien: 0, loaiDon: null, type: null });
       }
     }
   };
@@ -198,7 +205,7 @@ export function OrderList() {
                             </div>
                             {canCancelOrder(order.trang_thai) && (
                               <button
-                                onClick={(e) => handleCancelOrder(e, order.ma_don_hang)}
+                                onClick={(e) => handleCancelOrder(e, order)}
                                 disabled={cancelingOrderId === order.ma_don_hang}
                                 className="text-sm font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 px-4 py-2.5 rounded-xl transition shrink-0"
                               >
@@ -290,7 +297,11 @@ export function OrderList() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm transition-opacity">
           <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl space-y-4 animate-in fade-in zoom-in duration-200">
             <h3 className="text-xl font-semibold text-text-primary">
-              {cancelModal.type === 'subscription' ? 'Xác nhận hủy đăng ký định kỳ?' : 'Xác nhận hủy đơn hàng?'}
+              {cancelModal.type === 'subscription'
+                ? 'Xác nhận hủy đăng ký định kỳ?'
+                : cancelModal.loaiDon === 'dat_truoc' || cancelModal.tienCoc > 0
+                ? 'Xác nhận hủy đơn đặt trước?'
+                : 'Xác nhận hủy đơn hàng?'}
             </h3>
             <p className="text-text-secondary text-base leading-relaxed">
               {cancelModal.type === 'subscription' ? (
@@ -300,13 +311,20 @@ export function OrderList() {
                   <br /><br />
                   Bạn có chắc chắn muốn hủy gói không?
                 </>
+              ) : cancelModal.loaiDon === 'dat_truoc' || cancelModal.tienCoc > 0 ? (
+                <>
+                  Nếu hủy đơn đặt trước lúc này, khoản tiền cọc {cancelModal.tongTien > 0 && cancelModal.tienCoc >= cancelModal.tongTien ? 100 : 30}%
+                  {cancelModal.tienCoc > 0 ? <strong className="text-rose-600"> {formatCurrency(cancelModal.tienCoc)}</strong> : ''} đã thanh toán ban đầu sẽ <strong className="text-rose-600">không được hoàn trả</strong> theo quy định.
+                  <br /><br />
+                  Bạn có chắc chắn muốn hủy đơn không?
+                </>
               ) : (
                 'Bạn có chắc chắn muốn hủy đơn hàng này không?'
               )}
             </p>
             <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">
               <button
-                onClick={() => setCancelModal({ isOpen: false, id: null, tienCoc: 0, type: null })}
+                onClick={() => setCancelModal({ isOpen: false, id: null, tienCoc: 0, tongTien: 0, loaiDon: null, type: null })}
                 className="px-5 py-2.5 rounded-xl text-text-secondary bg-slate-100 hover:bg-slate-200 font-medium transition duration-200"
               >
                 Hủy bỏ
@@ -331,7 +349,7 @@ export function OrderDetail() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [canceling, setCanceling] = useState(false);
-  const [cancelModal, setCancelModal] = useState({ isOpen: false, id: null, tienCoc: 0, type: null });
+  const [cancelModal, setCancelModal] = useState({ isOpen: false, id: null, tienCoc: 0, tongTien: 0, loaiDon: null, type: null });
   const [polling, setPolling] = useState(false);
   const success = searchParams.get("success");
 
@@ -364,7 +382,14 @@ export function OrderDetail() {
 
   const handleCancel = () => {
     if (!data?.order || !canCancelOrder(data.order.trang_thai)) return;
-    setCancelModal({ isOpen: true, id: id, tienCoc: 0, type: 'order' });
+    setCancelModal({
+      isOpen: true,
+      id: id,
+      tienCoc: Number(data.order.tien_coc || 0),
+      tongTien: Number(data.order.tong_thanh_toan || 0),
+      loaiDon: data.order.loai_don,
+      type: 'order'
+    });
   };
 
   const executeCancel = async () => {
@@ -377,7 +402,7 @@ export function OrderDetail() {
       }));
     } finally {
       setCanceling(false);
-      setCancelModal({ isOpen: false, id: null, tienCoc: 0, type: null });
+      setCancelModal({ isOpen: false, id: null, tienCoc: 0, tongTien: 0, loaiDon: null, type: null });
     }
   };
 
@@ -700,14 +725,23 @@ export function OrderDetail() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm transition-opacity">
             <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl space-y-4 animate-in fade-in zoom-in duration-200">
               <h3 className="text-xl font-semibold text-text-primary">
-                {cancelModal.type === 'subscription' ? 'Xác nhận hủy đăng ký định kỳ?' : 'Xác nhận hủy đơn hàng?'}
+                {cancelModal.loaiDon === 'dat_truoc' || cancelModal.tienCoc > 0 ? 'Xác nhận hủy đơn đặt trước?' : 'Xác nhận hủy đơn hàng?'}
               </h3>
               <p className="text-text-secondary text-base leading-relaxed">
-                Bạn có chắc chắn muốn hủy đơn hàng này không?
+                {cancelModal.loaiDon === 'dat_truoc' || cancelModal.tienCoc > 0 ? (
+                  <>
+                    Nếu hủy đơn đặt trước lúc này, khoản tiền cọc {cancelModal.tongTien > 0 && cancelModal.tienCoc >= cancelModal.tongTien ? 100 : 30}%
+                    {cancelModal.tienCoc > 0 ? <strong className="text-rose-600"> {formatCurrency(cancelModal.tienCoc)}</strong> : ''} đã thanh toán ban đầu sẽ <strong className="text-rose-600">không được hoàn trả</strong> theo quy định.
+                    <br /><br />
+                    Bạn có chắc chắn muốn hủy đơn không?
+                  </>
+                ) : (
+                  'Bạn có chắc chắn muốn hủy đơn hàng này không?'
+                )}
               </p>
               <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">
                 <button
-                onClick={() => setCancelModal({ isOpen: false, id: null, tienCoc: 0, tongTien: 0, type: null })}
+                  onClick={() => setCancelModal({ isOpen: false, id: null, tienCoc: 0, tongTien: 0, loaiDon: null, type: null })}
                   className="px-5 py-2.5 rounded-xl text-text-secondary bg-slate-100 hover:bg-slate-200 font-medium transition duration-200"
                 >
                   Hủy bỏ

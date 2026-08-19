@@ -111,6 +111,7 @@ async function tinhUuDaiTuDong(tongTien, tongSoLuong, loai_don = 'thuong', maCod
   let codePromo = null;
   let codeDiscount = 0;
   let codeError = null;
+  let codeIsFreeship = false; // Đánh dấu nếu mã code là loại freeship
   if (maCode && maCode.trim()) {
     const { promo, error } = await findValidCode(maCode);
     if (error) {
@@ -128,8 +129,14 @@ async function tinhUuDaiTuDong(tongTien, tongSoLuong, loai_don = 'thuong', maCod
       if (!codeError) {
         const minVal = Number(promo.dieu_kien_toi_thieu || 0);
         if (tongTien >= minVal) {
-          codeDiscount = calcDiscountAmount(promo, tongTien);
-          codePromo = promo;
+          if (promo.loai_uu_dai === 'mien_phi_ship') {
+            // Mã code loại freeship → xử lý riêng, không so sánh giảm giá %
+            codeIsFreeship = true;
+            codePromo = promo;
+          } else {
+            codeDiscount = calcDiscountAmount(promo, tongTien);
+            codePromo = promo;
+          }
         } else {
           codeError = `Đơn hàng cần tối thiểu ${minVal.toLocaleString('vi-VN')}đ để dùng mã này.`;
         }
@@ -137,12 +144,19 @@ async function tinhUuDaiTuDong(tongTien, tongSoLuong, loai_don = 'thuong', maCod
     }
   }
 
-  // 3. So sánh, chọn bên cao hơn — KHÔNG cộng dồn
+  // 3. So sánh, chọn bên cao hơn — KHÔNG cộng dồn (chỉ cho mã giảm %, freeship xử lý riêng)
   let tienGiam = 0;
   let chosenPromo = null;
   let compareMessage = null;
 
-  if (codePromo && autoPromo) {
+  if (codeIsFreeship) {
+    // Mã code là freeship → giữ nguyên ưu đãi tự động giảm % (nếu có), freeship áp dụng ở bước 4
+    if (autoPromo) {
+      tienGiam = autoDiscount;
+      chosenPromo = autoPromo;
+    }
+    compareMessage = `Đã áp dụng mã ${codePromo.ma_code} (Miễn phí vận chuyển).`;
+  } else if (codePromo && autoPromo) {
     if (codeDiscount >= autoDiscount) {
       tienGiam = codeDiscount;
       chosenPromo = codePromo;
@@ -166,19 +180,30 @@ async function tinhUuDaiTuDong(tongTien, tongSoLuong, loai_don = 'thuong', maCod
     ? [{ makm: chosenPromo.makm, ten_km: chosenPromo.ten_km, tien_giam_ap_dung: tienGiam }]
     : [];
 
-  // 4. Miễn phí ship — tách riêng, luôn xét độc lập
-  const [shipRows] = await db.query(
-    `SELECT * FROM khuyen_mai
-     WHERE trang_thai = 1 AND loai_ap_dung = 'tu_dong' AND loai_uu_dai = 'mien_phi_ship'`
-  );
+  // 4. Miễn phí ship — xét cả tự động VÀ mã code freeship
   let mienPhiShip = false;
-  for (const promo of shipRows) {
-    if (!isPromoMatchOrderType(promo, loai_don)) continue;
-    const minVal = Number(promo.dieu_kien_toi_thieu || 0);
-    if ((tongTien - tienGiam) >= minVal) {
-      mienPhiShip = true;
-      appliedList.push(promo.ten_km);
-      appliedPromotions.push({ makm: promo.makm, ten_km: promo.ten_km, tien_giam_ap_dung: 30000 });
+
+  // 4a. Mã code freeship (nhập mã)
+  if (codeIsFreeship && codePromo) {
+    mienPhiShip = true;
+    appliedList.push(codePromo.ten_km);
+    appliedPromotions.push({ makm: codePromo.makm, ten_km: codePromo.ten_km, tien_giam_ap_dung: 30000 });
+  }
+
+  // 4b. Freeship tự động (nếu chưa được miễn phí từ mã code)
+  if (!mienPhiShip) {
+    const [shipRows] = await db.query(
+      `SELECT * FROM khuyen_mai
+       WHERE trang_thai = 1 AND loai_ap_dung = 'tu_dong' AND loai_uu_dai = 'mien_phi_ship'`
+    );
+    for (const promo of shipRows) {
+      if (!isPromoMatchOrderType(promo, loai_don)) continue;
+      const minVal = Number(promo.dieu_kien_toi_thieu || 0);
+      if ((tongTien - tienGiam) >= minVal) {
+        mienPhiShip = true;
+        appliedList.push(promo.ten_km);
+        appliedPromotions.push({ makm: promo.makm, ten_km: promo.ten_km, tien_giam_ap_dung: 30000 });
+      }
     }
   }
 
@@ -336,6 +361,7 @@ async function togglePromotionStatus(makm) {
 }
 
 async function deletePromotion(makm) {
+  await db.query("DELETE FROM don_hang_khuyen_mai WHERE makm = ?", [makm]);
   const [result] = await db.query("DELETE FROM khuyen_mai WHERE makm = ?", [makm]);
   return result.affectedRows > 0;
 }
