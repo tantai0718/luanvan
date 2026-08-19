@@ -187,11 +187,21 @@ async function toggleProduct(req, res) {
 
 async function deleteProduct(req, res) {
     try {
-        await db.query('DELETE FROM hinh_anh_video WHERE masp = ?', [req.params.id]);
-        await db.query('DELETE FROM san_pham WHERE masp = ?', [req.params.id]);
-        res.json({ message: 'Da xoa san pham' });
+        const masp = req.params.id;
+        // Xóa tất cả dữ liệu liên quan ở các bảng con trước
+        await db.query('DELETE FROM hinh_anh_video WHERE masp = ?', [masp]);
+        await db.query('DELETE FROM san_pham_mua_vu WHERE masp = ?', [masp]);
+        await db.query('DELETE FROM chi_tiet_gio_hang WHERE masp = ?', [masp]);
+        await db.query('DELETE FROM danh_gia WHERE masp = ?', [masp]);
+        await db.query('DELETE FROM chi_tiet_don_hang WHERE masp = ?', [masp]);
+        await db.query('DELETE FROM dang_ky_san_pham WHERE masp = ?', [masp]);
+
+        // Sau đó xóa sản phẩm khỏi bảng san_pham
+        await db.query('DELETE FROM san_pham WHERE masp = ?', [masp]);
+        res.json({ message: 'Đã xóa hoàn toàn sản phẩm khỏi hệ thống.' });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        console.error('[deleteProduct]', err);
+        res.status(500).json({ message: `Không thể xóa sản phẩm: ${err.message}` });
     }
 }
 

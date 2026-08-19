@@ -98,7 +98,7 @@ async function getCart(mand) {
                 phan_tram_giam_can_han: i.phan_tram_giam_can_han,
             },
         })),
-        summary: { totalPrice, discountAmount, discounts, shipping, total },
+        summary: { totalPrice, expiryDiscountTotal, promoDiscount, discountAmount, discounts, shipping, total },
     };
 }
 

@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { orderAPI } from '../services/api';
 import { pickProductImage } from '../utils/marketImages';
 import { getAddresses, addAddress, setDefaultAddress, removeAddress } from '../utils/addressBook';
+import { getExpiryDiscountPrice, getExpiryDiscountPercent } from '../utils/expiryDiscount';
 import { ShoppingCart, ChevronRight, Info, Plus, Minus, ArrowRight, ShieldCheck, Truck, HeadphonesIcon, CreditCard, Landmark, AlertCircle, MapPin, Star, Trash2, Tag, X, CheckCircle, Loader2 } from 'lucide-react';
 
 const formatCurrency = value => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
@@ -64,13 +65,28 @@ export default function Cart() {
   const [saveNote, setSaveNote] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  // Nếu có promoResult (khách nhập mã) → dùng tienGiam từ promoResult, ngược lại dùng summary
+  // Nếu có promoResult (khách nhập mã) → dùng tienGiam từ promoResult cộng với giảm giá cận hạn
   const hasCodeResult = promoResult && !promoResult.error && promoResult.tien_giam > 0;
-  const discount = hasCodeResult ? Number(promoResult.tien_giam) : Number(summary?.discountAmount || 0);
-  const promotions = summary?.discounts || [];
+  const expiryDiscountTotal = summary?.expiryDiscountTotal || items.reduce((s, i) => s + getExpiryDiscountAmount(i.product, i.quantity), 0);
+  const codeDiscount = hasCodeResult ? Number(promoResult.tien_giam) : 0;
+  const autoPromoDiscount = !hasCodeResult ? Number(summary?.promoDiscount || 0) : 0;
+  const discount = expiryDiscountTotal + (hasCodeResult ? codeDiscount : autoPromoDiscount);
+
+  const displayPromotions = [...(summary?.discounts || [])];
+  if (hasCodeResult && codeDiscount > 0) {
+    const filtered = displayPromotions.filter(p => p.code === 'EXPIRY_DISCOUNT');
+    filtered.push({
+      code: `CODE_${promoCode}`,
+      label: promoResult.message || `Đã áp dụng mã ${promoCode}`,
+      amount: codeDiscount,
+    });
+    displayPromotions.length = 0;
+    displayPromotions.push(...filtered);
+  }
+
   const shipping = hasCodeResult
     ? (promoResult.mien_phi_ship ? 0 : 30000)
-    : Number(summary?.shipping ?? (totalPrice > 500000 ? 0 : 30000));
+    : Number(summary?.shipping ?? (totalPrice - expiryDiscountTotal >= 500000 ? 0 : 30000));
   const total = Math.max(0, totalPrice - discount) + shipping;
 
   useEffect(() => {
@@ -316,6 +332,13 @@ export default function Cart() {
               <div className="p-6 space-y-4 border-b border-border/60 max-h-[380px] overflow-y-auto">
                 {items.map(item => {
                   const product = { ten_san_pham: item.product?.name, ma_danh_muc: item.product?.category_id, images: item.product?.images || [] };
+                  const discountedUnitPrice = getExpiryDiscountPrice(item.product);
+                  const isExpiryDiscounted = discountedUnitPrice != null && discountedUnitPrice < Number(item.product?.price || 0);
+                  const finalUnitPrice = isExpiryDiscounted ? discountedUnitPrice : Number(item.product?.price || 0);
+                  const itemSubtotal = item.quantity * finalUnitPrice;
+                  const originalSubtotal = item.quantity * Number(item.product?.price || 0);
+                  const expiryPct = getExpiryDiscountPercent(item.product);
+
                   return (
                     <div key={item.product_id} className="flex gap-4 items-center">
                       <img src={pickProductImage(product)} alt={item.product?.name} className="w-16 h-16 rounded-2xl object-cover flex-shrink-0 border border-border shadow-sm" />
@@ -323,7 +346,17 @@ export default function Cart() {
                         <p className="text-body font-medium text-text-primary line-clamp-1">{item.product?.name}</p>
                         <p className="text-[12px] font-medium text-text-secondary mt-0.5">{item.quantity} {item.product?.unit}</p>
                         <div className="flex items-center justify-between mt-2">
-                          <span className="text-body font-bold text-primary">{formatCurrency(item.quantity * Number(item.product?.price || 0))}</span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-body font-bold text-primary">{formatCurrency(itemSubtotal)}</span>
+                            {isExpiryDiscounted && (
+                              <>
+                                <span className="text-[11px] text-text-secondary line-through">{formatCurrency(originalSubtotal)}</span>
+                                <span className="text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-300 rounded px-1 py-0.5">
+                                  Giảm {expiryPct}%
+                                </span>
+                              </>
+                            )}
+                          </div>
                           <div className="flex items-center gap-1.5 border border-border rounded-lg p-0.5 bg-background">
                             <button onClick={() => (item.quantity > 1 ? updateItem(item.product_id, item.quantity - 1) : removeItem(item.product_id))} className="w-6 h-6 rounded-md bg-card text-text-primary flex items-center justify-center hover:bg-border transition-colors"><Minus size={12} /></button>
                             <input
@@ -363,9 +396,9 @@ export default function Cart() {
                 <div className="flex justify-between text-text-secondary"><span>Tạm tính</span><span className="font-medium text-text-primary">{formatCurrency(totalPrice)}</span></div>
                 <div className="flex justify-between text-primary"><span>Khuyến mãi</span><span className="font-semibold">{discount ? `-${formatCurrency(discount)}` : formatCurrency(0)}</span></div>
                 
-                {promotions.length ? (
+                {displayPromotions.length ? (
                   <div className="rounded-xl bg-primary/5 border border-primary/10 p-3 text-[12px] space-y-1">
-                    {promotions.map(p => <p key={p.code} className="text-text-secondary">{promotionLabelMap[p.code] || p.label}: <span className="text-primary font-bold">-{formatCurrency(p.amount)}</span></p>)}
+                    {displayPromotions.map(p => <p key={p.code} className="text-text-secondary">{promotionLabelMap[p.code] || p.label}: <span className="text-primary font-bold">-{formatCurrency(p.amount)}</span></p>)}
                   </div>
                 ) : (
                   <p className="rounded-xl bg-background border border-border/50 p-3 text-[12px] font-medium text-text-secondary">

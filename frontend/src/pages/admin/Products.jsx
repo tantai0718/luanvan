@@ -311,7 +311,7 @@ export default function AdminProducts() {
       type: 'danger',
       onConfirm: async () => {
         await productAPI.delete(id);
-        setProducts(prev => prev.filter(item => item.ma_san_pham !== id));
+        await fetchData();
       },
     });
   };

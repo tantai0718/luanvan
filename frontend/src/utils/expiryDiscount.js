@@ -17,11 +17,13 @@ export function getExpiryDiscountPercent(product) {
 export function getExpiryDiscountAmount(product, quantity = 1) {
   const pct = getExpiryDiscountPercent(product);
   if (!pct) return 0;
-  return Math.round(Number(product.gia_ban || 0) * Number(quantity || 0) * pct / 100);
+  const price = Number(product.gia_ban || product.price || 0);
+  return Math.round(price * Number(quantity || 0) * pct / 100);
 }
 
 export function getExpiryDiscountPrice(product) {
   const pct = getExpiryDiscountPercent(product);
   if (!pct) return null;
-  return Math.round(Number(product.gia_ban || 0) * (100 - pct) / 100);
+  const price = Number(product.gia_ban || product.price || 0);
+  return Math.round(price * (100 - pct) / 100);
 }

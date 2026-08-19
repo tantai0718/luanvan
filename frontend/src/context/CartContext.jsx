@@ -1,9 +1,18 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { cartAPI, promotionAPI } from '../services/api';
 import { useAuth } from './AuthContext';
+import { getExpiryDiscountAmount } from '../utils/expiryDiscount';
 import { AlertCircle, X } from 'lucide-react';
 
 const CartContext = createContext(null);
+
+function calcCartTotals(items) {
+  const totalPrice = items.reduce((s, i) => s + i.quantity * Number(i.product?.price || 0), 0);
+  const totalQty = items.reduce((s, i) => s + i.quantity, 0);
+  const expiryDiscountTotal = items.reduce((s, i) => s + getExpiryDiscountAmount(i.product, i.quantity), 0);
+  const priceAfterExpiry = Math.max(0, totalPrice - expiryDiscountTotal);
+  return { totalPrice, totalQty, expiryDiscountTotal, priceAfterExpiry };
+}
 
 export function CartProvider({ children }) {
   const { user }            = useAuth();
@@ -40,11 +49,10 @@ export function CartProvider({ children }) {
   // Khi xóa/cập nhật giỏ hàng mà đang có mã code → re-validate
   const revalidateCode = useCallback(async () => {
     if (!promoCode || !promoCode.trim() || !items.length) return;
-    const totalPrice = items.reduce((s, i) => s + i.quantity * (i.product?.price || 0), 0);
-    const totalQty = items.reduce((s, i) => s + i.quantity, 0);
+    const { totalQty, priceAfterExpiry } = calcCartTotals(items);
     try {
       const res = await promotionAPI.validateCode({
-        ma_code: promoCode, tong_tien: totalPrice, so_luong: totalQty, loai_don: 'thuong',
+        ma_code: promoCode, tong_tien: priceAfterExpiry, so_luong: totalQty, loai_don: 'thuong',
       });
       setPromoResult({ ...res, error: null });
     } catch (err) {
@@ -103,12 +111,11 @@ export function CartProvider({ children }) {
   // --- Promo code actions ---
   const applyCode = async (code) => {
     if (!code || !code.trim()) return;
-    const totalPrice = items.reduce((s, i) => s + i.quantity * (i.product?.price || 0), 0);
-    const totalQty = items.reduce((s, i) => s + i.quantity, 0);
+    const { totalQty, priceAfterExpiry } = calcCartTotals(items);
     setPromoLoading(true);
     try {
       const res = await promotionAPI.validateCode({
-        ma_code: code.trim(), tong_tien: totalPrice, so_luong: totalQty, loai_don: 'thuong',
+        ma_code: code.trim(), tong_tien: priceAfterExpiry, so_luong: totalQty, loai_don: 'thuong',
       });
       setPromoCode(code.trim());
       setPromoResult({ ...res, error: null });
